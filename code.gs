@@ -220,6 +220,58 @@ function doGet(e) {
     return _json({ lastDate: lastDate, daysBehind: daysBehind });
   }
 
+  if (action === 'dashboard') {
+    var values = sheet.getDataRange().getValues();
+
+    var miles   = sheet.getRange('I4').getValue();
+    var days    = sheet.getRange('M4').getValue();
+    var percent = sheet.getRange('Q4').getValue();
+    var today   = new Date();
+    var monthMilesRaw = sheet.getRange(MONTH_TOTAL_CELL[today.getMonth() + 1]).getValue();
+    var monthMiles = (typeof monthMilesRaw === 'number') ? monthMilesRaw : 0;
+    var weekSun = new Date(today);
+    weekSun.setDate(today.getDate() - today.getDay());
+    var weekMiles = _sumRange(values, weekSun, 7);
+
+    var lastDate = null;
+    for (var m = 1; m <= 12; m++) {
+      var dim = new Date(2026, m, 0).getDate();
+      for (var d = 1; d <= dim; d++) {
+        var dateStr = '2026-' + ('0' + m).slice(-2) + '-' + ('0' + d).slice(-2);
+        var pos = dateToColRow(dateStr);
+        if (!pos) continue;
+        var val = values[pos.row - 1][pos.col - 1];
+        if (val !== '' && val !== null && val !== undefined) lastDate = dateStr;
+      }
+    }
+    var daysBehind = 0;
+    if (lastDate) {
+      var last = new Date(lastDate + 'T12:00:00');
+      var t2 = new Date();
+      t2.setHours(12, 0, 0, 0);
+      daysBehind = Math.floor((t2 - last) / (1000 * 60 * 60 * 24));
+    }
+
+    var weeks = [];
+    for (var w = 11; w >= 0; w--) {
+      var sun = new Date(weekSun);
+      sun.setDate(weekSun.getDate() - w * 7);
+      weeks.push({ weekStart: _fmtDate(sun), miles: _sumRange(values, sun, 7) });
+    }
+
+    return _json({
+      stats: {
+        miles: miles, days: days, percent: percent,
+        monthMiles: monthMiles, weekMiles: weekMiles,
+        streak: _getStreak(values),
+        longestWalk: _getLongestWalk(values),
+        longestStreak: _getLongestStreak(values)
+      },
+      lastTracked: { lastDate: lastDate, daysBehind: daysBehind },
+      weekly12: { weeks: weeks }
+    });
+  }
+
   if (action === 'peek') {
     // Returns existing mileage for a list of dates, so the client can ask
     // "replace or add?" before posting. Usage: ?action=peek&dates=YYYY-MM-DD,YYYY-MM-DD

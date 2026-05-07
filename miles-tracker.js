@@ -62,6 +62,12 @@
       .catch(function(err) { MilesTracker.onError(String(err)); });
     },
 
+    fetchDashboard: function(callback) {
+      _get('dashboard')
+        .then(function(data) { callback(data && !data.error ? data : {}); })
+        .catch(function()    { callback({}); });
+    },
+
     fetchStats: function(callback) {
       _get('stats')
         .then(function(data) { callback(data && !data.error ? data : {}); })

@@ -21,6 +21,8 @@
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
+    html { scrollbar-width: none; -ms-overflow-style: none; }
+    body::-webkit-scrollbar { display: none; }
     body {
       background:
         linear-gradient(
@@ -304,60 +306,109 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.55);
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       z-index: 9999;
       align-items: center;
       justify-content: center;
-      padding: 1rem;
+      padding: 1.5rem;
     }
     #mt-modal.mt-modal-show { display: flex; }
 
     .mt-modal-card {
-      background: #fff;
-      color: #252525;
-      padding: 1.5rem 1.25rem 1.25rem;
-      border-radius: 12px;
-      max-width: 340px;
+      background: #f5f0e6;
+      color: #1a1a1a;
+      padding: 2rem 1.75rem 1.5rem;
+      border-radius: 16px;
+      max-width: 360px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
     }
     .mt-modal-text {
-      font-size: 0.95rem;
-      line-height: 1.45;
-      margin-bottom: 1.25rem;
+      font-size: 1rem;
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
     }
-    .mt-modal-text strong { font-weight: 700; }
+    .mt-modal-text strong { font-weight: 800; }
     .mt-modal-buttons {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
     .mt-modal-buttons button {
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 0.9rem;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 0.85rem;
       font-family: inherit;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
       cursor: pointer;
-      border: 1px solid #ddd;
-      background: #f5f5f5;
-      color: #252525;
+      border: none;
+      background: transparent;
+      color: #1a1a1a;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.2s ease;
     }
     .mt-modal-buttons button[data-action="replace"] {
-      background: #252525;
-      color: #fff;
-      border-color: #252525;
-      font-weight: 700;
+      background: #E89A1F;
+      color: #1a1a1a;
+      box-shadow: 0 4px 0 #8E5A0E, 0 8px 14px rgba(0, 0, 0, 0.25);
+      margin-bottom: 4px;
     }
+    .mt-modal-buttons button[data-action="replace"]:active {
+      transform: translateY(4px);
+      box-shadow: 0 0 0 #8E5A0E, 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .mt-modal-buttons button[data-action="add"] {
+      background: #1a1a1a;
+      color: #f5f0e6;
+    }
+    .mt-modal-buttons button[data-action="add"]:active { opacity: 0.85; }
     .mt-modal-buttons button[data-action="cancel"] {
       background: transparent;
-      border: none;
-      color: #999;
-      margin-top: 4px;
+      color: #1a1a1a;
+      opacity: 0.4;
+      letter-spacing: 0.08em;
+      padding-top: 8px;
+      padding-bottom: 4px;
+    }
+    .mt-modal-buttons button[data-action="cancel"]:hover { opacity: 0.7; }
+
+    #mt-loader {
+      position: fixed;
+      inset: 0;
+      background: #252525;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      transition: opacity 0.5s ease;
+    }
+    #mt-loader.mt-loader-hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .mt-loader-mark {
+      font-family: "omnes", sans-serif;
+      font-weight: 900;
+      font-size: 5rem;
+      color: #E89A1F;
+      line-height: 1;
+      animation: mtPulse 1.1s ease-in-out infinite alternate;
+    }
+    @keyframes mtPulse {
+      from { transform: scale(0.92); opacity: 0.55; }
+      to   { transform: scale(1.06); opacity: 1; }
     }
   </style>
 </head>
 <body>
+
+<div id="mt-loader">
+  <div class="mt-loader-mark">M</div>
+</div>
 
 <header class="wordmark">
   <div class="wordmark-year">2026</div>
@@ -475,76 +526,82 @@
   }
 
   function mtRefreshStats(animate) {
-    MilesTracker.fetchStats(function(data) {
-      var daysNum = data.days;
-      if (typeof daysNum === 'string') daysNum = parseInt(daysNum.split(' ')[0], 10);
-
-      var pctNum = NaN;
-      if (typeof data.percent === 'number') {
-        pctNum = data.percent <= 1 ? data.percent * 100 : data.percent;
-      }
-
-      var fmtInt = function(n) { return Math.round(n).toString(); };
-      var fmtPct = function(n) { return Math.round(n) + '%'; };
-
-      mtSetNum('mt-miles-val',   data.miles,         mtFmtMiles, animate);
-      mtSetNum('mt-days-val',    daysNum,            fmtInt,     animate);
-      if (!isNaN(pctNum)) {
-        mtSetNum('mt-percent-val', pctNum, fmtPct, animate);
-      } else {
-        document.getElementById('mt-percent-val').textContent = data.percent != null ? data.percent : '—';
-      }
-      mtSetNum('mt-month-val',          data.monthMiles,    mtFmtMiles, animate);
-      mtSetNum('mt-week-val',           data.weekMiles,     mtFmtMiles, animate);
-      mtSetNum('mt-streak-val',         data.streak,        fmtInt,     animate);
-      mtSetNum('mt-longest-walk-val',   data.longestWalk,   mtFmtMiles, animate);
-      mtSetNum('mt-longest-streak-val', data.longestStreak, fmtInt,     animate);
-    });
-    mtRefreshLastTracked();
-    mtRefreshChart(animate);
-  }
-
-  function mtRefreshLastTracked() {
-    MilesTracker.fetchLastTracked(function(lastDate, daysBehind) {
-      var el = document.getElementById('mt-last-tracked');
-      if (!lastDate) { el.textContent = 'No miles tracked yet for 2026.'; return; }
-      var d = new Date(lastDate + 'T12:00:00');
-      var formatted = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-      el.textContent = 'Last tracked: ' + formatted;
+    MilesTracker.fetchDashboard(function(data) {
+      mtRenderStats(data.stats || {}, animate);
+      mtRenderLastTracked((data.lastTracked && data.lastTracked.lastDate) || null);
+      mtRenderChart((data.weekly12 && data.weekly12.weeks) || [], animate);
+      mtHideLoader();
     });
   }
 
-  function mtRefreshChart(animate) {
-    MilesTracker.fetchWeekly12(function(weeks) {
-      weeks = weeks.slice(-6);
-      var max = 0;
-      weeks.forEach(function(w) { if (w.miles > max) max = w.miles; });
-      if (max === 0) max = 1;
-      var barsHtml = '';
-      var labelsHtml = '';
-      weeks.forEach(function(w, i) {
-        var pct = (w.miles / max) * 100;
-        var title = w.weekStart + ': ' + w.miles.toFixed(1) + ' mi';
-        var lbl = mtWeekNum(w.weekStart);
-        var val = w.miles > 0 ? '<div class="mt-bar-value">' + w.miles.toFixed(1) + '</div>' : '';
-        var startHeight = animate ? 0 : pct;
-        var isCurrent = (i === weeks.length - 1);
-        var cls = isCurrent ? 'mt-bar mt-bar-current' : 'mt-bar';
-        barsHtml   += '<div class="' + cls + '" data-target-height="' + pct + '" style="height:' + startHeight + '%" title="' + title + '">' + val + '</div>';
-        labelsHtml += '<div class="mt-bar-label">' + lbl + '</div>';
-      });
-      document.getElementById('mt-chart').innerHTML = barsHtml;
-      document.getElementById('mt-chart-labels').innerHTML = labelsHtml;
-      if (animate) {
+  function mtRenderStats(data, animate) {
+    var daysNum = data.days;
+    if (typeof daysNum === 'string') daysNum = parseInt(daysNum.split(' ')[0], 10);
+
+    var pctNum = NaN;
+    if (typeof data.percent === 'number') {
+      pctNum = data.percent <= 1 ? data.percent * 100 : data.percent;
+    }
+
+    var fmtInt = function(n) { return Math.round(n).toString(); };
+    var fmtPct = function(n) { return Math.round(n) + '%'; };
+
+    mtSetNum('mt-miles-val',   data.miles,  mtFmtMiles, animate);
+    mtSetNum('mt-days-val',    daysNum,     fmtInt,     animate);
+    if (!isNaN(pctNum)) {
+      mtSetNum('mt-percent-val', pctNum, fmtPct, animate);
+    } else {
+      document.getElementById('mt-percent-val').textContent = data.percent != null ? data.percent : '—';
+    }
+    mtSetNum('mt-month-val',          data.monthMiles,    mtFmtMiles, animate);
+    mtSetNum('mt-week-val',           data.weekMiles,     mtFmtMiles, animate);
+    mtSetNum('mt-streak-val',         data.streak,        fmtInt,     animate);
+    mtSetNum('mt-longest-walk-val',   data.longestWalk,   mtFmtMiles, animate);
+    mtSetNum('mt-longest-streak-val', data.longestStreak, fmtInt,     animate);
+  }
+
+  function mtRenderLastTracked(lastDate) {
+    var el = document.getElementById('mt-last-tracked');
+    if (!lastDate) { el.textContent = 'No miles tracked yet for 2026.'; return; }
+    var d = new Date(lastDate + 'T12:00:00');
+    var formatted = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    el.textContent = 'Last tracked: ' + formatted;
+  }
+
+  function mtRenderChart(weeks, animate) {
+    weeks = weeks.slice(-6);
+    var max = 0;
+    weeks.forEach(function(w) { if (w.miles > max) max = w.miles; });
+    if (max === 0) max = 1;
+    var barsHtml = '';
+    var labelsHtml = '';
+    weeks.forEach(function(w, i) {
+      var pct = (w.miles / max) * 100;
+      var title = w.weekStart + ': ' + w.miles.toFixed(1) + ' mi';
+      var lbl = mtWeekNum(w.weekStart);
+      var val = w.miles > 0 ? '<div class="mt-bar-value">' + w.miles.toFixed(1) + '</div>' : '';
+      var startHeight = animate ? 0 : pct;
+      var isCurrent = (i === weeks.length - 1);
+      var cls = isCurrent ? 'mt-bar mt-bar-current' : 'mt-bar';
+      barsHtml   += '<div class="' + cls + '" data-target-height="' + pct + '" style="height:' + startHeight + '%" title="' + title + '">' + val + '</div>';
+      labelsHtml += '<div class="mt-bar-label">' + lbl + '</div>';
+    });
+    document.getElementById('mt-chart').innerHTML = barsHtml;
+    document.getElementById('mt-chart-labels').innerHTML = labelsHtml;
+    if (animate) {
+      requestAnimationFrame(function() {
         requestAnimationFrame(function() {
-          requestAnimationFrame(function() {
-            document.querySelectorAll('#mt-chart .mt-bar').forEach(function(bar) {
-              bar.style.height = bar.getAttribute('data-target-height') + '%';
-            });
+          document.querySelectorAll('#mt-chart .mt-bar').forEach(function(bar) {
+            bar.style.height = bar.getAttribute('data-target-height') + '%';
           });
         });
-      }
-    });
+      });
+    }
+  }
+
+  function mtHideLoader() {
+    var loader = document.getElementById('mt-loader');
+    if (loader) loader.classList.add('mt-loader-hide');
   }
 
   MilesTracker.onReady = function() {

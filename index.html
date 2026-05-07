@@ -268,9 +268,6 @@
       cursor: pointer;
       color: #1a1a1a;
       background: #E89A1F;
-      position: relative;
-      overflow: hidden;
-      --mt-progress: 0%;
       box-shadow:
         0 5px 0 #8E5A0E,
         0 10px 18px rgba(0, 0, 0, 0.4);
@@ -283,29 +280,38 @@
         0 0 0 #8E5A0E,
         0 2px 6px rgba(0, 0, 0, 0.3);
     }
-    #mt-submit-btn.mt-busy { pointer-events: none; }
+    #mt-submit-btn.mt-busy {
+      opacity: 0.45;
+      pointer-events: none;
+    }
 
-    #mt-submit-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
+    .mt-submit-progress {
+      width: 240px;
+      height: 10px;
+      border-radius: 5px;
+      margin: 1rem auto 0;
+      background: rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+    .mt-submit-progress.mt-show { opacity: 1; }
+    .mt-submit-fill {
+      height: 100%;
+      width: 0%;
       background: linear-gradient(
         to right,
-        #016074 0%,     #016074 16.67%,
+        #016074 0%,    #016074 16.67%,
         #94D3BE 16.67%, #94D3BE 33.33%,
         #E7D7A4 33.33%, #E7D7A4 50%,
         #EB9A00 50%,    #EB9A00 66.67%,
         #CA6902 66.67%, #CA6902 83.33%,
         #B02113 83.33%, #B02113 100%
       );
-      clip-path: inset(0 calc(100% - var(--mt-progress, 0%)) 0 0);
-      pointer-events: none;
-      transition: clip-path 0.3s ease-out;
-    }
-
-    #mt-submit-btn span {
-      position: relative;
-      z-index: 1;
+      background-size: 240px 100%;
+      transition: width 0.3s ease-out;
     }
 
     #mt-result,
@@ -538,7 +544,8 @@
       <button onclick="mtAddRow()">+ Add another day</button>
     </div>
     <div id="mt-last-tracked"></div>
-    <button id="mt-submit-btn" onclick="mtSubmit()"><span>Track It!</span></button>
+    <button id="mt-submit-btn" onclick="mtSubmit()">Track It!</button>
+    <div class="mt-submit-progress"><div class="mt-submit-fill"></div></div>
     <div id="mt-result"></div>
     <div id="mt-error"></div>
   </div>
@@ -714,25 +721,32 @@
 
   function mtStartSubmitProgress() {
     var btn = document.getElementById('mt-submit-btn');
+    var prog = document.querySelector('.mt-submit-progress');
+    var fill = prog.querySelector('.mt-submit-fill');
     btn.classList.add('mt-busy');
     mtSubmitValue = 0;
-    btn.style.setProperty('--mt-progress', '0%');
+    fill.style.width = '0%';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() { prog.classList.add('mt-show'); });
+    });
     mtSubmitTimer = setInterval(function() {
       if (mtSubmitValue >= 95) return;
       var step = Math.max(0.4, (95 - mtSubmitValue) * 0.04);
       mtSubmitValue += step;
-      btn.style.setProperty('--mt-progress', mtSubmitValue + '%');
+      fill.style.width = mtSubmitValue + '%';
     }, 100);
   }
 
   function mtFinishSubmitProgress() {
     if (mtSubmitTimer) { clearInterval(mtSubmitTimer); mtSubmitTimer = null; }
     var btn = document.getElementById('mt-submit-btn');
-    btn.style.setProperty('--mt-progress', '100%');
+    var prog = document.querySelector('.mt-submit-progress');
+    var fill = prog.querySelector('.mt-submit-fill');
+    fill.style.width = '100%';
     setTimeout(function() {
+      prog.classList.remove('mt-show');
       btn.classList.remove('mt-busy');
-      btn.style.setProperty('--mt-progress', '0%');
-    }, 400);
+    }, 350);
   }
 
   MilesTracker.onReady = function() {

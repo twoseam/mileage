@@ -329,8 +329,9 @@
     #mt-result:not(:empty),
     #mt-error:not(:empty) { display: block; }
     #mt-result { color: #016074; transition: opacity 0.4s ease; }
-    #mt-error  { color: #B02113; }
-    #mt-result.mt-fade-out { opacity: 0; }
+    #mt-error  { color: #B02113; transition: opacity 0.4s ease; }
+    #mt-result.mt-fade-out,
+    #mt-error.mt-fade-out { opacity: 0; }
 
     #mt-last-tracked {
       margin-bottom: 1rem;
@@ -851,7 +852,16 @@
     }
     var todayStr = mtTodayStr();
     if (entries.some(function(e) { return e.date > todayStr; })) {
-      document.getElementById('mt-error').textContent = "Can't track dates in the future.";
+      var errEl = document.getElementById('mt-error');
+      errEl.classList.remove('mt-fade-out');
+      errEl.textContent = "Can't track dates in the future.";
+      setTimeout(function() {
+        errEl.classList.add('mt-fade-out');
+        setTimeout(function() {
+          errEl.textContent = '';
+          errEl.classList.remove('mt-fade-out');
+        }, 400);
+      }, 2500);
       return;
     }
 

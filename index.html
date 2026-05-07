@@ -312,21 +312,24 @@
       transition: width 0.3s ease-out;
     }
 
-    #mt-result {
-      margin-top: 1rem;
-      font-size: 0.9rem;
-      opacity: 0.6;
-      min-height: 1.2em;
-      text-align: center;
-    }
-
+    #mt-result,
     #mt-error {
-      margin-top: 1rem;
-      font-size: 0.9rem;
-      color: #ff6b6b;
-      min-height: 1.2em;
+      display: none;
+      margin: 1.25rem auto 0;
+      padding: 0.5rem 1rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
       text-align: center;
+      letter-spacing: 0.02em;
+      max-width: 280px;
+      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.35);
+      background: #f5f0e6;
     }
+    #mt-result:not(:empty),
+    #mt-error:not(:empty) { display: block; }
+    #mt-result { color: #016074; }
+    #mt-error  { color: #B02113; }
 
     #mt-last-tracked {
       margin-bottom: 1rem;

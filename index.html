@@ -36,6 +36,7 @@
       inset: 0;
       z-index: -1;
       pointer-events: none;
+      transform: translateY(50px);
       background: linear-gradient(
         159deg,
         transparent 0%, transparent 76.6%,
@@ -824,7 +825,7 @@
         '<label>Miles <span></span></label>' +
         '<input class="mt-miles-input" type="text" inputmode="decimal" placeholder="0.00" min="0" step="0.01" />' +
       '</div>' +
-      '<button class="mt-remove-btn" onclick="mtRemoveRow(this)" title="Remove">×</button>';
+      '<button class="mt-remove-btn mt-hidden" onclick="mtRemoveRow(this)" title="Remove">×</button>';
     container.appendChild(row);
     mtUpdateRemoveButtons();
   }

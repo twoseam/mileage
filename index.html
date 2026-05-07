@@ -170,6 +170,19 @@
       gap: 16px;
       align-items: flex-end;
       margin-bottom: 1.5rem;
+      max-height: 200px;
+      overflow: hidden;
+      transition:
+        opacity 0.35s ease,
+        max-height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+        margin-bottom 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+        transform 0.35s ease;
+    }
+    .mt-entry.mt-collapsed {
+      opacity: 0;
+      max-height: 0;
+      margin-bottom: 0;
+      transform: translateY(-8px);
     }
 
     .mt-entry-field {
@@ -803,7 +816,7 @@
   function mtAddRow() {
     var container = document.getElementById('mt-entries');
     var row = document.createElement('div');
-    row.className = 'mt-entry';
+    row.className = 'mt-entry mt-collapsed';
     var existingDates = container.querySelectorAll('.mt-entry input[type="date"]');
     var todayStr = mtTodayStr();
     var defaultDate;
@@ -827,21 +840,30 @@
       '</div>' +
       '<button class="mt-remove-btn mt-hidden" onclick="mtRemoveRow(this)" title="Remove">×</button>';
     container.appendChild(row);
-    mtUpdateRemoveButtons();
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        row.classList.remove('mt-collapsed');
+        mtUpdateRemoveButtons();
+      });
+    });
   }
 
   function mtRemoveRow(btn) {
     if (document.querySelectorAll('.mt-entry').length <= 1) return;
-    btn.parentElement.remove();
+    var row = btn.parentElement;
+    row.classList.add('mt-collapsed');
     mtUpdateRemoveButtons();
+    setTimeout(function() { row.remove(); }, 400);
   }
 
   function mtUpdateRemoveButtons() {
-    var entries = document.querySelectorAll('.mt-entry');
+    var entries = document.querySelectorAll('.mt-entry:not(.mt-collapsed)');
     var hide = entries.length <= 1;
     entries.forEach(function(entry) {
       var btn = entry.querySelector('.mt-remove-btn');
-      if (btn) btn.style.visibility = hide ? 'hidden' : '';
+      if (!btn) return;
+      if (hide) btn.classList.add('mt-hidden');
+      else btn.classList.remove('mt-hidden');
     });
   }
 

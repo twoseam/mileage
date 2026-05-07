@@ -387,5 +387,7 @@ function doPost(e) {
     });
   });
 
+  try { CacheService.getScriptCache().remove('dashboard'); } catch (e) {}
+
   return _json({ written: written, skipped: skipped, results: results });
 }

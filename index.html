@@ -328,8 +328,9 @@
     }
     #mt-result:not(:empty),
     #mt-error:not(:empty) { display: block; }
-    #mt-result { color: #016074; }
+    #mt-result { color: #016074; transition: opacity 0.4s ease; }
     #mt-error  { color: #B02113; }
+    #mt-result.mt-fade-out { opacity: 0; }
 
     #mt-last-tracked {
       margin-bottom: 1rem;
@@ -749,11 +750,20 @@
 
   MilesTracker.onSuccess = function(result) {
     mtFinishSubmitProgress();
-    document.getElementById('mt-result').textContent = '✓ ' + result.written + ' day' + (result.written !== 1 ? 's' : '') + ' saved!';
+    var resultEl = document.getElementById('mt-result');
+    resultEl.classList.remove('mt-fade-out');
+    resultEl.textContent = '✓ ' + result.written + ' day' + (result.written !== 1 ? 's' : '') + ' saved!';
     document.getElementById('mt-error').textContent = '';
     document.getElementById('mt-entries').innerHTML = '';
     mtAddRow();
     mtRefreshStats(false);
+    setTimeout(function() {
+      resultEl.classList.add('mt-fade-out');
+      setTimeout(function() {
+        resultEl.textContent = '';
+        resultEl.classList.remove('mt-fade-out');
+      }, 400);
+    }, 2500);
   };
 
   MilesTracker.onError = function(err) {
@@ -768,25 +778,33 @@
     if (disp) disp.textContent = mtFormatDateLabel(input.value);
   }
 
+  function mtTodayStr() {
+    var now = new Date();
+    return now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0');
+  }
+
   function mtAddRow() {
     var container = document.getElementById('mt-entries');
     var row = document.createElement('div');
     row.className = 'mt-entry';
     var existingDates = container.querySelectorAll('.mt-entry input[type="date"]');
-    var today;
+    var todayStr = mtTodayStr();
+    var defaultDate;
     if (existingDates.length > 0) {
       var nextDate = new Date(existingDates[existingDates.length - 1].value + 'T12:00:00');
       nextDate.setDate(nextDate.getDate() + 1);
-      today = nextDate.toISOString().split('T')[0];
+      var nextStr = nextDate.toISOString().split('T')[0];
+      defaultDate = (nextStr > todayStr) ? todayStr : nextStr;
     } else {
-      var now = new Date();
-      today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      defaultDate = todayStr;
     }
     row.innerHTML =
       '<div class="mt-entry-field">' +
         '<label>Date</label>' +
-        '<div class="mt-date-display">' + mtFormatDateLabel(today) + '</div>' +
-        '<input type="date" class="mt-date-real" value="' + today + '" max="2026-12-31" min="2026-01-01" onchange="mtDateChanged(this)" />' +
+        '<div class="mt-date-display">' + mtFormatDateLabel(defaultDate) + '</div>' +
+        '<input type="date" class="mt-date-real" value="' + defaultDate + '" max="' + todayStr + '" min="2026-01-01" onchange="mtDateChanged(this)" />' +
       '</div>' +
       '<div class="mt-entry-field">' +
         '<label>Miles <span></span></label>' +

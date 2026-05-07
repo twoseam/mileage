@@ -833,7 +833,7 @@
     var hide = entries.length <= 1;
     entries.forEach(function(entry) {
       var btn = entry.querySelector('.mt-remove-btn');
-      if (btn) btn.style.display = hide ? 'none' : '';
+      if (btn) btn.style.visibility = hide ? 'hidden' : '';
     });
   }
 

@@ -221,6 +221,10 @@ function doGet(e) {
   }
 
   if (action === 'dashboard') {
+    var cache = CacheService.getScriptCache();
+    var cached = cache.get('dashboard');
+    if (cached) return _json(JSON.parse(cached));
+
     var values = sheet.getDataRange().getValues();
 
     var miles   = sheet.getRange('I4').getValue();
@@ -259,7 +263,7 @@ function doGet(e) {
       weeks.push({ weekStart: _fmtDate(sun), miles: _sumRange(values, sun, 7) });
     }
 
-    return _json({
+    var response = {
       stats: {
         miles: miles, days: days, percent: percent,
         monthMiles: monthMiles, weekMiles: weekMiles,
@@ -269,7 +273,9 @@ function doGet(e) {
       },
       lastTracked: { lastDate: lastDate, daysBehind: daysBehind },
       weekly12: { weeks: weeks }
-    });
+    };
+    try { cache.put('dashboard', JSON.stringify(response), 60); } catch (e) {}
+    return _json(response);
   }
 
   if (action === 'peek') {

@@ -1,0 +1,606 @@
+<script src="https://cdn.jsdelivr.net/gh/twoseam/mileage@main/miles-tracker.js"></script>
+
+<style>
+  #miles-tracker {
+    max-width: 500px;
+    margin: 0 auto;
+    font-family: inherit;
+    color: inherit;
+    padding: 0 1.5rem 1.5rem;
+    border-radius: 8px;
+    transition: background 1s, color 1s;
+  }
+
+  #mt-stats, #mt-stats-2, #mt-stats-3 {
+    display: flex;
+    gap: 32px;
+  }
+  #mt-stats   { margin-bottom: 1.75rem; }
+  #mt-stats-2 { margin-bottom: 1.75rem; }
+  #mt-stats-3 { margin-bottom: 2.25rem; }
+
+  .mt-stat { flex: 1; }
+
+  .mt-stat-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .mt-stat-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  #mt-chart-section { margin-bottom: 2rem; }
+
+  .mt-chart-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 8px;
+  }
+
+  #mt-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 80px;
+    padding-top: 14px;
+  }
+
+  #mt-chart-labels {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .mt-bar {
+    flex: 1;
+    min-height: 1px;
+    position: relative;
+    transition: height 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .mt-bar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #8FCFC2;
+    border-radius: 6px 6px 0 0;
+  }
+
+  .mt-bar-current::before {
+    background: #E89A1F;
+  }
+
+  .mt-bar-value {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 0.6rem;
+    color: #fff;
+    margin-bottom: 2px;
+    line-height: 1;
+  }
+
+  .mt-bar-label {
+    flex: 1;
+    text-align: center;
+    font-size: 0.55rem;
+    opacity: 0.5;
+    line-height: 1;
+  }
+
+  .mt-entry {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    margin-bottom: 1.5rem;
+  }
+
+  .mt-entry-field {
+    flex: 1;
+    position: relative;
+  }
+
+  .mt-entry-field label {
+    display: block;
+    font-size: 0.95rem;
+    text-align: left;
+    margin-bottom: 6px;
+    color: inherit;
+  }
+
+  .mt-entry-field label span {
+    font-size: 0.85rem;
+    opacity: 0.5;
+    margin-left: 6px;
+  }
+
+  .mt-entry-field input,
+  .mt-date-display {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid currentColor;
+    border-radius: 0;
+    padding: 8px 0;
+    font-size: 1rem;
+    font-family: inherit;
+    color: inherit;
+    outline: none;
+    -webkit-appearance: none;
+    text-align: left;
+  }
+
+  .mt-date-display {
+    line-height: 1.2;
+    pointer-events: none;
+  }
+
+  /* Real date input overlays the visible display — taps hit it directly,
+     so the native picker opens with no JS shim. */
+  .mt-date-real {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 2.5rem;
+    opacity: 0;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    padding: 0;
+    background: transparent;
+  }
+
+  .mt-remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: inherit;
+    opacity: 0.3;
+    padding: 0 0 8px 0;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .mt-remove-btn:hover { opacity: 0.7; }
+
+  #mt-add-row { margin-bottom: 1rem; }
+
+  #mt-add-row button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: inherit;
+    opacity: 0.5;
+    padding: 0;
+  }
+  #mt-add-row button:hover { opacity: 1; }
+
+  #mt-submit-btn {
+    display: block;
+    margin: 0 auto 6px;
+    border: none;
+    border-radius: 10px;
+    padding: 16px 52px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: #1a1a1a;
+    background: #E89A1F;
+    box-shadow:
+      0 5px 0 #8E5A0E,
+      0 10px 18px rgba(0, 0, 0, 0.4);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.2s ease;
+  }
+  #mt-submit-btn:hover { opacity: 0.95; }
+  #mt-submit-btn:active {
+    transform: translateY(5px);
+    box-shadow:
+      0 0 0 #8E5A0E,
+      0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  #mt-result {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    opacity: 0.6;
+    min-height: 1.2em;
+  }
+
+  #mt-error {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: red;
+    min-height: 1.2em;
+  }
+
+  #mt-last-tracked {
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    text-align: center;
+    opacity: 0.6;
+    line-height: 1.5;
+  }
+
+  #miles-tracker.mt-dark #mt-error { color: #ff6b6b; }
+
+  #mt-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  #mt-modal.mt-modal-show { display: flex; }
+
+  .mt-modal-card {
+    background: #fff;
+    color: #252525;
+    padding: 1.5rem 1.25rem 1.25rem;
+    border-radius: 12px;
+    max-width: 340px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  }
+  .mt-modal-text {
+    font-size: 0.95rem;
+    line-height: 1.45;
+    margin-bottom: 1.25rem;
+  }
+  .mt-modal-text strong { font-weight: 700; }
+  .mt-modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mt-modal-buttons button {
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    background: #f5f5f5;
+    color: #252525;
+  }
+  .mt-modal-buttons button[data-action="replace"] {
+    background: #252525;
+    color: #fff;
+    border-color: #252525;
+    font-weight: 700;
+  }
+  .mt-modal-buttons button[data-action="cancel"] {
+    background: transparent;
+    border: none;
+    color: #999;
+    margin-top: 4px;
+  }
+</style>
+<div id="miles-tracker">
+  <div id="mt-stats">
+    <div class="mt-stat">
+      <div class="mt-stat-label">Total Miles</div>
+      <div class="mt-stat-value" id="mt-miles-val">—</div>
+    </div>
+    <div class="mt-stat">
+      <div class="mt-stat-label">Days walked</div>
+      <div class="mt-stat-value" id="mt-days-val">—</div>
+    </div>
+    <div class="mt-stat">
+      <div class="mt-stat-label">Percent</div>
+      <div class="mt-stat-value" id="mt-percent-val">—</div>
+    </div>
+  </div>
+
+  <div id="mt-stats-2">
+    <div class="mt-stat">
+      <div class="mt-stat-label">Weekly</div>
+      <div class="mt-stat-value" id="mt-week-val">—</div>
+    </div>
+    <div class="mt-stat">
+      <div class="mt-stat-label">Monthly</div>
+      <div class="mt-stat-value" id="mt-month-val">—</div>
+    </div>
+    <div class="mt-stat">
+      <div class="mt-stat-label">Longest Walk</div>
+      <div class="mt-stat-value" id="mt-longest-walk-val">—</div>
+    </div>
+  </div>
+
+  <div id="mt-stats-3">
+    <div class="mt-stat">
+      <div class="mt-stat-label">Current Streak</div>
+      <div class="mt-stat-value" id="mt-streak-val">—</div>
+    </div>
+    <div class="mt-stat">
+      <div class="mt-stat-label">Longest Streak</div>
+      <div class="mt-stat-value" id="mt-longest-streak-val">—</div>
+    </div>
+    <div class="mt-stat"></div>
+  </div>
+
+  <div id="mt-chart-section">
+    <div id="mt-chart"></div>
+    <div id="mt-chart-labels"></div>
+  </div>
+
+  <div id="mt-form">
+    <div id="mt-entries"></div>
+    <div id="mt-add-row">
+      <button onclick="mtAddRow()">+ Add another day</button>
+    </div>
+    <div id="mt-last-tracked"></div>
+    <button id="mt-submit-btn" onclick="mtSubmit()">Track It!</button>
+    <div id="mt-result"></div>
+    <div id="mt-error"></div>
+  </div>
+</div>
+
+<div id="mt-modal">
+  <div class="mt-modal-card">
+    <div class="mt-modal-text"></div>
+    <div class="mt-modal-buttons">
+      <button data-action="replace">Replace</button>
+      <button data-action="add">Add to it</button>
+      <button data-action="cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+  function mtFormatDateLabel(yyyymmdd) {
+    var d = new Date(yyyymmdd + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  function mtFmtMiles(n) {
+    return (typeof n === 'number') ? n.toFixed(1) : '—';
+  }
+
+  function mtCountUp(el, target, formatter, duration) {
+    var start = null;
+    function frame(now) {
+      if (start === null) start = now;
+      var t = Math.min(1, (now - start) / duration);
+      var eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = formatter(target * eased);
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function mtSetNum(id, target, formatter, animate) {
+    var el = document.getElementById(id);
+    if (typeof target !== 'number' || isNaN(target)) { el.textContent = '—'; return; }
+    if (animate) mtCountUp(el, target, formatter, 1000);
+    else el.textContent = formatter(target);
+  }
+
+  function mtWeekNum(yyyymmdd) {
+    var d = new Date(yyyymmdd + 'T12:00:00');
+    var year = d.getFullYear();
+    var jan1 = new Date(year, 0, 1);
+    var firstSun = new Date(year, 0, 1 - jan1.getDay());
+    var diffDays = Math.round((d - firstSun) / (24 * 60 * 60 * 1000));
+    return Math.floor(diffDays / 7) + 1;
+  }
+
+  function mtRefreshStats(animate) {
+    MilesTracker.fetchStats(function(data) {
+      var daysNum = data.days;
+      if (typeof daysNum === 'string') daysNum = parseInt(daysNum.split(' ')[0], 10);
+
+      var pctNum = NaN;
+      if (typeof data.percent === 'number') {
+        pctNum = data.percent <= 1 ? data.percent * 100 : data.percent;
+      }
+
+      var fmtInt = function(n) { return Math.round(n).toString(); };
+      var fmtPct = function(n) { return Math.round(n) + '%'; };
+
+      mtSetNum('mt-miles-val',   data.miles,         mtFmtMiles, animate);
+      mtSetNum('mt-days-val',    daysNum,            fmtInt,     animate);
+      if (!isNaN(pctNum)) {
+        mtSetNum('mt-percent-val', pctNum, fmtPct, animate);
+      } else {
+        document.getElementById('mt-percent-val').textContent = data.percent != null ? data.percent : '—';
+      }
+      mtSetNum('mt-month-val',          data.monthMiles,    mtFmtMiles, animate);
+      mtSetNum('mt-week-val',           data.weekMiles,     mtFmtMiles, animate);
+      mtSetNum('mt-streak-val',         data.streak,        fmtInt,     animate);
+      mtSetNum('mt-longest-walk-val',   data.longestWalk,   mtFmtMiles, animate);
+      mtSetNum('mt-longest-streak-val', data.longestStreak, fmtInt,     animate);
+    });
+    mtRefreshLastTracked();
+    mtRefreshChart(animate);
+  }
+
+  function mtRefreshLastTracked() {
+    MilesTracker.fetchLastTracked(function(lastDate, daysBehind) {
+      var el = document.getElementById('mt-last-tracked');
+      if (!lastDate) { el.textContent = 'No miles tracked yet for 2026.'; return; }
+      var d = new Date(lastDate + 'T12:00:00');
+      var formatted = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      el.textContent = 'Last tracked: ' + formatted;
+    });
+  }
+
+  function mtRefreshChart(animate) {
+    MilesTracker.fetchWeekly12(function(weeks) {
+      weeks = weeks.slice(-6);
+      var max = 0;
+      weeks.forEach(function(w) { if (w.miles > max) max = w.miles; });
+      if (max === 0) max = 1;
+      var barsHtml = '';
+      var labelsHtml = '';
+      weeks.forEach(function(w, i) {
+        var pct = (w.miles / max) * 100;
+        var title = w.weekStart + ': ' + w.miles.toFixed(1) + ' mi';
+        var lbl = mtWeekNum(w.weekStart);
+        var val = w.miles > 0 ? '<div class="mt-bar-value">' + w.miles.toFixed(1) + '</div>' : '';
+        var startHeight = animate ? 0 : pct;
+        var isCurrent = (i === weeks.length - 1);
+        var cls = isCurrent ? 'mt-bar mt-bar-current' : 'mt-bar';
+        barsHtml   += '<div class="' + cls + '" data-target-height="' + pct + '" style="height:' + startHeight + '%" title="' + title + '">' + val + '</div>';
+        labelsHtml += '<div class="mt-bar-label">' + lbl + '</div>';
+      });
+      document.getElementById('mt-chart').innerHTML = barsHtml;
+      document.getElementById('mt-chart-labels').innerHTML = labelsHtml;
+      if (animate) {
+        requestAnimationFrame(function() {
+          requestAnimationFrame(function() {
+            document.querySelectorAll('#mt-chart .mt-bar').forEach(function(bar) {
+              bar.style.height = bar.getAttribute('data-target-height') + '%';
+            });
+          });
+        });
+      }
+    });
+  }
+
+  MilesTracker.onReady = function() {
+    if (document.querySelectorAll('.mt-entry').length === 0) mtAddRow();
+    mtRefreshStats(true);
+  };
+
+  MilesTracker.onSuccess = function(result) {
+    document.getElementById('mt-result').textContent = '✓ ' + result.written + ' day' + (result.written !== 1 ? 's' : '') + ' saved!';
+    document.getElementById('mt-error').textContent = '';
+    document.getElementById('mt-entries').innerHTML = '';
+    mtAddRow();
+    mtRefreshStats(false);
+  };
+
+  MilesTracker.onError = function(err) {
+    var msg = (typeof err === 'object' && err.result) ? err.result.error.message : String(err);
+    document.getElementById('mt-error').textContent = '✗ ' + msg;
+    document.getElementById('mt-result').textContent = '';
+  };
+
+  function mtDateChanged(input) {
+    var disp = input.previousElementSibling;
+    if (disp) disp.textContent = mtFormatDateLabel(input.value);
+  }
+
+  function mtAddRow() {
+    var container = document.getElementById('mt-entries');
+    var row = document.createElement('div');
+    row.className = 'mt-entry';
+    var existingDates = container.querySelectorAll('.mt-entry input[type="date"]');
+    var today;
+    if (existingDates.length > 0) {
+      var nextDate = new Date(existingDates[existingDates.length - 1].value + 'T12:00:00');
+      nextDate.setDate(nextDate.getDate() + 1);
+      today = nextDate.toISOString().split('T')[0];
+    } else {
+      var now = new Date();
+      today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    }
+    row.innerHTML =
+      '<div class="mt-entry-field">' +
+        '<label>Date</label>' +
+        '<div class="mt-date-display">' + mtFormatDateLabel(today) + '</div>' +
+        '<input type="date" class="mt-date-real" value="' + today + '" max="2026-12-31" min="2026-01-01" onchange="mtDateChanged(this)" />' +
+      '</div>' +
+      '<div class="mt-entry-field">' +
+        '<label>Miles <span></span></label>' +
+        '<input class="mt-miles-input" type="text" inputmode="decimal" placeholder="0.00" min="0" step="0.01" />' +
+      '</div>' +
+      '<button class="mt-remove-btn" onclick="this.parentElement.remove()" title="Remove">×</button>';
+    container.appendChild(row);
+  }
+
+  function mtAskMode(date, existing, attempting) {
+    return new Promise(function(resolve) {
+      var modal = document.getElementById('mt-modal');
+      var formatted = mtFormatDateLabel(date);
+      var combined = (existing + attempting).toFixed(1);
+      modal.querySelector('.mt-modal-text').innerHTML =
+        '<strong>' + formatted + '</strong> already has <strong>' +
+        existing.toFixed(1) + ' mi</strong> logged.<br><br>' +
+        'Replace it with <strong>' + attempting.toFixed(1) + ' mi</strong>, ' +
+        'or add to it (total: <strong>' + combined + ' mi</strong>)?';
+      var buttons = modal.querySelectorAll('button');
+      function cleanup(choice) {
+        modal.classList.remove('mt-modal-show');
+        buttons.forEach(function(b) { b.onclick = null; });
+        resolve(choice);
+      }
+      buttons.forEach(function(btn) {
+        btn.onclick = function() { cleanup(btn.getAttribute('data-action')); };
+      });
+      modal.classList.add('mt-modal-show');
+    });
+  }
+
+  function mtSubmit() {
+    var rows = document.querySelectorAll('.mt-entry');
+    var entries = [];
+    rows.forEach(function(row) {
+      var date  = row.querySelector('input[type="date"]').value;
+      var miles = parseFloat(row.querySelector('.mt-miles-input').value);
+      if (date && !isNaN(miles) && miles >= 0) entries.push({ date: date, miles: miles });
+    });
+    if (entries.length === 0) {
+      document.getElementById('mt-error').textContent = 'Please enter at least one date and mileage.';
+      return;
+    }
+
+    document.getElementById('mt-result').textContent = 'Checking...';
+    document.getElementById('mt-error').textContent = '';
+
+    var dates = entries.map(function(e) { return e.date; });
+    MilesTracker.fetchPeek(dates, function(existingMap) {
+      // Walk entries in order; prompt for any that already have miles.
+      var i = 0;
+      function next() {
+        if (i >= entries.length) {
+          document.getElementById('mt-result').textContent = 'Saving...';
+          MilesTracker.logBatch(entries);
+          return;
+        }
+        var entry = entries[i];
+        var prev = existingMap[entry.date];
+        if (typeof prev === 'number' && prev > 0) {
+          mtAskMode(entry.date, prev, entry.miles).then(function(choice) {
+            if (choice === 'cancel') {
+              document.getElementById('mt-result').textContent = '';
+              return;
+            }
+            entry.mode = choice;
+            i++;
+            next();
+          });
+        } else {
+          i++;
+          next();
+        }
+      }
+      next();
+    });
+  }
+
+  MilesTracker.init();
+</script>

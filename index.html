@@ -352,20 +352,25 @@
       transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.2s ease;
     }
     .mt-modal-buttons button[data-action="replace"] {
-      background: #E89A1F;
-      color: #1a1a1a;
-      box-shadow: 0 4px 0 #8E5A0E, 0 8px 14px rgba(0, 0, 0, 0.25);
+      background: #B02113;
+      color: #f5f0e6;
+      box-shadow: 0 4px 0 #6C1308, 0 8px 14px rgba(0, 0, 0, 0.25);
       margin-bottom: 4px;
     }
     .mt-modal-buttons button[data-action="replace"]:active {
       transform: translateY(4px);
-      box-shadow: 0 0 0 #8E5A0E, 0 2px 4px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 0 0 #6C1308, 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     .mt-modal-buttons button[data-action="add"] {
-      background: #1a1a1a;
-      color: #f5f0e6;
+      background: #EB9A00;
+      color: #1a1a1a;
+      box-shadow: 0 4px 0 #8E5A0E, 0 8px 14px rgba(0, 0, 0, 0.25);
+      margin-bottom: 4px;
     }
-    .mt-modal-buttons button[data-action="add"]:active { opacity: 0.85; }
+    .mt-modal-buttons button[data-action="add"]:active {
+      transform: translateY(4px);
+      box-shadow: 0 0 0 #8E5A0E, 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
     .mt-modal-buttons button[data-action="cancel"] {
       background: transparent;
       color: #1a1a1a;
@@ -509,7 +514,14 @@
     return (typeof n === 'number') ? n.toFixed(1) : '—';
   }
 
-  function mtCountUp(el, target, formatter, duration) {
+  var MT_STAGGER = 200;
+  var MT_CASCADE_DELAY = 400;
+
+  function mtCountUp(el, target, formatter, duration, delay) {
+    if (delay) {
+      setTimeout(function() { mtCountUp(el, target, formatter, duration, 0); }, delay);
+      return;
+    }
     var start = null;
     function frame(now) {
       if (start === null) start = now;
@@ -521,10 +533,10 @@
     requestAnimationFrame(frame);
   }
 
-  function mtSetNum(id, target, formatter, animate) {
+  function mtSetNum(id, target, formatter, animate, delay) {
     var el = document.getElementById(id);
     if (typeof target !== 'number' || isNaN(target)) { el.textContent = '—'; return; }
-    if (animate) mtCountUp(el, target, formatter, 1000);
+    if (animate) mtCountUp(el, target, formatter, 1000, delay || 0);
     else el.textContent = formatter(target);
   }
 
@@ -558,18 +570,20 @@
     var fmtInt = function(n) { return Math.round(n).toString(); };
     var fmtPct = function(n) { return Math.round(n) + '%'; };
 
-    mtSetNum('mt-miles-val',   data.miles,  mtFmtMiles, animate);
-    mtSetNum('mt-days-val',    daysNum,     fmtInt,     animate);
+    var d = animate ? MT_CASCADE_DELAY : 0;
+    var s = animate ? MT_STAGGER : 0;
+    mtSetNum('mt-miles-val',          data.miles,         mtFmtMiles, animate, d + 0 * s);
+    mtSetNum('mt-days-val',           daysNum,            fmtInt,     animate, d + 1 * s);
     if (!isNaN(pctNum)) {
-      mtSetNum('mt-percent-val', pctNum, fmtPct, animate);
+      mtSetNum('mt-percent-val',      pctNum,             fmtPct,     animate, d + 2 * s);
     } else {
       document.getElementById('mt-percent-val').textContent = data.percent != null ? data.percent : '—';
     }
-    mtSetNum('mt-month-val',          data.monthMiles,    mtFmtMiles, animate);
-    mtSetNum('mt-week-val',           data.weekMiles,     mtFmtMiles, animate);
-    mtSetNum('mt-streak-val',         data.streak,        fmtInt,     animate);
-    mtSetNum('mt-longest-walk-val',   data.longestWalk,   mtFmtMiles, animate);
-    mtSetNum('mt-longest-streak-val', data.longestStreak, fmtInt,     animate);
+    mtSetNum('mt-week-val',           data.weekMiles,     mtFmtMiles, animate, d + 3 * s);
+    mtSetNum('mt-month-val',          data.monthMiles,    mtFmtMiles, animate, d + 4 * s);
+    mtSetNum('mt-longest-walk-val',   data.longestWalk,   mtFmtMiles, animate, d + 5 * s);
+    mtSetNum('mt-streak-val',         data.streak,        fmtInt,     animate, d + 6 * s);
+    mtSetNum('mt-longest-streak-val', data.longestStreak, fmtInt,     animate, d + 7 * s);
   }
 
   function mtRenderLastTracked(lastDate) {
@@ -603,8 +617,10 @@
     if (animate) {
       requestAnimationFrame(function() {
         requestAnimationFrame(function() {
-          document.querySelectorAll('#mt-chart .mt-bar').forEach(function(bar) {
-            bar.style.height = bar.getAttribute('data-target-height') + '%';
+          document.querySelectorAll('#mt-chart .mt-bar').forEach(function(bar, i) {
+            setTimeout(function() {
+              bar.style.height = bar.getAttribute('data-target-height') + '%';
+            }, MT_CASCADE_DELAY + i * MT_STAGGER);
           });
         });
       });
@@ -697,9 +713,9 @@
       var combined = (existing + attempting).toFixed(1);
       modal.querySelector('.mt-modal-text').innerHTML =
         '<strong>' + formatted + '</strong> already has <strong>' +
-        existing.toFixed(1) + ' mi</strong> logged.<br><br>' +
-        'Replace it with <strong>' + attempting.toFixed(1) + ' mi</strong>, ' +
-        'or add to it (total: <strong>' + combined + ' mi</strong>)?';
+        existing.toFixed(1) + '&nbsp;mi</strong> logged.<br><br>' +
+        'Replace it with <strong>' + attempting.toFixed(1) + '&nbsp;mi</strong>,<br>' +
+        'or add to it (total: <strong>' + combined + '&nbsp;mi</strong>)?';
       var buttons = modal.querySelectorAll('button');
       function cleanup(choice) {
         modal.classList.remove('mt-modal-show');

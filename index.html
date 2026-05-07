@@ -390,24 +390,36 @@
       opacity: 0;
       pointer-events: none;
     }
-    .mt-loader-mark {
-      font-family: "omnes", sans-serif;
-      font-weight: 900;
-      font-size: 5rem;
-      color: #E89A1F;
-      line-height: 1;
-      animation: mtPulse 1.1s ease-in-out infinite alternate;
+    .mt-loader-bar {
+      width: 240px;
+      height: 12px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
     }
-    @keyframes mtPulse {
-      from { transform: scale(0.92); opacity: 0.55; }
-      to   { transform: scale(1.06); opacity: 1; }
+    .mt-loader-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(
+        to right,
+        #016074 0%,    #016074 16.67%,
+        #94D3BE 16.67%, #94D3BE 33.33%,
+        #E7D7A4 33.33%, #E7D7A4 50%,
+        #EB9A00 50%,    #EB9A00 66.67%,
+        #CA6902 66.67%, #CA6902 83.33%,
+        #B02113 83.33%, #B02113 100%
+      );
+      background-size: 240px 100%;
+      transition: width 0.3s ease-out;
     }
   </style>
 </head>
 <body>
 
 <div id="mt-loader">
-  <div class="mt-loader-mark">M</div>
+  <div class="mt-loader-bar">
+    <div class="mt-loader-fill"></div>
+  </div>
 </div>
 
 <header class="wordmark">
@@ -599,13 +611,35 @@
     }
   }
 
+  var mtProgressTimer = null;
+  var mtProgressValue = 0;
+
+  function mtStartProgress() {
+    var fill = document.querySelector('.mt-loader-fill');
+    if (!fill) return;
+    mtProgressValue = 0;
+    fill.style.width = '0%';
+    mtProgressTimer = setInterval(function() {
+      if (mtProgressValue >= 95) return;
+      var step = Math.max(0.4, (95 - mtProgressValue) * 0.04);
+      mtProgressValue += step;
+      fill.style.width = mtProgressValue + '%';
+    }, 100);
+  }
+
   function mtHideLoader() {
-    var loader = document.getElementById('mt-loader');
-    if (loader) loader.classList.add('mt-loader-hide');
+    if (mtProgressTimer) { clearInterval(mtProgressTimer); mtProgressTimer = null; }
+    var fill = document.querySelector('.mt-loader-fill');
+    if (fill) fill.style.width = '100%';
+    setTimeout(function() {
+      var loader = document.getElementById('mt-loader');
+      if (loader) loader.classList.add('mt-loader-hide');
+    }, 350);
   }
 
   MilesTracker.onReady = function() {
     if (document.querySelectorAll('.mt-entry').length === 0) mtAddRow();
+    mtStartProgress();
     mtRefreshStats(true);
   };
 

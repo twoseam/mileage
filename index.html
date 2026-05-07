@@ -47,7 +47,7 @@
 
     .wordmark {
       max-width: 500px;
-      margin: 3rem auto 2rem;
+      margin: 3rem auto 3rem;
       padding: 0 2.5rem;
       text-align: center;
       font-family: "omnes", system-ui, sans-serif;
@@ -78,7 +78,7 @@
     }
     #mt-stats   { margin-bottom: 1.75rem; }
     #mt-stats-2 { margin-bottom: 1.75rem; }
-    #mt-stats-3 { margin-bottom: 2.25rem; }
+    #mt-stats-3 { margin-bottom: 3.25rem; }
 
     .mt-stat { flex: 1; }
 
@@ -98,7 +98,7 @@
       line-height: 1;
     }
 
-    #mt-chart-section { margin-bottom: 2rem; }
+    #mt-chart-section { margin-bottom: 3.25rem; }
 
     .mt-chart-label {
       font-size: 0.6rem;
@@ -259,7 +259,7 @@
       border-radius: 10px;
       padding: 16px 52px;
       font-size: 0.9rem;
-      font-weight: 800;
+      font-weight: 900;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       cursor: pointer;
@@ -276,6 +276,40 @@
       box-shadow:
         0 0 0 #8E5A0E,
         0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+    #mt-submit-btn.mt-busy {
+      opacity: 0.4;
+      pointer-events: none;
+      transform: translateY(5px);
+      box-shadow:
+        0 0 0 #8E5A0E,
+        0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .mt-submit-progress {
+      display: none;
+      width: 240px;
+      height: 8px;
+      border-radius: 4px;
+      margin: 0.85rem auto 0;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+    .mt-submit-progress.mt-show { display: block; }
+    .mt-submit-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(
+        to right,
+        #016074 0%,    #016074 16.67%,
+        #94D3BE 16.67%, #94D3BE 33.33%,
+        #E7D7A4 33.33%, #E7D7A4 50%,
+        #EB9A00 50%,    #EB9A00 66.67%,
+        #CA6902 66.67%, #CA6902 83.33%,
+        #B02113 83.33%, #B02113 100%
+      );
+      background-size: 240px 100%;
+      transition: width 0.3s ease-out;
     }
 
     #mt-result {
@@ -417,6 +451,21 @@
       background-size: 280px 100%;
       transition: width 0.3s ease-out;
     }
+
+    .mt-footer {
+      text-align: center;
+      padding: 0 1.5rem 2rem;
+    }
+    .mt-footer a {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: inherit;
+      text-decoration: none;
+      opacity: 0.35;
+      transition: opacity 0.2s ease;
+    }
+    .mt-footer a:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
@@ -487,10 +536,15 @@
     </div>
     <div id="mt-last-tracked"></div>
     <button id="mt-submit-btn" onclick="mtSubmit()">Track It!</button>
+    <div class="mt-submit-progress"><div class="mt-submit-fill"></div></div>
     <div id="mt-result"></div>
     <div id="mt-error"></div>
   </div>
 </div>
+
+<footer class="mt-footer">
+  <a href="https://docs.google.com/spreadsheets/d/1esqpdcqIxpW55ZIuhkcjzWOBfK99qVzWk5T1YbTkR_4/edit?usp=sharing&rm=minimal" target="_blank" rel="noopener noreferrer">View Source Sheet</a>
+</footer>
 
 <div id="mt-modal">
   <div class="mt-modal-card">
@@ -653,6 +707,37 @@
     }, 350);
   }
 
+  var mtSubmitTimer = null;
+  var mtSubmitValue = 0;
+
+  function mtStartSubmitProgress() {
+    var btn = document.getElementById('mt-submit-btn');
+    var prog = document.querySelector('.mt-submit-progress');
+    var fill = prog.querySelector('.mt-submit-fill');
+    btn.classList.add('mt-busy');
+    prog.classList.add('mt-show');
+    mtSubmitValue = 0;
+    fill.style.width = '0%';
+    mtSubmitTimer = setInterval(function() {
+      if (mtSubmitValue >= 95) return;
+      var step = Math.max(0.4, (95 - mtSubmitValue) * 0.04);
+      mtSubmitValue += step;
+      fill.style.width = mtSubmitValue + '%';
+    }, 100);
+  }
+
+  function mtFinishSubmitProgress() {
+    if (mtSubmitTimer) { clearInterval(mtSubmitTimer); mtSubmitTimer = null; }
+    var fill = document.querySelector('.mt-submit-fill');
+    if (fill) fill.style.width = '100%';
+    setTimeout(function() {
+      var btn = document.getElementById('mt-submit-btn');
+      var prog = document.querySelector('.mt-submit-progress');
+      btn.classList.remove('mt-busy');
+      prog.classList.remove('mt-show');
+    }, 300);
+  }
+
   MilesTracker.onReady = function() {
     if (document.querySelectorAll('.mt-entry').length === 0) mtAddRow();
     mtStartProgress();
@@ -660,6 +745,7 @@
   };
 
   MilesTracker.onSuccess = function(result) {
+    mtFinishSubmitProgress();
     document.getElementById('mt-result').textContent = '✓ ' + result.written + ' day' + (result.written !== 1 ? 's' : '') + ' saved!';
     document.getElementById('mt-error').textContent = '';
     document.getElementById('mt-entries').innerHTML = '';
@@ -668,6 +754,7 @@
   };
 
   MilesTracker.onError = function(err) {
+    mtFinishSubmitProgress();
     var msg = (typeof err === 'object' && err.result) ? err.result.error.message : String(err);
     document.getElementById('mt-error').textContent = '✗ ' + msg;
     document.getElementById('mt-result').textContent = '';
@@ -742,16 +829,15 @@
       return;
     }
 
-    document.getElementById('mt-result').textContent = 'Checking...';
+    document.getElementById('mt-result').textContent = '';
     document.getElementById('mt-error').textContent = '';
+    mtStartSubmitProgress();
 
     var dates = entries.map(function(e) { return e.date; });
     MilesTracker.fetchPeek(dates, function(existingMap) {
-      // Walk entries in order; prompt for any that already have miles.
       var i = 0;
       function next() {
         if (i >= entries.length) {
-          document.getElementById('mt-result').textContent = 'Saving...';
           MilesTracker.logBatch(entries);
           return;
         }
@@ -760,7 +846,7 @@
         if (typeof prev === 'number' && prev > 0) {
           mtAskMode(entry.date, prev, entry.miles).then(function(choice) {
             if (choice === 'cancel') {
-              document.getElementById('mt-result').textContent = '';
+              mtFinishSubmitProgress();
               return;
             }
             entry.mode = choice;

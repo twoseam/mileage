@@ -849,6 +849,11 @@
       document.getElementById('mt-error').textContent = 'Please enter at least one date and mileage.';
       return;
     }
+    var todayStr = mtTodayStr();
+    if (entries.some(function(e) { return e.date > todayStr; })) {
+      document.getElementById('mt-error').textContent = "Can't track dates in the future.";
+      return;
+    }
 
     document.getElementById('mt-result').textContent = '';
     document.getElementById('mt-error').textContent = '';

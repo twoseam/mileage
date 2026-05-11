@@ -1,19 +1,16 @@
 /**
- * miles-tracker.js (v15)
- * Walking miles tracker — talks to your Apps Script backend.
- * No Google sign-in needed — protected by a shared secret in the URL.
+ * miles-tracker.js (v16, flat-schema)
  *
- * v15: adds fetchPeek(dates, cb) so the page can ask "replace or add?"
- *      before submitting. logBatch entries may now include mode: 'add'|'replace'.
+ * Talks to the Apps Script backend that reads/writes the new `Entries` and
+ * `Shoes` tabs. One row per walk. POSTs may include any of:
+ *   { date, miles, type, start_time, lat, lon, temp_f, weather, shoe, notes }
+ * `type` is 'Walk' or 'Run' (default Walk).
  *
  * USAGE:
  *   MilesTracker.init();
- *   MilesTracker.logMiles('2026-04-11', 3.2);
- *   MilesTracker.logBatch([ { date, miles, mode? }, ... ]);
- *   MilesTracker.fetchStats(callback);        // callback(stats) — see backend stats response
- *   MilesTracker.fetchLastTracked(callback);  // callback(lastDateStr, daysBehind)
- *   MilesTracker.fetchWeekly12(callback);     // callback([{ weekStart, miles }, ...])
- *   MilesTracker.fetchPeek(dates, callback);  // callback({ '2026-04-11': 3.2, ... })
+ *   MilesTracker.logWalk({ date, miles, type, start_time, lat, lon, temp_f, weather, shoe, notes });
+ *   MilesTracker.fetchDashboard(callback);   // primary entry — stats + lastTracked + weekly12
+ *   MilesTracker.fetchShoes(callback);       // [{ brand, model, name, purchased, retired, notes, lifetimeMiles }, ...]
  */
 
 (function(global) {
@@ -30,7 +27,7 @@
   var MilesTracker = {
 
     onReady:   function() {},
-    onSuccess: function(result) { console.log('Miles logged:', result); },
+    onSuccess: function(result) { console.log('Walk logged:', result); },
     onError:   function(err)    { console.error('MilesTracker error:', err); },
 
     init: function() {
@@ -43,8 +40,8 @@
     signIn:     function() {},
     signOut:    function() {},
 
-    logMiles: function(date, miles) {
-      MilesTracker.logBatch([{ date: date, miles: miles }]);
+    logWalk: function(entry) {
+      MilesTracker.logBatch([entry]);
     },
 
     logBatch: function(entries) {
@@ -68,6 +65,12 @@
         .catch(function()    { callback({}); });
     },
 
+    fetchShoes: function(callback) {
+      _get('shoes')
+        .then(function(data) { callback(data && data.shoes ? data.shoes : []); })
+        .catch(function()    { callback([]); });
+    },
+
     fetchStats: function(callback) {
       _get('stats')
         .then(function(data) { callback(data && !data.error ? data : {}); })
@@ -87,18 +90,6 @@
       _get('weekly12')
         .then(function(data) { callback(data && data.weeks ? data.weeks : []); })
         .catch(function()    { callback([]); });
-    },
-
-    fetchDaily: function(callback) {
-      _get('daily')
-        .then(function(data) { callback(data && data.weeks ? data.weeks : []); })
-        .catch(function()    { callback([]); });
-    },
-
-    fetchPeek: function(dates, callback) {
-      _get('peek&dates=' + encodeURIComponent(dates.join(',')))
-        .then(function(data) { callback(data && data.values ? data.values : {}); })
-        .catch(function()    { callback({}); });
     }
 
   };

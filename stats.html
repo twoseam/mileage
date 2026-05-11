@@ -180,8 +180,11 @@
     .chart-bar.is-drillable { cursor: pointer; }
     .chart-bar:hover { filter: brightness(1.1); }
     .chart-bar-seg { width: 100%; }
-    .chart-bar-seg-walk { background: #E7D7A4; }  /* cream */
-    .chart-bar-seg-run  { background: #016074; }  /* deep blue */
+    .chart-bar-seg-walk { background: #8FCFC2; }  /* cyan */
+    .chart-bar-seg-run  { background: #E7D7A4; }  /* cream */
+    /* Current period: bar fills mustard regardless of walk/run split */
+    .chart-bar.is-current .chart-bar-seg-walk,
+    .chart-bar.is-current .chart-bar-seg-run { background: #E89A1F; }
     .chart-bar-value {
       position: absolute;
       bottom: 100%;
@@ -330,8 +333,8 @@
         <div class="chart-summary-value" id="summary-days">—</div>
       </div>
       <div class="chart-legend">
-        <span><span class="chart-legend-swatch" style="background:#E7D7A4"></span>Walk</span>
-        <span><span class="chart-legend-swatch" style="background:#016074"></span>Run</span>
+        <span><span class="chart-legend-swatch" style="background:#8FCFC2"></span>Walk</span>
+        <span><span class="chart-legend-swatch" style="background:#E7D7A4"></span>Run</span>
       </div>
     </div>
     <div class="chart-bars" id="chart-bars"></div>
@@ -348,7 +351,7 @@
 </div>
 
 <footer class="mt-footer">
-  <div class="mt-build">2026.05.10.010</div>
+  <div class="mt-build">2026.05.10.013</div>
 </footer>
 
 <script>
@@ -599,7 +602,7 @@
 
     var barsHtml = bins.map(function(b, i) {
       var pct = (b.miles / max) * 100;
-      var cls = 'chart-bar' + (b.drillTo ? ' is-drillable' : '');
+      var cls = 'chart-bar' + (b.drillTo ? ' is-drillable' : '') + (b.isCurrent ? ' is-current' : '');
       var walkPct = b.miles > 0 ? (b.walkMiles / b.miles) * 100 : 0;
       var runPct  = b.miles > 0 ? (b.runMiles  / b.miles) * 100 : 0;
       var val = b.miles > 0 ? '<div class="chart-bar-value">' + b.miles.toFixed(1) + '</div>' : '';
@@ -629,23 +632,28 @@
   }
 
   function computeDaysInRange() {
-    var d = state.dailyMiles;
     var count = 0;
     if (state.zoom === 'week') {
       var sun = startOfWeek(state.cursor);
-      for (var i = 0; i < 7; i++) if ((d[fmtDate(addDays(sun, i))] || 0) > 0) count++;
+      for (var i = 0; i < 7; i++) if (dayTotal(fmtDate(addDays(sun, i))) > 0) count++;
     } else if (state.zoom === 'month') {
       var first = startOfMonth(state.cursor);
       var n = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
       for (var dy = 1; dy <= n; dy++) {
         var dt = new Date(first.getFullYear(), first.getMonth(), dy, 12);
-        if ((d[fmtDate(dt)] || 0) > 0) count++;
+        if (dayTotal(fmtDate(dt)) > 0) count++;
       }
     } else if (state.zoom === 'year') {
       var yr = state.cursor.getFullYear();
-      Object.keys(d).forEach(function(k) { if (k.indexOf(yr + '-') === 0 && d[k] > 0) count++; });
+      var seen = {};
+      Object.keys(state.dailyWalk).forEach(function(k) { if (k.indexOf(yr + '-') === 0) seen[k] = true; });
+      Object.keys(state.dailyRun).forEach(function(k) { if (k.indexOf(yr + '-') === 0) seen[k] = true; });
+      count = Object.keys(seen).length;
     } else if (state.zoom === 'all') {
-      Object.keys(d).forEach(function(k) { if (d[k] > 0) count++; });
+      var seen2 = {};
+      Object.keys(state.dailyWalk).forEach(function(k) { seen2[k] = true; });
+      Object.keys(state.dailyRun).forEach(function(k) { seen2[k] = true; });
+      count = Object.keys(seen2).length;
     }
     return count;
   }

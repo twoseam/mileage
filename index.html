@@ -267,6 +267,60 @@
       border-color: #E89A1F;
     }
 
+    /* Notes: hidden behind a checkbox until toggled on */
+    .mt-checkbox {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      user-select: none;
+      margin: 0;
+    }
+    .mt-checkbox input {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 1.5px solid currentColor;
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+      position: relative;
+      opacity: 0.6;
+      transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+      flex-shrink: 0;
+      margin: 0;
+    }
+    .mt-checkbox input:checked {
+      background: #E89A1F;
+      border-color: #E89A1F;
+      opacity: 1;
+    }
+    .mt-checkbox input:checked::after {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 0px;
+      width: 6px;
+      height: 11px;
+      border: solid #1a1a1a;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+    .mt-notes-wrap {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      margin-top: 0;
+      transition: max-height 0.35s ease, opacity 0.35s ease, margin-top 0.35s ease;
+    }
+    .mt-notes-wrap.mt-expanded {
+      max-height: 80px;
+      opacity: 1;
+      margin-top: 14px;
+    }
+
     #mt-submit-btn {
       display: block;
       margin: 0 auto 6px;
@@ -512,8 +566,13 @@
     </div>
 
     <div class="mt-field">
-      <label>Notes <span class="mt-optional">(optional)</span></label>
-      <input type="text" id="mt-notes-input" placeholder="" />
+      <label class="mt-checkbox">
+        <input type="checkbox" id="mt-notes-toggle" onchange="mtToggleNotes()" />
+        <span>Add notes</span>
+      </label>
+      <div class="mt-notes-wrap" id="mt-notes-wrap">
+        <input type="text" id="mt-notes-input" placeholder="" />
+      </div>
     </div>
 
     <div id="mt-last-tracked"></div>
@@ -762,6 +821,20 @@
     document.getElementById('mt-date-display').textContent = mtFormatDateLabel(input.value);
   }
 
+  function mtToggleNotes() {
+    var checkbox = document.getElementById('mt-notes-toggle');
+    var wrap = document.getElementById('mt-notes-wrap');
+    if (checkbox.checked) {
+      wrap.classList.add('mt-expanded');
+      setTimeout(function() {
+        document.getElementById('mt-notes-input').focus();
+      }, 150);
+    } else {
+      wrap.classList.remove('mt-expanded');
+      document.getElementById('mt-notes-input').value = '';
+    }
+  }
+
   function mtInitDate() {
     var today = mtTodayStr();
     var input = document.getElementById('mt-date-input');
@@ -894,6 +967,8 @@
   function mtResetForm() {
     document.getElementById('mt-miles-input').value = '';
     document.getElementById('mt-notes-input').value = '';
+    document.getElementById('mt-notes-toggle').checked = false;
+    document.getElementById('mt-notes-wrap').classList.remove('mt-expanded');
     mtTimeManuallyEdited = false;
     mtInitTime();
     // leave date, type, and shoe as-is — most likely same next time

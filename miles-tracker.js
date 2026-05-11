@@ -90,6 +90,12 @@
       _get('weekly12')
         .then(function(data) { callback(data && data.weeks ? data.weeks : []); })
         .catch(function()    { callback([]); });
+    },
+
+    fetchAllEntries: function(callback) {
+      _get('allEntries')
+        .then(function(data) { callback(data && data.rows ? data.rows : []); })
+        .catch(function()    { callback([]); });
     }
 
   };

@@ -124,11 +124,15 @@ function _stats(rows, year) {
   var dates = Object.keys(byDate).sort();
 
   var totalMiles = 0;
+  dates.forEach(function(d) { totalMiles += byDate[d]; });
+
+  // Longest Walk = longest single row (not summed day total — two walks on
+  // the same date are two separate walks, not one 9.2-mile walk).
   var longestWalk = 0;
-  dates.forEach(function(d) {
-    totalMiles += byDate[d];
-    if (byDate[d] > longestWalk) longestWalk = byDate[d];
+  rows.forEach(function(r) {
+    if (r.miles > longestWalk) longestWalk = r.miles;
   });
+
   var daysWalked = dates.length;
 
   // Days elapsed in `year` as of today (capped at year-end)
@@ -304,6 +308,17 @@ function doGet(e) {
     var out = {};
     dateList.forEach(function(d) { out[d] = 0; });
     return _json({ values: out });
+  }
+
+  if (action === 'allEntries') {
+    // Returns every entry across all years for client-side aggregation
+    // (Stats page slices by zoom level).
+    var allRows = _readEntries();
+    return _json({
+      rows: allRows.map(function(r) {
+        return { date: r.date, miles: r.miles, type: r.type, shoe: r.shoe };
+      })
+    });
   }
 
   return _json({ error: 'Unknown action' });

@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2026 Mileage — Stats</title>
+
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Mileage">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#252525">
+
+  <link rel="preconnect" href="https://use.typekit.net" crossorigin>
+  <link rel="preconnect" href="https://p.typekit.net" crossorigin>
+  <link rel="stylesheet" href="https://use.typekit.net/ymz2nvi.css">
+
+  <script src="miles-tracker.js"></script>
+  <script src="nav.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    html { scrollbar-width: none; -ms-overflow-style: none; }
+    body::-webkit-scrollbar { display: none; }
+    body {
+      background: #252525;
+      color: #f5f5f5;
+      font-family: "omnes", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .mt-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      transform: translateY(50px);
+      background: linear-gradient(
+        159deg,
+        transparent 0%, transparent 76.6%,
+        #016074 76.6%, #016074 78.8%,
+        #94D3BE 78.8%, #94D3BE 81.1%,
+        #E7D7A4 81.1%, #E7D7A4 83.9%,
+        #EB9A00 83.9%, #EB9A00 86.6%,
+        #CA6902 86.6%, #CA6902 89.3%,
+        #B02113 89.3%, #B02113 100%
+      );
+    }
+
+    .wordmark {
+      max-width: 720px;
+      margin: 2.5rem auto 1.5rem;
+      padding: 0 2rem;
+      text-align: center;
+      font-family: "omnes", system-ui, sans-serif;
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: 0.01em;
+    }
+    .wordmark-year {
+      font-size: clamp(2.5rem, 10vw, 4rem);
+      color: #8FCFC2;
+      margin-bottom: 0.1em;
+    }
+    .wordmark-title {
+      font-size: clamp(2.5rem, 10vw, 4rem);
+      color: #E89A1F;
+    }
+    .page-title {
+      font-size: 0.65rem;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      opacity: 0.5;
+      margin-top: 1rem;
+      font-weight: 700;
+    }
+
+    #stats-shell {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 4.5rem 1.5rem 2.5rem;
+    }
+
+    /* Period navigation */
+    .range-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      min-height: 36px;
+    }
+    .range-arrow {
+      background: none;
+      border: none;
+      color: inherit;
+      width: 36px; height: 36px;
+      font-size: 1.4rem;
+      cursor: pointer;
+      opacity: 0.55;
+      transition: opacity 0.15s ease;
+      padding: 0;
+    }
+    .range-arrow:hover { opacity: 1; }
+    .range-arrow:disabled { opacity: 0.15; cursor: not-allowed; }
+    .range-label {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      min-width: 180px;
+      text-align: center;
+    }
+
+    /* Chart */
+    .chart-card {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 1.25rem 1.25rem 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .chart-summary {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .chart-summary > div { display: flex; flex-direction: column; gap: 2px; }
+    .chart-summary-label {
+      font-size: 0.55rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.5;
+    }
+    .chart-summary-value {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 240px;
+      padding-top: 18px;
+    }
+    .chart-bar {
+      flex: 1;
+      min-height: 1px;
+      position: relative;
+      transition: height 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.15s ease;
+      background: #8FCFC2;
+      border-radius: 4px 4px 0 0;
+      cursor: pointer;
+    }
+    .chart-bar.is-current { background: #E89A1F; }
+    .chart-bar.is-drillable { cursor: pointer; }
+    .chart-bar:not(.is-drillable) { cursor: default; }
+    .chart-bar:hover { filter: brightness(1.1); }
+    .chart-bar-value {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 0.6rem;
+      color: #fff;
+      margin-bottom: 4px;
+      line-height: 1;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .chart-bar.show-value .chart-bar-value,
+    .chart-bar:hover .chart-bar-value { opacity: 1; }
+
+    .chart-labels {
+      display: flex;
+      gap: 3px;
+      margin-top: 6px;
+      padding-bottom: 4px;
+    }
+    .chart-label {
+      flex: 1;
+      text-align: center;
+      font-size: 0.55rem;
+      opacity: 0.55;
+      line-height: 1;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    /* Zoom buttons */
+    .zoom-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    .zoom-btn {
+      flex: 1;
+      max-width: 120px;
+      padding: 10px 14px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: inherit;
+      font-family: inherit;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      opacity: 0.55;
+      transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+    }
+    .zoom-btn:hover { opacity: 1; }
+    .zoom-btn.is-active {
+      background: #E89A1F;
+      color: #1a1a1a;
+      opacity: 1;
+    }
+
+    /* Loader */
+    #mt-loader {
+      position: fixed;
+      inset: 0;
+      background: #252525;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      transition: opacity 0.5s ease;
+    }
+    #mt-loader.mt-loader-hide { opacity: 0; pointer-events: none; }
+    .mt-loader-bar {
+      width: 240px;
+      height: 12px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+    .mt-loader-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(
+        to right,
+        #016074 0%,    #016074 16.67%,
+        #94D3BE 16.67%, #94D3BE 33.33%,
+        #E7D7A4 33.33%, #E7D7A4 50%,
+        #EB9A00 50%,    #EB9A00 66.67%,
+        #CA6902 66.67%, #CA6902 83.33%,
+        #B02113 83.33%, #B02113 100%
+      );
+      background-size: 240px 100%;
+      transition: width 0.3s ease-out;
+    }
+
+    .mt-footer { text-align: center; padding: 0 1.5rem 2rem; }
+    .mt-build {
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
+      opacity: 0.18;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    @media (min-width: 720px) {
+      .chart-bars { height: 320px; gap: 5px; }
+      .chart-bar-value { font-size: 0.7rem; }
+      .chart-label { font-size: 0.65rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="mt-bg"></div>
+
+<div id="mt-loader">
+  <div class="mt-loader-bar"><div class="mt-loader-fill"></div></div>
+</div>
+
+<div id="stats-shell">
+
+  <div class="range-nav">
+    <button class="range-arrow" id="range-prev" aria-label="Previous">←</button>
+    <div class="range-label" id="range-label">—</div>
+    <button class="range-arrow" id="range-next" aria-label="Next">→</button>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-summary">
+      <div>
+        <div class="chart-summary-label">Miles</div>
+        <div class="chart-summary-value" id="summary-miles">—</div>
+      </div>
+      <div>
+        <div class="chart-summary-label">Days</div>
+        <div class="chart-summary-value" id="summary-days">—</div>
+      </div>
+    </div>
+    <div class="chart-bars" id="chart-bars"></div>
+    <div class="chart-labels" id="chart-labels"></div>
+  </div>
+
+  <div class="zoom-buttons">
+    <button class="zoom-btn"           data-zoom="all"  >All</button>
+    <button class="zoom-btn"           data-zoom="year" >Year</button>
+    <button class="zoom-btn"           data-zoom="month">Month</button>
+    <button class="zoom-btn is-active" data-zoom="week" >Week</button>
+  </div>
+
+</div>
+
+<footer class="mt-footer">
+  <div class="mt-build">2026.05.10.009</div>
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  // ---------- date helpers ----------
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function fmtDate(d) { return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+  function parseDate(s) { return new Date(s + 'T12:00:00'); }
+  function startOfWeek(d) {
+    var s = new Date(d); s.setHours(12,0,0,0);
+    s.setDate(s.getDate() - s.getDay());
+    return s;
+  }
+  function addDays(d, n)   { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function addMonths(d, n) { var x = new Date(d); x.setMonth(x.getMonth() + n); return x; }
+  function addYears(d, n)  { var x = new Date(d); x.setFullYear(x.getFullYear() + n); return x; }
+  function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1, 12); }
+  function startOfYear(d)  { return new Date(d.getFullYear(), 0, 1, 12); }
+  function sameDate(a, b)  { return fmtDate(a) === fmtDate(b); }
+  function sameMonth(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth(); }
+  function sameYear(a, b)  { return a.getFullYear() === b.getFullYear(); }
+
+  var MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DOW_SHORT    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var DOW_TINY     = ['S','M','T','W','T','F','S'];
+
+  // ---------- state ----------
+
+  var state = {
+    zoom: 'week',                 // 'week' | 'month' | 'year' | 'all'
+    cursor: startOfWeek(new Date()), // anchor of current visible range
+    dailyMiles: {},               // 'YYYY-MM-DD' -> total miles that day
+    firstEntryDate: null          // earliest date with any entries
+  };
+
+  // ---------- loader ----------
+
+  var loaderTimer = null, loaderValue = 0;
+  function startLoader() {
+    var fill = document.querySelector('.mt-loader-fill');
+    if (!fill) return;
+    loaderValue = 0; fill.style.width = '0%';
+    loaderTimer = setInterval(function() {
+      if (loaderValue >= 95) return;
+      var step = Math.max(0.4, (95 - loaderValue) * 0.04);
+      loaderValue += step;
+      fill.style.width = loaderValue + '%';
+    }, 100);
+  }
+  function stopLoader() {
+    if (loaderTimer) { clearInterval(loaderTimer); loaderTimer = null; }
+    var fill = document.querySelector('.mt-loader-fill');
+    if (fill) fill.style.width = '100%';
+    setTimeout(function() {
+      var loader = document.getElementById('mt-loader');
+      if (loader) loader.classList.add('mt-loader-hide');
+    }, 350);
+  }
+
+  // ---------- data ----------
+
+  function loadData() {
+    startLoader();
+    MilesTracker.fetchAllEntries(function(rows) {
+      var daily = {};
+      var firstDate = null;
+      rows.forEach(function(r) {
+        if (!r.date) return;
+        daily[r.date] = (daily[r.date] || 0) + (parseFloat(r.miles) || 0);
+        if (!firstDate || r.date < firstDate) firstDate = r.date;
+      });
+      state.dailyMiles = daily;
+      state.firstEntryDate = firstDate;
+      render();
+      stopLoader();
+    });
+  }
+
+  // ---------- bin computation per zoom ----------
+
+  function buildBins() {
+    var d = state.dailyMiles;
+    var today = new Date(); today.setHours(12,0,0,0);
+    var bins = [];
+
+    if (state.zoom === 'week') {
+      var sun = startOfWeek(state.cursor);
+      for (var i = 0; i < 7; i++) {
+        var dt = addDays(sun, i);
+        bins.push({
+          label: DOW_TINY[i],
+          miles: d[fmtDate(dt)] || 0,
+          isCurrent: sameDate(dt, today),
+          tooltip: dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })
+        });
+      }
+    } else if (state.zoom === 'month') {
+      // Bar per Sun-Sat week that touches the cursor's month; drills to Week zoom
+      var first = startOfMonth(state.cursor);
+      var last  = new Date(first.getFullYear(), first.getMonth() + 1, 0, 12);
+      var sunCursor = startOfWeek(first);
+      var weekIdx = 1;
+      while (sunCursor <= last) {
+        var sum = 0;
+        for (var i = 0; i < 7; i++) {
+          var dt = addDays(sunCursor, i);
+          if (sameMonth(dt, first)) sum += d[fmtDate(dt)] || 0;
+        }
+        var satCursor = addDays(sunCursor, 6);
+        bins.push({
+          label: 'W' + weekIdx,
+          miles: sum,
+          isCurrent: today >= sunCursor && today <= satCursor,
+          tooltip: 'Week of ' + sunCursor.toLocaleDateString('en-US', { month:'short', day:'numeric' }),
+          drillTo: { zoom: 'week', cursor: new Date(sunCursor) }
+        });
+        sunCursor = addDays(sunCursor, 7);
+        weekIdx++;
+      }
+    } else if (state.zoom === 'year') {
+      // 12 month bars; tap to drill into that month
+      for (var m = 0; m < 12; m++) {
+        var monthDate = new Date(state.cursor.getFullYear(), m, 1, 12);
+        var ym = monthDate.getFullYear() + '-' + pad2(m + 1);
+        var sum = 0;
+        Object.keys(d).forEach(function(k) {
+          if (k.indexOf(ym) === 0) sum += d[k];
+        });
+        bins.push({
+          label: MONTHS_SHORT[m],
+          miles: sum,
+          isCurrent: sameMonth(monthDate, today),
+          tooltip: monthDate.toLocaleDateString('en-US', { month:'long', year:'numeric' }),
+          drillTo: { zoom: 'month', cursor: monthDate }
+        });
+      }
+    } else if (state.zoom === 'all') {
+      // One bar per year; tap to drill into that year
+      if (!state.firstEntryDate) return [];
+      var firstYear = parseInt(state.firstEntryDate.substring(0, 4), 10);
+      var thisYear = today.getFullYear();
+      for (var yr = firstYear; yr <= thisYear; yr++) {
+        var yrStr = String(yr);
+        var sum = 0;
+        Object.keys(d).forEach(function(k) {
+          if (k.indexOf(yrStr + '-') === 0) sum += d[k];
+        });
+        bins.push({
+          label: yrStr,
+          miles: sum,
+          isCurrent: yr === today.getFullYear(),
+          tooltip: yrStr + ' total',
+          drillTo: { zoom: 'year', cursor: new Date(yr, 0, 1, 12) }
+        });
+      }
+    }
+    return bins;
+  }
+
+  // ---------- range label ----------
+
+  function rangeLabel() {
+    if (state.zoom === 'week') {
+      var sun = startOfWeek(state.cursor);
+      var sat = addDays(sun, 6);
+      var sameMo = sun.getMonth() === sat.getMonth();
+      var startStr = sun.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+      var endStr   = sameMo
+        ? String(sat.getDate())
+        : sat.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+      return startStr + ' – ' + endStr + ', ' + sun.getFullYear();
+    }
+    if (state.zoom === 'month') {
+      return state.cursor.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+    }
+    if (state.zoom === 'year') {
+      return String(state.cursor.getFullYear());
+    }
+    return 'All time';
+  }
+
+  // ---------- nav: prev/next ----------
+
+  function shiftCursor(direction) {
+    if (state.zoom === 'week')  state.cursor = addDays(state.cursor,   direction * 7);
+    if (state.zoom === 'month') state.cursor = addMonths(state.cursor, direction);
+    if (state.zoom === 'year')  state.cursor = addYears(state.cursor,  direction);
+    // 'all' has no nav
+  }
+
+  function navDisabled() {
+    if (state.zoom === 'all') return { prev: true, next: true };
+    var today = new Date(); today.setHours(12,0,0,0);
+    var prev = false, next = false;
+    if (state.firstEntryDate) {
+      var first = parseDate(state.firstEntryDate);
+      if (state.zoom === 'week'  && addDays(startOfWeek(state.cursor),   -1) < startOfWeek(first))   prev = true;
+      if (state.zoom === 'month' && addMonths(startOfMonth(state.cursor), -1) < startOfMonth(first))  prev = true;
+      if (state.zoom === 'year'  && state.cursor.getFullYear() - 1 < first.getFullYear())              prev = true;
+    }
+    if (state.zoom === 'week'  && addDays(startOfWeek(state.cursor),    7) > startOfWeek(today))   next = true;
+    if (state.zoom === 'month' && addMonths(startOfMonth(state.cursor), 1) > startOfMonth(today))  next = true;
+    if (state.zoom === 'year'  && state.cursor.getFullYear() + 1 > today.getFullYear())             next = true;
+    return { prev: prev, next: next };
+  }
+
+  // ---------- render ----------
+
+  var lastBins = [];
+
+  function render() {
+    var bins = buildBins();
+    lastBins = bins;
+    var max = 0;
+    bins.forEach(function(b) { if (b.miles > max) max = b.miles; });
+    if (max === 0) max = 1;
+
+    // "Days walked" should count distinct days, not bins, when bins are coarser than days
+    var totalMiles = bins.reduce(function(s, b) { return s + b.miles; }, 0);
+    var totalDays  = computeDaysInRange();
+
+    document.getElementById('summary-miles').textContent = totalMiles.toFixed(1);
+    document.getElementById('summary-days').textContent  = totalDays;
+
+    var barsHtml = bins.map(function(b, i) {
+      var pct = (b.miles / max) * 100;
+      var cls = 'chart-bar' + (b.isCurrent ? ' is-current' : '') + (b.drillTo ? ' is-drillable' : '');
+      var val = b.miles > 0 ? '<div class="chart-bar-value">' + b.miles.toFixed(1) + '</div>' : '';
+      return '<div class="' + cls + '" data-idx="' + i + '" style="height:' + pct + '%" title="' + b.tooltip + ': ' + b.miles.toFixed(1) + ' mi">' + val + '</div>';
+    }).join('');
+    var labelsHtml = bins.map(function(b) {
+      return '<div class="chart-label">' + (b.label || '') + '</div>';
+    }).join('');
+
+    document.getElementById('chart-bars').innerHTML   = barsHtml;
+    document.getElementById('chart-labels').innerHTML = labelsHtml;
+    document.getElementById('range-label').textContent = rangeLabel();
+
+    var nav = navDisabled();
+    document.getElementById('range-prev').disabled = nav.prev;
+    document.getElementById('range-next').disabled = nav.next;
+
+    document.querySelectorAll('.zoom-btn').forEach(function(b) {
+      if (b.getAttribute('data-zoom') === state.zoom) b.classList.add('is-active');
+      else b.classList.remove('is-active');
+    });
+  }
+
+  function computeDaysInRange() {
+    var d = state.dailyMiles;
+    var count = 0;
+    if (state.zoom === 'week') {
+      var sun = startOfWeek(state.cursor);
+      for (var i = 0; i < 7; i++) if ((d[fmtDate(addDays(sun, i))] || 0) > 0) count++;
+    } else if (state.zoom === 'month') {
+      var first = startOfMonth(state.cursor);
+      var n = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+      for (var dy = 1; dy <= n; dy++) {
+        var dt = new Date(first.getFullYear(), first.getMonth(), dy, 12);
+        if ((d[fmtDate(dt)] || 0) > 0) count++;
+      }
+    } else if (state.zoom === 'year') {
+      var yr = state.cursor.getFullYear();
+      Object.keys(d).forEach(function(k) { if (k.indexOf(yr + '-') === 0 && d[k] > 0) count++; });
+    } else if (state.zoom === 'all') {
+      Object.keys(d).forEach(function(k) { if (d[k] > 0) count++; });
+    }
+    return count;
+  }
+
+  // ---------- wire UI ----------
+
+  document.getElementById('range-prev').addEventListener('click', function() { shiftCursor(-1); render(); });
+  document.getElementById('range-next').addEventListener('click', function() { shiftCursor( 1); render(); });
+
+  // Drill-down: tap an All-zoom year bar → Year of that year; tap a Year-zoom month bar → Month of that month
+  document.getElementById('chart-bars').addEventListener('click', function(e) {
+    var bar = e.target.closest('.chart-bar');
+    if (!bar) return;
+    var idx = parseInt(bar.getAttribute('data-idx'), 10);
+    var bin = lastBins[idx];
+    if (!bin || !bin.drillTo) return;
+    state.zoom = bin.drillTo.zoom;
+    state.cursor = bin.drillTo.cursor;
+    render();
+  });
+
+  document.querySelectorAll('.zoom-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var z = btn.getAttribute('data-zoom');
+      state.zoom = z;
+      // Snap cursor to the START of the new period (so the label feels right)
+      var today = new Date(); today.setHours(12,0,0,0);
+      if (z === 'week')  state.cursor = startOfWeek(today);
+      if (z === 'month') state.cursor = startOfMonth(today);
+      if (z === 'year')  state.cursor = startOfYear(today);
+      if (z === 'all')   state.cursor = today;
+      render();
+    });
+  });
+
+  MilesTracker.onReady = function() { loadData(); };
+  MilesTracker.init();
+
+})();
+</script>
+
+</body>
+</html>

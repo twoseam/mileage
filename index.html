@@ -224,6 +224,63 @@
     }
     .mt-field-row .mt-field { flex: 1; }
 
+    /* Multi-day entry rows */
+    .mt-entry-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+      margin-bottom: 1.5rem;
+      max-height: 200px;
+      overflow: visible;
+      transition:
+        opacity 0.35s ease,
+        max-height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+        margin-bottom 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+        transform 0.35s ease;
+    }
+    .mt-entry-row.mt-collapsed {
+      opacity: 0;
+      max-height: 0;
+      margin-bottom: 0;
+      overflow: hidden;
+      transform: translateY(-8px);
+    }
+    .mt-entry-row .mt-field {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    .mt-remove-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: inherit;
+      opacity: 0.3;
+      padding: 0 0 8px 0;
+      line-height: 1;
+      flex-shrink: 0;
+      transform: translateY(0);
+      transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+    }
+    .mt-remove-btn:hover { opacity: 0.7; }
+    .mt-remove-btn.mt-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(8px);
+    }
+    #mt-add-day-wrap { margin-bottom: 1.25rem; }
+    #mt-add-day {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-family: inherit;
+      color: inherit;
+      opacity: 0.5;
+      padding: 0;
+    }
+    #mt-add-day:hover { opacity: 1; }
+
     .mt-field input[type="date"] {
       cursor: pointer;
     }
@@ -616,15 +673,9 @@
 
   <div id="mt-form">
 
-    <div class="mt-field-row">
-      <div class="mt-field">
-        <label>Date</label>
-        <input type="date" id="mt-date-input" />
-      </div>
-      <div class="mt-field">
-        <label>Miles</label>
-        <input type="text" inputmode="decimal" id="mt-miles-input" placeholder="0.0" />
-      </div>
+    <div id="mt-entries"></div>
+    <div id="mt-add-day-wrap">
+      <button type="button" id="mt-add-day" onclick="mtAddDateRow()">+ Add another day</button>
     </div>
 
     <div id="mt-last-tracked"></div>
@@ -650,7 +701,7 @@
       </div>
     </div>
 
-    <div class="mt-field">
+    <div class="mt-field" id="mt-time-field">
       <label>Start Time</label>
       <input type="time" id="mt-time-input" oninput="mtTimeEdited()" />
     </div>
@@ -906,6 +957,77 @@
 
   function mtDateChanged() { /* no-op now that native input is visible */ }
 
+  function mtPrevDay(yyyymmdd) {
+    var d = new Date(yyyymmdd + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    return d.getFullYear() + '-' + mtPad2(d.getMonth() + 1) + '-' + mtPad2(d.getDate());
+  }
+
+  function mtAddDateRow() {
+    var container = document.getElementById('mt-entries');
+    var existing = container.querySelectorAll('.mt-date-input');
+    var todayStr = mtTodayStr();
+    var defaultDate;
+    if (existing.length > 0) {
+      var lastVal = existing[existing.length - 1].value || todayStr;
+      defaultDate = mtPrevDay(lastVal);
+      if (defaultDate < '2026-01-01') defaultDate = '2026-01-01';
+    } else {
+      defaultDate = todayStr;
+    }
+    var html =
+      '<div class="mt-entry-row mt-collapsed">' +
+        '<div class="mt-field">' +
+          '<label>Date</label>' +
+          '<input type="date" class="mt-date-input" value="' + defaultDate + '" max="' + todayStr + '" min="2026-01-01" />' +
+        '</div>' +
+        '<div class="mt-field">' +
+          '<label>Miles</label>' +
+          '<input type="text" class="mt-miles-input" inputmode="decimal" placeholder="0.0" />' +
+        '</div>' +
+        '<button type="button" class="mt-remove-btn mt-hidden" onclick="mtRemoveDateRow(this)" title="Remove">×</button>' +
+      '</div>';
+    container.insertAdjacentHTML('beforeend', html);
+    var row = container.lastElementChild;
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        row.classList.remove('mt-collapsed');
+        mtUpdateRemoveButtons();
+      });
+    });
+  }
+
+  function mtRemoveDateRow(btn) {
+    var rows = document.querySelectorAll('#mt-entries .mt-entry-row');
+    if (rows.length <= 1) return;
+    var row = btn.closest('.mt-entry-row');
+    row.classList.add('mt-collapsed');
+    mtUpdateRemoveButtons();
+    setTimeout(function() { row.remove(); mtUpdateRemoveButtons(); }, 400);
+  }
+
+  function mtUpdateRemoveButtons() {
+    var rows = document.querySelectorAll('#mt-entries .mt-entry-row:not(.mt-collapsed)');
+    var hide = rows.length <= 1;
+    rows.forEach(function(r) {
+      var btn = r.querySelector('.mt-remove-btn');
+      if (!btn) return;
+      if (hide) btn.classList.add('mt-hidden');
+      else btn.classList.remove('mt-hidden');
+    });
+  }
+
+  function mtReadEntries() {
+    var rows = document.querySelectorAll('#mt-entries .mt-entry-row');
+    var entries = [];
+    rows.forEach(function(r) {
+      var date  = r.querySelector('.mt-date-input').value;
+      var miles = parseFloat(r.querySelector('.mt-miles-input').value);
+      if (date && !isNaN(miles) && miles > 0) entries.push({ date: date, miles: miles });
+    });
+    return entries;
+  }
+
   function mtToggleNotes() {
     var checkbox = document.getElementById('mt-notes-toggle');
     var wrap = document.getElementById('mt-notes-wrap');
@@ -921,8 +1043,7 @@
   }
 
   function mtOpenDialog() {
-    var date  = document.getElementById('mt-date-input').value;
-    var miles = parseFloat(document.getElementById('mt-miles-input').value);
+    var entries = mtReadEntries();
     var errEl = document.getElementById('mt-error');
     function flashError(msg) {
       errEl.classList.remove('mt-fade-out');
@@ -935,12 +1056,21 @@
         }, 400);
       }, 2500);
     }
-    if (!date) { flashError('Pick a date.'); return; }
-    if (isNaN(miles) || miles <= 0) { flashError('Enter miles greater than 0.'); return; }
-    if (date > mtTodayStr()) { flashError("Can't track dates in the future."); return; }
+    if (entries.length === 0) { flashError('Enter at least one date and mileage.'); return; }
+    var todayStr = mtTodayStr();
+    if (entries.some(function(e) { return e.date > todayStr; })) {
+      flashError("Can't track dates in the future."); return;
+    }
 
-    // Smart default for Start Time — only if user hasn't manually edited it in this session
-    if (!mtTimeManuallyEdited) mtAutoFillStartTime(miles);
+    // Show Start Time only when logging a single walk (multi-day backfill skips it,
+    // along with location and weather, since those are unreliable for past walks)
+    var timeField = document.getElementById('mt-time-field');
+    if (entries.length === 1) {
+      timeField.style.display = '';
+      if (!mtTimeManuallyEdited) mtAutoFillStartTime(entries[0].miles);
+    } else {
+      timeField.style.display = 'none';
+    }
 
     document.getElementById('mt-dialog').classList.add('mt-dialog-show');
   }
@@ -949,14 +1079,9 @@
     document.getElementById('mt-dialog').classList.remove('mt-dialog-show');
   }
 
-  function mtInitDate() {
-    var today = mtTodayStr();
-    var input = document.getElementById('mt-date-input');
-    input.value = today;
-    input.max = today;
-    input.min = '2026-01-01';
-    input.addEventListener('change', mtDateChanged);
-    mtDateChanged();
+  function mtInitEntries() {
+    document.getElementById('mt-entries').innerHTML = '';
+    mtAddDateRow();
   }
 
   function mtInitTime() {
@@ -1046,7 +1171,7 @@
 
   MilesTracker.onReady = function() {
     mtSetType('Walk');
-    mtInitDate();
+    mtInitEntries();
     mtInitTime();
     mtLoadShoes();
     mtStartProgress();
@@ -1079,20 +1204,20 @@
   };
 
   function mtResetForm() {
-    document.getElementById('mt-miles-input').value = '';
     document.getElementById('mt-notes-input').value = '';
     document.getElementById('mt-notes-toggle').checked = false;
     document.getElementById('mt-notes-wrap').classList.remove('mt-expanded');
     mtTimeManuallyEdited = false;
     mtInitTime();
-    // leave date, type, and shoe as-is — most likely same next time
+    mtInitEntries();
+    // leave type and shoe as-is — most likely same next time
   }
 
   /* ===================== Submit (called from dialog) ===================== */
 
   function mtConfirmSave() {
-    var date      = document.getElementById('mt-date-input').value;
-    var miles     = parseFloat(document.getElementById('mt-miles-input').value);
+    var entries  = mtReadEntries();
+    if (entries.length === 0) { mtCloseDialog(); return; }
     var startTime = document.getElementById('mt-time-input').value;
     var shoe      = document.getElementById('mt-shoe-select').value;
     var notes     = document.getElementById('mt-notes-input').value;
@@ -1102,27 +1227,41 @@
     document.getElementById('mt-error').textContent = '';
     mtStartSubmitProgress();
 
-    mtGetLocation().then(function(coords) {
-      return mtGetWeather(coords, date, startTime).then(function(weather) {
-        var entry = {
-          date:       date,
-          miles:      miles,
-          type:       mtType,
-          start_time: startTime || '',
-          shoe:       shoe || '',
-          notes:      notes || ''
+    // Build base entry attributes shared across all rows
+    function decorate(entries, coords, weather) {
+      return entries.map(function(e, i) {
+        var out = {
+          date:  e.date,
+          miles: e.miles,
+          type:  mtType,
+          shoe:  shoe || '',
+          notes: notes || ''
         };
-        if (coords) {
-          entry.lat = coords.lat;
-          entry.lon = coords.lon;
+        // Time + location + weather only attach to single-walk submissions
+        if (entries.length === 1) {
+          out.start_time = startTime || '';
+          if (coords) {
+            out.lat = coords.lat;
+            out.lon = coords.lon;
+          }
+          if (weather) {
+            out.temp_f  = weather.temp_f;
+            out.weather = weather.weather;
+          }
         }
-        if (weather) {
-          entry.temp_f  = weather.temp_f;
-          entry.weather = weather.weather;
-        }
-        MilesTracker.logBatch([entry]);
+        return out;
       });
-    });
+    }
+
+    if (entries.length === 1) {
+      mtGetLocation().then(function(coords) {
+        return mtGetWeather(coords, entries[0].date, startTime).then(function(weather) {
+          MilesTracker.logBatch(decorate(entries, coords, weather));
+        });
+      });
+    } else {
+      MilesTracker.logBatch(decorate(entries, null, null));
+    }
   }
 
   MilesTracker.init();

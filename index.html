@@ -687,7 +687,7 @@
 </div>
 
 <footer class="mt-footer">
-  <div class="mt-build">2026.05.10.002</div>
+  <div class="mt-build">2026.05.10.003</div>
 </footer>
 
 <div id="mt-dialog">
@@ -957,9 +957,9 @@
 
   function mtDateChanged() { /* no-op now that native input is visible */ }
 
-  function mtPrevDay(yyyymmdd) {
+  function mtNextDay(yyyymmdd) {
     var d = new Date(yyyymmdd + 'T12:00:00');
-    d.setDate(d.getDate() - 1);
+    d.setDate(d.getDate() + 1);
     return d.getFullYear() + '-' + mtPad2(d.getMonth() + 1) + '-' + mtPad2(d.getDate());
   }
 
@@ -970,8 +970,8 @@
     var defaultDate;
     if (existing.length > 0) {
       var lastVal = existing[existing.length - 1].value || todayStr;
-      defaultDate = mtPrevDay(lastVal);
-      if (defaultDate < '2026-01-01') defaultDate = '2026-01-01';
+      defaultDate = mtNextDay(lastVal);
+      if (defaultDate > todayStr) defaultDate = todayStr;
     } else {
       defaultDate = todayStr;
     }

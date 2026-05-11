@@ -542,41 +542,12 @@
     </div>
 
     <div class="mt-field">
-      <label>Walk / Run</label>
-      <div class="mt-toggle">
-        <button type="button" class="mt-toggle-btn mt-active" data-type="Walk" onclick="mtSetType('Walk')">Walk</button>
-        <button type="button" class="mt-toggle-btn" data-type="Run" onclick="mtSetType('Run')">Run</button>
-      </div>
-    </div>
-
-    <div class="mt-field-row">
-      <div class="mt-field">
-        <label>Miles</label>
-        <input type="text" inputmode="decimal" id="mt-miles-input" placeholder="0.0" oninput="mtMilesChanged()" />
-      </div>
-      <div class="mt-field">
-        <label>Start Time</label>
-        <input type="time" id="mt-time-input" oninput="mtTimeEdited()" />
-      </div>
-    </div>
-
-    <div class="mt-field">
-      <label>Shoe</label>
-      <select id="mt-shoe-select"><option value="">Loading…</option></select>
-    </div>
-
-    <div class="mt-field">
-      <label class="mt-checkbox">
-        <input type="checkbox" id="mt-notes-toggle" onchange="mtToggleNotes()" />
-        <span>Add notes</span>
-      </label>
-      <div class="mt-notes-wrap" id="mt-notes-wrap">
-        <input type="text" id="mt-notes-input" placeholder="" />
-      </div>
+      <label>Miles</label>
+      <input type="text" inputmode="decimal" id="mt-miles-input" placeholder="0.0" />
     </div>
 
     <div id="mt-last-tracked"></div>
-    <button id="mt-submit-btn" onclick="mtSubmit()">Track It!</button>
+    <button id="mt-submit-btn" onclick="mtOpenDialog()">Track It!</button>
     <div class="mt-submit-progress"><div class="mt-submit-fill"></div></div>
     <div id="mt-result"></div>
     <div id="mt-error"></div>

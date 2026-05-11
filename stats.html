@@ -127,6 +127,7 @@
       gap: 1.5rem;
       margin-bottom: 0.75rem;
       flex-wrap: wrap;
+      align-items: flex-end;
     }
     .chart-summary > div { display: flex; flex-direction: column; gap: 2px; }
     .chart-summary-label {
@@ -140,6 +141,23 @@
       font-weight: 800;
       letter-spacing: -0.02em;
     }
+    .chart-legend {
+      margin-left: auto;
+      display: flex;
+      gap: 0.9rem;
+      align-items: center;
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      opacity: 0.75;
+      padding-bottom: 4px;
+    }
+    .chart-legend-swatch {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 2px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
 
     .chart-bars {
       display: flex;
@@ -152,15 +170,18 @@
       flex: 1;
       min-height: 1px;
       position: relative;
-      transition: height 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.15s ease;
-      background: #8FCFC2;
+      display: flex;
+      flex-direction: column;
       border-radius: 4px 4px 0 0;
-      cursor: pointer;
+      overflow: hidden;
+      transition: height 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+      cursor: default;
     }
-    .chart-bar.is-current { background: #E89A1F; }
     .chart-bar.is-drillable { cursor: pointer; }
-    .chart-bar:not(.is-drillable) { cursor: default; }
     .chart-bar:hover { filter: brightness(1.1); }
+    .chart-bar-seg { width: 100%; }
+    .chart-bar-seg-walk { background: #E7D7A4; }  /* cream */
+    .chart-bar-seg-run  { background: #016074; }  /* deep blue */
     .chart-bar-value {
       position: absolute;
       bottom: 100%;
@@ -194,6 +215,12 @@
       letter-spacing: 0.04em;
       white-space: nowrap;
       overflow: hidden;
+      transition: color 0.15s ease, opacity 0.15s ease;
+    }
+    .chart-label.is-current {
+      color: #E89A1F;
+      opacity: 1;
+      font-weight: 800;
     }
 
     /* Zoom buttons */
@@ -302,6 +329,10 @@
         <div class="chart-summary-label">Days</div>
         <div class="chart-summary-value" id="summary-days">—</div>
       </div>
+      <div class="chart-legend">
+        <span><span class="chart-legend-swatch" style="background:#E7D7A4"></span>Walk</span>
+        <span><span class="chart-legend-swatch" style="background:#016074"></span>Run</span>
+      </div>
     </div>
     <div class="chart-bars" id="chart-bars"></div>
     <div class="chart-labels" id="chart-labels"></div>
@@ -309,15 +340,15 @@
 
   <div class="zoom-buttons">
     <button class="zoom-btn"           data-zoom="all"  >All</button>
-    <button class="zoom-btn"           data-zoom="year" >Year</button>
+    <button class="zoom-btn is-active" data-zoom="year" >Year</button>
     <button class="zoom-btn"           data-zoom="month">Month</button>
-    <button class="zoom-btn is-active" data-zoom="week" >Week</button>
+    <button class="zoom-btn"           data-zoom="week" >Week</button>
   </div>
 
 </div>
 
 <footer class="mt-footer">
-  <div class="mt-build">2026.05.10.009</div>
+  <div class="mt-build">2026.05.10.010</div>
 </footer>
 
 <script>
@@ -350,11 +381,14 @@
   // ---------- state ----------
 
   var state = {
-    zoom: 'week',                 // 'week' | 'month' | 'year' | 'all'
-    cursor: startOfWeek(new Date()), // anchor of current visible range
-    dailyMiles: {},               // 'YYYY-MM-DD' -> total miles that day
+    zoom: 'year',                 // 'week' | 'month' | 'year' | 'all' — default Year
+    cursor: startOfYear(new Date()), // anchor of current visible range
+    dailyWalk: {},                // 'YYYY-MM-DD' -> walk miles that day
+    dailyRun:  {},                // 'YYYY-MM-DD' -> run miles that day
     firstEntryDate: null          // earliest date with any entries
   };
+
+  function dayTotal(k) { return (state.dailyWalk[k] || 0) + (state.dailyRun[k] || 0); }
 
   // ---------- loader ----------
 
@@ -385,14 +419,18 @@
   function loadData() {
     startLoader();
     MilesTracker.fetchAllEntries(function(rows) {
-      var daily = {};
+      var walk = {};
+      var run  = {};
       var firstDate = null;
       rows.forEach(function(r) {
         if (!r.date) return;
-        daily[r.date] = (daily[r.date] || 0) + (parseFloat(r.miles) || 0);
+        var miles = parseFloat(r.miles) || 0;
+        var bucket = (r.type === 'Run') ? run : walk;
+        bucket[r.date] = (bucket[r.date] || 0) + miles;
         if (!firstDate || r.date < firstDate) firstDate = r.date;
       });
-      state.dailyMiles = daily;
+      state.dailyWalk = walk;
+      state.dailyRun  = run;
       state.firstEntryDate = firstDate;
       render();
       stopLoader();
@@ -402,37 +440,55 @@
   // ---------- bin computation per zoom ----------
 
   function buildBins() {
-    var d = state.dailyMiles;
+    var w = state.dailyWalk;
+    var r = state.dailyRun;
     var today = new Date(); today.setHours(12,0,0,0);
     var bins = [];
+
+    function pushBin(opts) {
+      bins.push({
+        label: opts.label,
+        walkMiles: opts.walk,
+        runMiles:  opts.run,
+        miles:     opts.walk + opts.run,
+        isCurrent: !!opts.isCurrent,
+        tooltip:   opts.tooltip,
+        drillTo:   opts.drillTo
+      });
+    }
 
     if (state.zoom === 'week') {
       var sun = startOfWeek(state.cursor);
       for (var i = 0; i < 7; i++) {
         var dt = addDays(sun, i);
-        bins.push({
+        var k = fmtDate(dt);
+        pushBin({
           label: DOW_TINY[i],
-          miles: d[fmtDate(dt)] || 0,
+          walk:  w[k] || 0,
+          run:   r[k] || 0,
           isCurrent: sameDate(dt, today),
           tooltip: dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })
         });
       }
     } else if (state.zoom === 'month') {
-      // Bar per Sun-Sat week that touches the cursor's month; drills to Week zoom
       var first = startOfMonth(state.cursor);
       var last  = new Date(first.getFullYear(), first.getMonth() + 1, 0, 12);
       var sunCursor = startOfWeek(first);
       var weekIdx = 1;
       while (sunCursor <= last) {
-        var sum = 0;
+        var sumW = 0, sumR = 0;
         for (var i = 0; i < 7; i++) {
           var dt = addDays(sunCursor, i);
-          if (sameMonth(dt, first)) sum += d[fmtDate(dt)] || 0;
+          if (sameMonth(dt, first)) {
+            var k = fmtDate(dt);
+            sumW += w[k] || 0;
+            sumR += r[k] || 0;
+          }
         }
         var satCursor = addDays(sunCursor, 6);
-        bins.push({
+        pushBin({
           label: 'W' + weekIdx,
-          miles: sum,
+          walk: sumW, run: sumR,
           isCurrent: today >= sunCursor && today <= satCursor,
           tooltip: 'Week of ' + sunCursor.toLocaleDateString('en-US', { month:'short', day:'numeric' }),
           drillTo: { zoom: 'week', cursor: new Date(sunCursor) }
@@ -441,36 +497,32 @@
         weekIdx++;
       }
     } else if (state.zoom === 'year') {
-      // 12 month bars; tap to drill into that month
       for (var m = 0; m < 12; m++) {
         var monthDate = new Date(state.cursor.getFullYear(), m, 1, 12);
         var ym = monthDate.getFullYear() + '-' + pad2(m + 1);
-        var sum = 0;
-        Object.keys(d).forEach(function(k) {
-          if (k.indexOf(ym) === 0) sum += d[k];
-        });
-        bins.push({
+        var sumW = 0, sumR = 0;
+        Object.keys(w).forEach(function(k) { if (k.indexOf(ym) === 0) sumW += w[k]; });
+        Object.keys(r).forEach(function(k) { if (k.indexOf(ym) === 0) sumR += r[k]; });
+        pushBin({
           label: MONTHS_SHORT[m],
-          miles: sum,
+          walk: sumW, run: sumR,
           isCurrent: sameMonth(monthDate, today),
           tooltip: monthDate.toLocaleDateString('en-US', { month:'long', year:'numeric' }),
           drillTo: { zoom: 'month', cursor: monthDate }
         });
       }
     } else if (state.zoom === 'all') {
-      // One bar per year; tap to drill into that year
       if (!state.firstEntryDate) return [];
       var firstYear = parseInt(state.firstEntryDate.substring(0, 4), 10);
       var thisYear = today.getFullYear();
       for (var yr = firstYear; yr <= thisYear; yr++) {
         var yrStr = String(yr);
-        var sum = 0;
-        Object.keys(d).forEach(function(k) {
-          if (k.indexOf(yrStr + '-') === 0) sum += d[k];
-        });
-        bins.push({
+        var sumW = 0, sumR = 0;
+        Object.keys(w).forEach(function(k) { if (k.indexOf(yrStr + '-') === 0) sumW += w[k]; });
+        Object.keys(r).forEach(function(k) { if (k.indexOf(yrStr + '-') === 0) sumR += r[k]; });
+        pushBin({
           label: yrStr,
-          miles: sum,
+          walk: sumW, run: sumR,
           isCurrent: yr === today.getFullYear(),
           tooltip: yrStr + ' total',
           drillTo: { zoom: 'year', cursor: new Date(yr, 0, 1, 12) }
@@ -547,12 +599,19 @@
 
     var barsHtml = bins.map(function(b, i) {
       var pct = (b.miles / max) * 100;
-      var cls = 'chart-bar' + (b.isCurrent ? ' is-current' : '') + (b.drillTo ? ' is-drillable' : '');
+      var cls = 'chart-bar' + (b.drillTo ? ' is-drillable' : '');
+      var walkPct = b.miles > 0 ? (b.walkMiles / b.miles) * 100 : 0;
+      var runPct  = b.miles > 0 ? (b.runMiles  / b.miles) * 100 : 0;
       var val = b.miles > 0 ? '<div class="chart-bar-value">' + b.miles.toFixed(1) + '</div>' : '';
-      return '<div class="' + cls + '" data-idx="' + i + '" style="height:' + pct + '%" title="' + b.tooltip + ': ' + b.miles.toFixed(1) + ' mi">' + val + '</div>';
+      var segs = '';
+      // Stack: run on top (rendered first), walk on bottom (rendered second; flex puts last at the bottom)
+      if (b.runMiles  > 0) segs += '<div class="chart-bar-seg chart-bar-seg-run"  style="height:' + runPct  + '%"></div>';
+      if (b.walkMiles > 0) segs += '<div class="chart-bar-seg chart-bar-seg-walk" style="height:' + walkPct + '%"></div>';
+      return '<div class="' + cls + '" data-idx="' + i + '" style="height:' + pct + '%" title="' + b.tooltip + ': ' + b.miles.toFixed(1) + ' mi">' + val + segs + '</div>';
     }).join('');
     var labelsHtml = bins.map(function(b) {
-      return '<div class="chart-label">' + (b.label || '') + '</div>';
+      var lblCls = 'chart-label' + (b.isCurrent ? ' is-current' : '');
+      return '<div class="' + lblCls + '">' + (b.label || '') + '</div>';
     }).join('');
 
     document.getElementById('chart-bars').innerHTML   = barsHtml;

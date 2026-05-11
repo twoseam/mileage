@@ -468,6 +468,92 @@
       opacity: 0.18;
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
     }
+
+    /* ---------- DIALOG ---------- */
+
+    #mt-dialog {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    #mt-dialog.mt-dialog-show { display: flex; }
+
+    .mt-dialog-card {
+      background: #f5f0e6;
+      color: #1a1a1a;
+      padding: 1.75rem 1.75rem 1.5rem;
+      border-radius: 16px;
+      max-width: 380px;
+      width: 100%;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    }
+    .mt-dialog-card .mt-field { margin-bottom: 1.4rem; }
+    .mt-dialog-card .mt-field label { color: #1a1a1a; }
+    .mt-dialog-card .mt-field input[type="text"],
+    .mt-dialog-card .mt-field input[type="time"],
+    .mt-dialog-card .mt-field select {
+      color: #1a1a1a;
+      border-bottom-color: rgba(0, 0, 0, 0.4);
+    }
+    .mt-dialog-card .mt-toggle-btn {
+      color: #1a1a1a;
+      border-color: rgba(0, 0, 0, 0.22);
+    }
+    .mt-dialog-card .mt-toggle-btn.mt-active {
+      background: #E89A1F;
+      color: #1a1a1a;
+      border-color: #E89A1F;
+    }
+    .mt-dialog-card .mt-checkbox { color: #1a1a1a; }
+    .mt-dialog-card .mt-checkbox input { border-color: #1a1a1a; opacity: 0.7; }
+    .mt-dialog-card .mt-checkbox input:checked { opacity: 1; }
+
+    .mt-dialog-actions {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+    .mt-dialog-save {
+      border: none;
+      border-radius: 10px;
+      padding: 14px 44px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      color: #1a1a1a;
+      background: #E89A1F;
+      box-shadow: 0 4px 0 #8E5A0E, 0 8px 14px rgba(0, 0, 0, 0.25);
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .mt-dialog-save:active {
+      transform: translateY(4px);
+      box-shadow: 0 0 0 #8E5A0E, 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .mt-dialog-cancel {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #1a1a1a;
+      opacity: 0.45;
+      font-family: inherit;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 10px;
+    }
+    .mt-dialog-cancel:hover { opacity: 0.8; }
   </style>
 </head>
 <body>
@@ -557,6 +643,45 @@
 <footer class="mt-footer">
   <div class="mt-build">2026.05.10.001</div>
 </footer>
+
+<div id="mt-dialog">
+  <div class="mt-dialog-card">
+
+    <div class="mt-field">
+      <label>Walk / Run</label>
+      <div class="mt-toggle">
+        <button type="button" class="mt-toggle-btn mt-active" data-type="Walk" onclick="mtSetType('Walk')">Walk</button>
+        <button type="button" class="mt-toggle-btn" data-type="Run" onclick="mtSetType('Run')">Run</button>
+      </div>
+    </div>
+
+    <div class="mt-field">
+      <label>Start Time</label>
+      <input type="time" id="mt-time-input" oninput="mtTimeEdited()" />
+    </div>
+
+    <div class="mt-field">
+      <label>Shoe</label>
+      <select id="mt-shoe-select"><option value="">Loading…</option></select>
+    </div>
+
+    <div class="mt-field">
+      <label class="mt-checkbox">
+        <input type="checkbox" id="mt-notes-toggle" onchange="mtToggleNotes()" />
+        <span>Add notes</span>
+      </label>
+      <div class="mt-notes-wrap" id="mt-notes-wrap">
+        <input type="text" id="mt-notes-input" placeholder="" />
+      </div>
+    </div>
+
+    <div class="mt-dialog-actions">
+      <button type="button" class="mt-dialog-save" onclick="mtConfirmSave()">Save</button>
+      <button type="button" class="mt-dialog-cancel" onclick="mtCloseDialog()">Cancel</button>
+    </div>
+
+  </div>
+</div>
 
 <script>
 
@@ -776,10 +901,7 @@
 
   function mtTimeEdited() { mtTimeManuallyEdited = true; }
 
-  function mtMilesChanged() {
-    if (mtTimeManuallyEdited) return;
-    var miles = parseFloat(document.getElementById('mt-miles-input').value);
-    if (!miles || miles <= 0) return;
+  function mtAutoFillStartTime(miles) {
     var durationMin = Math.round(miles / MT_PACE_MPH * 60);
     var now = new Date();
     now.setMinutes(now.getMinutes() - durationMin);
@@ -804,6 +926,35 @@
       wrap.classList.remove('mt-expanded');
       document.getElementById('mt-notes-input').value = '';
     }
+  }
+
+  function mtOpenDialog() {
+    var date  = document.getElementById('mt-date-input').value;
+    var miles = parseFloat(document.getElementById('mt-miles-input').value);
+    var errEl = document.getElementById('mt-error');
+    function flashError(msg) {
+      errEl.classList.remove('mt-fade-out');
+      errEl.textContent = msg;
+      setTimeout(function() {
+        errEl.classList.add('mt-fade-out');
+        setTimeout(function() {
+          errEl.textContent = '';
+          errEl.classList.remove('mt-fade-out');
+        }, 400);
+      }, 2500);
+    }
+    if (!date) { flashError('Pick a date.'); return; }
+    if (isNaN(miles) || miles <= 0) { flashError('Enter miles greater than 0.'); return; }
+    if (date > mtTodayStr()) { flashError("Can't track dates in the future."); return; }
+
+    // Smart default for Start Time — only if user hasn't manually edited it in this session
+    if (!mtTimeManuallyEdited) mtAutoFillStartTime(miles);
+
+    document.getElementById('mt-dialog').classList.add('mt-dialog-show');
+  }
+
+  function mtCloseDialog() {
+    document.getElementById('mt-dialog').classList.remove('mt-dialog-show');
   }
 
   function mtInitDate() {
@@ -945,34 +1096,18 @@
     // leave date, type, and shoe as-is — most likely same next time
   }
 
-  /* ===================== Submit ===================== */
+  /* ===================== Submit (called from dialog) ===================== */
 
-  function mtSubmit() {
-    var date  = document.getElementById('mt-date-input').value;
-    var miles = parseFloat(document.getElementById('mt-miles-input').value);
+  function mtConfirmSave() {
+    var date      = document.getElementById('mt-date-input').value;
+    var miles     = parseFloat(document.getElementById('mt-miles-input').value);
     var startTime = document.getElementById('mt-time-input').value;
-    var shoe  = document.getElementById('mt-shoe-select').value;
-    var notes = document.getElementById('mt-notes-input').value;
+    var shoe      = document.getElementById('mt-shoe-select').value;
+    var notes     = document.getElementById('mt-notes-input').value;
 
-    var errEl = document.getElementById('mt-error');
-    function flashError(msg) {
-      errEl.classList.remove('mt-fade-out');
-      errEl.textContent = msg;
-      setTimeout(function() {
-        errEl.classList.add('mt-fade-out');
-        setTimeout(function() {
-          errEl.textContent = '';
-          errEl.classList.remove('mt-fade-out');
-        }, 400);
-      }, 2500);
-    }
-
-    if (!date) { flashError('Pick a date.'); return; }
-    if (isNaN(miles) || miles <= 0) { flashError('Enter miles greater than 0.'); return; }
-    if (date > mtTodayStr()) { flashError("Can't track dates in the future."); return; }
-
+    mtCloseDialog();
     document.getElementById('mt-result').textContent = '';
-    errEl.textContent = '';
+    document.getElementById('mt-error').textContent = '';
     mtStartSubmitProgress();
 
     mtGetLocation().then(function(coords) {

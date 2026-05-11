@@ -186,6 +186,7 @@
 
     .mt-field input[type="text"],
     .mt-field input[type="time"],
+    .mt-field input[type="date"],
     .mt-field select,
     .mt-date-display {
       width: 100%;
@@ -223,22 +224,16 @@
     }
     .mt-field-row .mt-field { flex: 1; }
 
-    .mt-date-display { pointer-events: none; }
-    /* Real date input overlays the visible display — taps hit it directly,
-       so the native picker opens with no JS shim. */
-    .mt-date-real {
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      width: 100%;
-      height: 2.5rem;
-      opacity: 0;
+    .mt-field input[type="date"] {
       cursor: pointer;
-      -webkit-appearance: none;
-      appearance: none;
-      border: none;
-      padding: 0;
-      background: transparent;
+    }
+    .mt-field input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      opacity: 0.5;
+      cursor: pointer;
+    }
+    .mt-dialog-card .mt-field input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: none;
     }
 
     /* Walk / Run toggle */
@@ -621,15 +616,15 @@
 
   <div id="mt-form">
 
-    <div class="mt-field">
-      <label>Date</label>
-      <div class="mt-date-display" id="mt-date-display"></div>
-      <input type="date" class="mt-date-real" id="mt-date-input" />
-    </div>
-
-    <div class="mt-field">
-      <label>Miles</label>
-      <input type="text" inputmode="decimal" id="mt-miles-input" placeholder="0.0" />
+    <div class="mt-field-row">
+      <div class="mt-field">
+        <label>Date</label>
+        <input type="date" id="mt-date-input" />
+      </div>
+      <div class="mt-field">
+        <label>Miles</label>
+        <input type="text" inputmode="decimal" id="mt-miles-input" placeholder="0.0" />
+      </div>
     </div>
 
     <div id="mt-last-tracked"></div>
@@ -909,10 +904,7 @@
       mtPad2(now.getHours()) + ':' + mtPad2(now.getMinutes());
   }
 
-  function mtDateChanged() {
-    var input = document.getElementById('mt-date-input');
-    document.getElementById('mt-date-display').textContent = mtFormatDateLabel(input.value);
-  }
+  function mtDateChanged() { /* no-op now that native input is visible */ }
 
   function mtToggleNotes() {
     var checkbox = document.getElementById('mt-notes-toggle');

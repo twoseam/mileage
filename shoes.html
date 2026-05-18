@@ -154,6 +154,7 @@
       font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase;
       opacity: 0.35; font-weight: 700;
     }
+    .shoe-dur { margin-top: 2px; opacity: 0.8; }
     .wear-track {
       margin-top: 6px; height: 6px; border-radius: 3px;
       background: rgba(255,255,255,0.08); overflow: hidden;
@@ -375,7 +376,7 @@
 <div class="mt-pill" id="pill"></div>
 
 <footer class="mt-footer">
-  <div class="mt-build">2026.05.17.031</div>
+  <div class="mt-build">2026.05.17.032</div>
 </footer>
 
 <script>
@@ -418,6 +419,23 @@
     var d = new Date(s + 'T12:00:00');
     if (isNaN(d)) return s;
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function mdy(s) {
+    if (!s) return '';
+    var d = new Date(s + 'T12:00:00');
+    if (isNaN(d)) return s;
+    return ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2) + '/' + d.getFullYear();
+  }
+  function durUsed(a, b) {
+    var d1 = new Date(a + 'T12:00:00'), d2 = new Date(b + 'T12:00:00');
+    if (isNaN(d1) || isNaN(d2)) return '';
+    var days = Math.round((d2 - d1) / 86400000);
+    if (days < 31) return days + ' day' + (days === 1 ? '' : 's');
+    var months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+    if (d2.getDate() < d1.getDate()) months--;
+    if (months < 12) return months + ' month' + (months === 1 ? '' : 's');
+    var yrs = Math.floor(months / 12), rem = months % 12;
+    return yrs + ' yr' + (yrs === 1 ? '' : 's') + (rem ? ' ' + rem + ' mo' : '');
   }
   function pill(msg, sticky) {
     var p = document.getElementById('pill');
@@ -463,9 +481,14 @@
     }
     var title = (brand + ' ' + titleModel).trim() || s.name || 'Unnamed pair';
 
-    var when = s.purchased ? ('Purchased ' + fmtDate(s.purchased)) : '';
+    var whenHtml = '';
     if (retired && s.retired) {
-      when = (when ? when + ' · ' : '') + 'Retired ' + fmtDate(s.retired);
+      whenHtml = esc(mdy(s.purchased) + ' – ' + mdy(s.retired));
+      if (s.purchased) {
+        whenHtml += '<div class="shoe-dur">' + esc(durUsed(s.purchased, s.retired)) + ' used</div>';
+      }
+    } else if (s.purchased) {
+      whenHtml = esc('Purchased ' + fmtDate(s.purchased));
     }
 
     var photo = s.photo
@@ -486,7 +509,7 @@
           '<div class="shoe-walks">' + (s.walks || 0) + (s.walks === 1 ? ' walk' : ' walks') + '</div>' +
           '<div class="shoe-miles">' + miles.toFixed(1) + ' <span>/ ' + goal + ' mi</span></div>' +
           '<div class="wear-track"><div class="wear-fill ' + wearCls + '" style="width:' + pct + '%"></div></div>' +
-          (when ? '<div class="shoe-when">' + esc(when) + '</div>' : '') +
+          (whenHtml ? '<div class="shoe-when">' + whenHtml + '</div>' : '') +
         '</div>' +
       '</div>';
   }

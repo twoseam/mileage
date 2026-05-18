@@ -454,9 +454,15 @@
         retired.map(function(s) { return shoeCard(s, true); }).join('');
       document.getElementById('toggle-retired').style.display = '';
     } else {
-      rw.style.display = 'none';
+      rw.classList.remove('open');
       document.getElementById('toggle-retired').style.display = 'none';
     }
+
+    // Stagger the cards in
+    var cards = document.querySelectorAll('.shoe-card.reveal');
+    cards.forEach(function(c, i) {
+      setTimeout(function() { c.classList.remove('reveal'); }, 80 + i * 70);
+    });
   }
 
   function load() {

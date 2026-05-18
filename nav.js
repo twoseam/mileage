@@ -25,7 +25,7 @@
       icon: '<path d="M3 16.4c0-.9.4-1.7 1.1-2.2L8 11l2 1.3L12.6 9l3 3.2c2.2.5 4.3 1 5.4 2.3.5.6.6 1.3.6 2v1.4H3z"/><path d="M3 18.7h18"/>' }
   ];
 
-  var VERSION = 'v4.13.1';
+  var VERSION = 'v4.14.0';
 
   /* ===================== Theme (light / dark) ===================== */
   var THEME_KEY = 'mt-theme';
@@ -61,17 +61,6 @@
     'html[data-theme="light"] body {',
     '  background: ' + LIGHT_BG + ' !important; color: ' + LIGHT_TEXT + ' !important;',
     '}',
-    // bottom bar + sheet in light mode
-    'html[data-theme="light"] #mt-tabbar {',
-    '  background: ' + LIGHT_SURF + '; border-top-color: ' + LIGHT_BORDER + ';',
-    '}',
-    'html[data-theme="light"] .mt-tab { color: ' + LIGHT_TEXT + '; }',
-    'html[data-theme="light"] #mt-sheet {',
-    '  background: ' + LIGHT_SURF + '; color: ' + LIGHT_TEXT + ';',
-    '}',
-    'html[data-theme="light"] .mt-sheet-grab { background: rgba(0,0,0,0.18); }',
-    'html[data-theme="light"] #mt-sheet-bd { background: rgba(0,0,0,0.32); }',
-    'html[data-theme="light"] .mt-sheet-ver { color: ' + LIGHT_TEXT + '; }',
     'html[data-theme="light"] .mt-footer .mt-ver { color: ' + LIGHT_TEXT + '; }',
     // theme switch control
     '#mt-theme-switch {',
@@ -107,25 +96,56 @@
     (document.head || document.documentElement).appendChild(s);
   })();
 
-  var BAR_H = 62;   // px (excludes the iOS safe-area inset added below)
+  var BAR_H  = 62;   // tab-row content height (px)
+  var GRIP_H = 22;   // the little pull tab strip on top
   var BAR_LIFT = 12; // extra bottom pad so the row floats off the edge
-  // total reserved height below content
   var BAR_PAD = 'calc(env(safe-area-inset-bottom, 0px) + ' + BAR_LIFT + 'px)';
 
   var css = [
-    // content must clear the fixed bar
-    'body { padding-bottom: calc(' + BAR_H + 'px + ' + BAR_PAD + '); }',
+    // content clears the closed nav (grip + tab row)
+    'body { padding-bottom: calc(' + (GRIP_H + BAR_H) + 'px + ' + BAR_PAD + '); }',
 
-    '#mt-tabbar {',
+    '#mt-nav-bd {',
+    '  position: fixed; inset: 0; z-index: 7990;',
+    '  background: rgba(0, 0, 0, 0.5);',
+    '  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);',
+    '  opacity: 0; pointer-events: none; transition: opacity 0.25s ease;',
+    '}',
+    '#mt-nav-bd.show { opacity: 1; pointer-events: auto; }',
+    'html[data-theme="light"] #mt-nav-bd { background: rgba(0, 0, 0, 0.32); }',
+
+    // one continuous panel: grip + tabs + drawer. Closed = translated
+    // down by the drawer height (set inline once measured) so only the
+    // grip + tabs show; drag/tap lifts the whole thing to reveal the rest.
+    '#mt-nav {',
     '  position: fixed; left: 0; right: 0; bottom: 0; z-index: 8000;',
-    '  height: calc(' + BAR_H + 'px + ' + BAR_PAD + ');',
-    '  padding-bottom: ' + BAR_PAD + ';',
-    '  display: flex; align-items: stretch;',
+    '  display: flex; flex-direction: column;',
     '  background: #1c1c1c; color: #f5f5f5;',
-    '  border-top: 1px solid rgba(255, 255, 255, 0.07);',
-    '  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.28);',
+    '  border-radius: 16px 16px 0 0;',
+    '  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.34);',
+    '  transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);',
     '  touch-action: none;',
     '}',
+    '#mt-nav.dragging { transition: none; }',
+    'html[data-theme="light"] #mt-nav { background: ' + LIGHT_SURF + '; color: ' + LIGHT_TEXT + '; }',
+
+    // the small pull tab — sits to the LEFT
+    '.mt-grip {',
+    '  height: ' + GRIP_H + 'px; display: flex; align-items: center;',
+    '  padding-left: 24px; cursor: pointer; flex: 0 0 auto;',
+    '}',
+    '.mt-grip i {',
+    '  display: block; width: 34px; height: 5px; border-radius: 3px;',
+    '  background: rgba(255, 255, 255, 0.32);',
+    '}',
+    'html[data-theme="light"] .mt-grip i { background: rgba(0, 0, 0, 0.28); }',
+
+    '#mt-nav-tabs {',
+    '  display: flex; align-items: stretch;',
+    '  height: ' + BAR_H + 'px; padding-bottom: ' + BAR_PAD + ';',
+    '  border-top: 1px solid rgba(255, 255, 255, 0.07);',
+    '}',
+    'html[data-theme="light"] #mt-nav-tabs { border-top-color: ' + LIGHT_BORDER + '; }',
     '.mt-tab {',
     '  flex: 1; position: relative;',
     '  display: flex; flex-direction: column;',
@@ -145,63 +165,33 @@
     '  font-size: 0.58rem; font-weight: 800;',
     '  letter-spacing: 0.06em; text-transform: uppercase;',
     '}',
-    // the yellow current-page bar
     '.mt-tab-ind {',
     '  position: absolute; top: 0; left: 50%; transform: translateX(-50%);',
     '  width: 26px; height: 3px; border-radius: 0 0 3px 3px;',
-    '  background: #F7C948; opacity: 0;',
-    '  transition: opacity 0.15s ease;',
+    '  background: #F7C948; opacity: 0; transition: opacity 0.15s ease;',
     '}',
     '.mt-tab.active .mt-tab-ind { opacity: 1; }',
-    // grab handle (signifies swipe-up)
-    '.mt-grab {',
-    '  position: absolute; top: 6px; left: 50%; transform: translateX(-50%);',
-    '  width: 38px; height: 4px; border-radius: 2px;',
-    '  background: rgba(255, 255, 255, 0.22);',
-    '}',
 
-    '#mt-sheet-bd {',
-    '  position: fixed; inset: 0; z-index: 8090;',
-    '  background: rgba(0, 0, 0, 0.5);',
-    '  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);',
-    '  opacity: 0; pointer-events: none; transition: opacity 0.25s ease;',
+    '#mt-nav-draw {',
+    '  padding: 0.4rem 1.6rem calc(1.6rem + env(safe-area-inset-bottom, 0px));',
     '}',
-    '#mt-sheet-bd.show { opacity: 1; pointer-events: auto; }',
-    '#mt-sheet {',
-    '  position: fixed; left: 0; right: 0; bottom: 0; z-index: 8100;',
-    '  background: #1c1c1c; color: #f5f5f5;',
-    '  border-radius: 20px 20px 0 0;',
-    '  padding: 14px 1.6rem calc(1.6rem + env(safe-area-inset-bottom, 0px));',
-    '  transform: translateY(110%);',
-    '  transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);',
-    '  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.45);',
-    '}',
-    '#mt-sheet.show { transform: translateY(0); }',
-    '#mt-sheet.dragging { transition: none; }',
-    '.mt-sheet-grab {',
-    '  width: 44px; height: 5px; border-radius: 3px; margin: 0 auto 1.4rem;',
-    '  background: rgba(255, 255, 255, 0.22);',
-    '}',
-    '.mt-sheet-row {',
+    '.mt-draw-row {',
     '  display: flex; align-items: center; justify-content: space-between;',
-    '  padding: 0.7rem 0; gap: 1rem;',
+    '  padding: 0.9rem 0; gap: 1rem;',
     '}',
-    '.mt-sheet-row + .mt-sheet-row {',
-    '  border-top: 1px solid rgba(255, 255, 255, 0.08);',
-    '}',
-    'html[data-theme="light"] .mt-sheet-row + .mt-sheet-row {',
-    '  border-top-color: ' + LIGHT_BORDER + ';',
-    '}',
-    '.mt-sheet-k {',
+    '.mt-draw-row + .mt-draw-row { border-top: 1px solid rgba(255, 255, 255, 0.08); }',
+    'html[data-theme="light"] .mt-draw-row + .mt-draw-row { border-top-color: ' + LIGHT_BORDER + '; }',
+    '.mt-draw-k {',
     '  font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em;',
     '  text-transform: uppercase; opacity: 0.55;',
     '}',
-    '.mt-sheet-ver {',
+    '.mt-draw-ver {',
     '  color: inherit; text-decoration: none; font-weight: 800;',
     '  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;',
     '  letter-spacing: 0.08em; opacity: 0.85;',
     '}'
   ].join('\n');
+
 
   function inject() {
     var style = document.createElement('style');
@@ -221,35 +211,54 @@
     }).join('');
 
     var html = '' +
-      '<nav id="mt-tabbar"><div class="mt-grab"></div>' + tabsHtml + '</nav>' +
-      '<div id="mt-sheet-bd"></div>' +
-      '<div id="mt-sheet">' +
-        '<div class="mt-sheet-grab"></div>' +
-        '<div class="mt-sheet-row">' +
-          '<span class="mt-sheet-k">Appearance</span>' +
-          '<button id="mt-theme-switch" type="button" role="switch" ' +
-                  'aria-label="Switch between light and dark mode">' +
-            '<span class="mt-ts-ico">☾</span>' +
-            '<span class="mt-ts-track"><span class="mt-ts-knob"></span></span>' +
-            '<span class="mt-ts-ico">☀</span>' +
-          '</button>' +
+      '<div id="mt-nav-bd"></div>' +
+      '<nav id="mt-nav">' +
+        '<div class="mt-grip"><i></i></div>' +
+        '<div id="mt-nav-tabs">' + tabsHtml + '</div>' +
+        '<div id="mt-nav-draw">' +
+          '<div class="mt-draw-row">' +
+            '<span class="mt-draw-k">Appearance</span>' +
+            '<button id="mt-theme-switch" type="button" role="switch" ' +
+                    'aria-label="Switch between light and dark mode">' +
+              '<span class="mt-ts-ico">☾</span>' +
+              '<span class="mt-ts-track"><span class="mt-ts-knob"></span></span>' +
+              '<span class="mt-ts-ico">☀</span>' +
+            '</button>' +
+          '</div>' +
+          '<div class="mt-draw-row">' +
+            '<span class="mt-draw-k">Version history</span>' +
+            '<a class="mt-draw-ver" href="changelog.html">' + VERSION + '</a>' +
+          '</div>' +
         '</div>' +
-        '<div class="mt-sheet-row">' +
-          '<span class="mt-sheet-k">Version history</span>' +
-          '<a class="mt-sheet-ver" href="changelog.html">' + VERSION + '</a>' +
-        '</div>' +
-      '</div>';
+      '</nav>';
     document.body.insertAdjacentHTML('beforeend', html);
 
-    var bar    = document.getElementById('mt-tabbar');
-    var sheet  = document.getElementById('mt-sheet');
-    var sheetB = document.getElementById('mt-sheet-bd');
+    var navEl = document.getElementById('mt-nav');
+    var draw  = document.getElementById('mt-nav-draw');
+    var bd    = document.getElementById('mt-nav-bd');
+    var grip  = navEl.querySelector('.mt-grip');
 
-    function openSheet()  { sheet.classList.add('show'); sheetB.classList.add('show'); }
-    function closeSheet() { sheet.classList.remove('show'); sheetB.classList.remove('show'); }
-    sheetB.addEventListener('click', closeSheet);
+    // Closed = the whole panel pushed down by the drawer's height, so
+    // only the grip + tabs show. Measured after layout (and on resize).
+    var closedTY = 0, isOpen = false;
+    function measure() {
+      closedTY = draw.offsetHeight;
+      if (!isOpen) navEl.style.transform = 'translateY(' + closedTY + 'px)';
+    }
+    requestAnimationFrame(function() { requestAnimationFrame(measure); });
+    window.addEventListener('resize', measure);
+    window.addEventListener('load', measure);
 
-    // Theme switch lives in the sheet now
+    function setOpen(o) {
+      isOpen = o;
+      navEl.style.transform = 'translateY(' + (o ? 0 : closedTY) + 'px)';
+      navEl.classList.toggle('mt-open', o);
+      bd.classList.toggle('show', o);
+      bd.style.opacity = '';
+    }
+    grip.addEventListener('click', function() { setOpen(!isOpen); });
+    bd.addEventListener('click', function() { setOpen(false); });
+
     var themeSwitch = document.getElementById('mt-theme-switch');
     function syncSwitch() {
       themeSwitch.setAttribute('aria-checked', theme === 'light' ? 'true' : 'false');
@@ -260,34 +269,37 @@
       applyTheme(theme); saveTheme(theme); syncSwitch();
     });
 
-    // --- swipe up on the bar opens the sheet; drag the sheet down closes ---
-    var sy = 0, tracking = false, sdy = 0;
-    bar.addEventListener('touchstart', function(e) {
-      sy = e.touches[0].clientY; tracking = true;
+    // --- drag the whole panel: it follows your finger and snaps ---
+    var sY = 0, baseTY = 0, dragging = false;
+    navEl.addEventListener('touchstart', function(e) {
+      sY = e.touches[0].clientY;
+      baseTY = isOpen ? 0 : closedTY;
+      dragging = false;
     }, { passive: true });
-    bar.addEventListener('touchmove', function(e) {
-      if (!tracking) return;
-      if (sy - e.touches[0].clientY > 36) { tracking = false; openSheet(); }
-    }, { passive: true });
-    bar.addEventListener('touchend', function() { tracking = false; });
-    // tapping the handle also opens (discoverable without the gesture)
-    bar.querySelector('.mt-grab').addEventListener('click', function(e) {
-      e.preventDefault(); e.stopPropagation(); openSheet();
-    });
-
-    sheet.addEventListener('touchstart', function(e) {
-      sdy = e.touches[0].clientY; sheet.classList.add('dragging');
-    }, { passive: true });
-    sheet.addEventListener('touchmove', function(e) {
-      var d = e.touches[0].clientY - sdy;
-      if (d > 0) sheet.style.transform = 'translateY(' + d + 'px)';
-    }, { passive: true });
-    sheet.addEventListener('touchend', function(e) {
-      sheet.classList.remove('dragging');
-      sheet.style.transform = '';
-      var d = (e.changedTouches[0] || {}).clientY - sdy;
-      if (d > 70) closeSheet();
-    });
+    navEl.addEventListener('touchmove', function(e) {
+      var dy = e.touches[0].clientY - sY;
+      if (!dragging) {
+        if (Math.abs(dy) < 6) return;
+        dragging = true;
+        navEl.classList.add('dragging');
+      }
+      if (e.cancelable) e.preventDefault();
+      var ty = Math.max(0, Math.min(closedTY, baseTY + dy));
+      navEl.style.transform = 'translateY(' + ty + 'px)';
+      bd.classList.add('show');
+      bd.style.opacity = closedTY ? (1 - ty / closedTY) : 1;
+    }, { passive: false });
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      navEl.classList.remove('dragging');
+      var t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+      var dy = (t ? t.clientY : sY) - sY;
+      var ty = Math.max(0, Math.min(closedTY, baseTY + dy));
+      setOpen(ty < closedTY * 0.5);
+    }
+    navEl.addEventListener('touchend', endDrag);
+    navEl.addEventListener('touchcancel', endDrag);
 
     // Single source of truth for any in-page version stamps.
     document.querySelectorAll('a.mt-ver').forEach(function(a) {
@@ -321,8 +333,8 @@
     var TRIG = 70, MAX = 110;
 
     function blocked() {
-      var s = document.getElementById('mt-sheet');
-      if (s && s.classList.contains('show')) return true;
+      var s = document.getElementById('mt-nav');
+      if (s && s.classList.contains('mt-open')) return true;
       var m = document.querySelector('[aria-modal="true"]');
       if (m && getComputedStyle(m).display !== 'none') return true;
       var ap = document.getElementById('apanel');

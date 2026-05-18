@@ -16,7 +16,7 @@
 (function(global) {
   'use strict';
 
-  var ENDPOINT = 'https://script.google.com/macros/s/AKfycbwi4FGaT6zMOfWulcZWZrD8O7BvlVaDgK2SUYUeqap5qPzxFpZCjvi-TMHkeRRh1gyP/exec';
+  var ENDPOINT = 'https://script.google.com/macros/s/AKfycbw0EFLLXlMLpa_T3qb7xfPjaRosXia6QqOo3HMuKemmpijVzjlWWXp70V2CvPirNVpX/exec';
   var SECRET   = '101685910168591016859';
 
   function _get(action) {

@@ -251,11 +251,27 @@ function _weekly12(rows) {
 
 function _shoesWithLifetime(allRows) {
   var shoes = _readShoes();
-  var milesByShoe = {};
+
+  // Miles keyed by the (normalized) shoe label written on each walk.
+  var milesByLabel = {};
   allRows.forEach(function(r) {
-    if (r.shoe) milesByShoe[r.shoe] = (milesByShoe[r.shoe] || 0) + r.miles;
+    if (!r.shoe) return;
+    var k = String(r.shoe).trim().toLowerCase();
+    milesByLabel[k] = (milesByLabel[k] || 0) + r.miles;
   });
+
+  // A pair owns a walk if the walk's label matches the full name,
+  // the model alone, or brand+model — case-insensitive. (Walks are often
+  // tagged "Volt #2" while the pair is "Nike Volt #2".)
   return shoes.map(function(s) {
+    var keys = [s.name, s.model, (s.brand + ' ' + s.model).trim()];
+    var seen = {}, total = 0;
+    keys.forEach(function(key) {
+      key = String(key || '').trim().toLowerCase();
+      if (!key || seen[key]) return;
+      seen[key] = true;
+      total += milesByLabel[key] || 0;
+    });
     return {
       name:          s.name,
       brand:         s.brand,
@@ -266,7 +282,7 @@ function _shoesWithLifetime(allRows) {
       photo:         s.photo,
       goal:          s.goal,
       color:         s.color,
-      lifetimeMiles: milesByShoe[s.name] || 0
+      lifetimeMiles: total
     };
   });
 }

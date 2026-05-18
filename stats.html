@@ -241,10 +241,9 @@
     .chart-bar.is-drillable { cursor: pointer; }
     .chart-bar:hover { filter: brightness(1.1); }
     .chart-bar-seg { width: 100%; }
-    /* Duotone yellow: light gold = walk, deep amber = run */
-    .chart-bar-seg-walk { background: #EBB22E; }
-    .chart-bar-seg-run  { background: #A05E08; }
-    /* Current period: brighter pair so it still pops, keeps walk/run split */
+    .chart-bar-seg-walk { background: #8FCFC2; }  /* cyan */
+    .chart-bar-seg-run  { background: #E7D7A4; }  /* cream */
+    /* Current period: yellow duotone so it pops AND still shows walk/run split */
     .chart-bar.is-current .chart-bar-seg-walk { background: #F7C948; }
     .chart-bar.is-current .chart-bar-seg-run  { background: #C77A0C; }
     .chart-bar-value {
@@ -631,8 +630,8 @@
         <div class="chart-summary-value" id="summary-days">—</div>
       </div>
       <div class="chart-legend">
-        <span><span class="chart-legend-swatch" style="background:#EBB22E"></span>Walk</span>
-        <span><span class="chart-legend-swatch" style="background:#A05E08"></span>Run</span>
+        <span><span class="chart-legend-swatch" style="background:#8FCFC2"></span>Walk</span>
+        <span><span class="chart-legend-swatch" style="background:#E7D7A4"></span>Run</span>
       </div>
     </div>
     <div class="chart-viewport" id="chart-viewport">
@@ -1430,9 +1429,9 @@
       if (!bin) return;
       var html =
         '<div class="bp-title">' + bin.tooltip + '</div>' +
-        '<div class="bp-row"><span><span class="bp-dot" style="background:#EBB22E"></span>Walk</span><b>' + bin.walkMiles.toFixed(1) + '</b></div>';
+        '<div class="bp-row"><span><span class="bp-dot" style="background:#8FCFC2"></span>Walk</span><b>' + bin.walkMiles.toFixed(1) + '</b></div>';
       if (bin.runMiles > 0) {
-        html += '<div class="bp-row"><span><span class="bp-dot" style="background:#A05E08"></span>Run</span><b>' + bin.runMiles.toFixed(1) + '</b></div>';
+        html += '<div class="bp-row"><span><span class="bp-dot" style="background:#E7D7A4"></span>Run</span><b>' + bin.runMiles.toFixed(1) + '</b></div>';
       }
       html += '<div class="bp-row bp-total"><span>Total</span><b>' + bin.miles.toFixed(1) + ' mi</b></div>';
       pop.innerHTML = html;

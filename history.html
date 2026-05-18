@@ -57,7 +57,7 @@
         #B02113 89.3%, #B02113 100%);
     }
 
-    .h-wrap { max-width: 500px; margin: 0 auto; padding: 3rem 1.4rem 3rem; }
+    .h-wrap { max-width: 500px; margin: 0 auto; padding: 1.5rem 1.4rem 3rem; }
     .h-title {
       font-size: clamp(2rem, 9vw, 2.6rem); font-weight: 900;
       letter-spacing: 0.01em; margin: 0 0 1.6rem; padding: 0 0.4rem;
@@ -287,15 +287,7 @@
         fetch('routes/' + encodeURIComponent(aid) + '.json')
           .then(function(res) { if (!res.ok) throw 0; return res.json(); })
           .then(function(pts) {
-            if (!pts || pts.length < 2) return;
-            var url = (window.ActivityPanel && ActivityPanel.staticMapUrl)
-              ? ActivityPanel.staticMapUrl(pts) : '';
-            if (!url) { box.innerHTML = hThumbSvg(pts); return; }
-            var img = new Image();
-            img.alt = '';
-            img.onload = function() { box.innerHTML = ''; box.appendChild(img); };
-            img.onerror = function() { box.innerHTML = hThumbSvg(pts); };
-            img.src = url;
+            if (pts && pts.length >= 2) box.innerHTML = hThumbSvg(pts);
           })
           .catch(function() { /* keep the glyph */ });
       });

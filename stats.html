@@ -67,7 +67,7 @@
 
     .wordmark {
       max-width: 720px;
-      margin: 2.5rem auto 1.5rem;
+      margin: 1rem auto 1.25rem;
       padding: 0 2rem;
       text-align: center;
       font-family: "omnes", system-ui, sans-serif;
@@ -96,7 +96,7 @@
     #stats-shell {
       max-width: 880px;
       margin: 0 auto;
-      padding: 4.5rem 0.9rem 2.5rem;
+      padding: 1.25rem 0.9rem 2.5rem;
     }
 
     /* Period navigation */
@@ -1003,15 +1003,7 @@
           fetch('routes/' + encodeURIComponent(aid) + '.json')
             .then(function(res){ if(!res.ok) throw 0; return res.json(); })
             .then(function(pts){
-              if(!pts || pts.length<2) return;
-              var url = (window.ActivityPanel && ActivityPanel.staticMapUrl)
-                ? ActivityPanel.staticMapUrl(pts) : '';
-              if(!url){ t.innerHTML = hThumbSvg(pts); return; }
-              var img = new Image();
-              img.alt = '';
-              img.onload = function(){ t.innerHTML=''; t.appendChild(img); };
-              img.onerror = function(){ t.innerHTML = hThumbSvg(pts); };
-              img.src = url;
+              if(pts && pts.length>=2) t.innerHTML = hThumbSvg(pts);
             })
             .catch(function(){});
         });
@@ -1522,13 +1514,13 @@
     if (state.zoom === 'all') {
       scan(withCursor(state.cursor, function() { return buildBins(); }));
     } else {
-      var today = new Date(); today.setHours(12, 0, 0, 0);
-      var first = state.firstEntryDate ? parseDate(state.firstEntryDate) : state.cursor;
-      var c = periodStart(first), endC = periodStart(today), guard = 0;
-      while (c <= endC && guard++ < 1000) {
-        scan(withCursor(new Date(c), function() { return buildBins(); }));
-        c = stepCursor(c, 1);
-      }
+      // Scale to the visible period and its immediate neighbors only —
+      // keeps the axis steady across a swipe without dwarfing the
+      // current view under some huge month from a year ago.
+      var p = periodStart(state.cursor);
+      [stepCursor(p, -1), p, stepCursor(p, 1)].forEach(function(cc) {
+        scan(withCursor(new Date(cc), function() { return buildBins(); }));
+      });
     }
     return max > 0 ? max : 1;
   }

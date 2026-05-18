@@ -17,13 +17,15 @@
       icon: '<path d="M12 5v14M5 12h14"/>' },
     { href: 'stats.html', label: 'Stats',
       icon: '<path d="M4 20h16M7.5 20v-7M12 20V5M16.5 20v-9"/>' },
+    { href: 'trends.html', label: 'Trends',
+      icon: '<path d="M4 16l5-5 4 3 7-8"/><path d="M16 6h4v4"/>' },
     { href: 'history.html', label: 'History',
       icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.5 2"/>' },
     { href: 'shoes.html', label: 'Shoes',
       icon: '<path d="M3 16.4c0-.9.4-1.7 1.1-2.2L8 11l2 1.3L12.6 9l3 3.2c2.2.5 4.3 1 5.4 2.3.5.6.6 1.3.6 2v1.4H3z"/><path d="M3 18.7h18"/>' }
   ];
 
-  var VERSION = 'v4.13.0';
+  var VERSION = 'v4.13.1';
 
   /* ===================== Theme (light / dark) ===================== */
   var THEME_KEY = 'mt-theme';
@@ -105,16 +107,19 @@
     (document.head || document.documentElement).appendChild(s);
   })();
 
-  var BAR_H = 60;  // px (excludes the iOS safe-area inset added below)
+  var BAR_H = 62;   // px (excludes the iOS safe-area inset added below)
+  var BAR_LIFT = 12; // extra bottom pad so the row floats off the edge
+  // total reserved height below content
+  var BAR_PAD = 'calc(env(safe-area-inset-bottom, 0px) + ' + BAR_LIFT + 'px)';
 
   var css = [
     // content must clear the fixed bar
-    'body { padding-bottom: calc(' + BAR_H + 'px + env(safe-area-inset-bottom, 0px)); }',
+    'body { padding-bottom: calc(' + BAR_H + 'px + ' + BAR_PAD + '); }',
 
     '#mt-tabbar {',
     '  position: fixed; left: 0; right: 0; bottom: 0; z-index: 8000;',
-    '  height: calc(' + BAR_H + 'px + env(safe-area-inset-bottom, 0px));',
-    '  padding-bottom: env(safe-area-inset-bottom, 0px);',
+    '  height: calc(' + BAR_H + 'px + ' + BAR_PAD + ');',
+    '  padding-bottom: ' + BAR_PAD + ';',
     '  display: flex; align-items: stretch;',
     '  background: #1c1c1c; color: #f5f5f5;',
     '  border-top: 1px solid rgba(255, 255, 255, 0.07);',

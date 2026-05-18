@@ -135,31 +135,39 @@ function _cell(row, map, key) {
   return (map[key] != null) ? row[map[key]] : '';
 }
 
-// One source of truth for a pair's identity, display, and the set of label
-// strings a walk may use to credit it. `pair` is the copy number ('' = lone).
-function _shoeIdentity(brand, modelRaw, pairRaw) {
+function _reEsc(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// One source of truth for a pair's identity, display, and the label strings a
+// walk may use to credit it. Identity = brand + model + COLOR + copy number.
+// A Volt Pegasus and an Olive Pegasus are different shoes, numbered separately.
+function _shoeIdentity(brand, modelRaw, colorRaw, pairRaw) {
   brand = String(brand || '').trim();
+  var color = String(colorRaw || '').trim();
   var base = _stripCopyNum(modelRaw);
+  if (color) {                                   // don't double the color word
+    base = base.replace(new RegExp('\\s*' + _reEsc(color) + '\\s*$', 'i'), '').trim();
+  }
   var pair = String(pairRaw == null ? '' : pairRaw).trim();
   if (pair === '0') pair = '';
   if (!pair) {                                   // back-compat: # still in Model
     var mm = String(modelRaw || '').match(/#\s*(\d+)\s*$/);
     if (mm) pair = mm[1];
   }
-  var bm = (brand + ' ' + base).trim();
+  var bm = (brand + ' ' + base).trim();          // "Nike Pegasus"
+  var bc = (base + (color ? ' ' + color : '')).trim();      // "Pegasus Volt"
+  var full = (bm + (color ? ' ' + color : '')).trim();      // "Nike Pegasus Volt"
   var keys = [];
   function add(s) { s = String(s || '').trim().toLowerCase(); if (s && keys.indexOf(s) < 0) keys.push(s); }
-  if (pair) {
-    add(bm + ' #' + pair); add(bm + ' (' + pair + ')'); add(bm + ' ' + pair);
-    add(base + ' #' + pair); add(base + ' (' + pair + ')'); add(base + ' ' + pair);
-  } else {
-    add(bm); add(base);
-  }
+  [full, bc].forEach(function(stem) {
+    if (pair) { add(stem + ' #' + pair); add(stem + ' (' + pair + ')'); add(stem + ' ' + pair); }
+    else      { add(stem); }
+  });
   return {
     base:    base,
+    color:   color,
     pair:    pair,
-    name:    bm + (pair ? ' #' + pair : ''),       // canonical identity
-    display: bm + (pair ? ' (' + pair + ')' : ''), // shown in the app
+    name:    full + (pair ? ' #' + pair : ''),       // canonical identity
+    display: full + (pair ? ' (' + pair + ')' : ''), // full label
     keys:    keys
   };
 }
@@ -176,7 +184,7 @@ function _readShoes() {
     var brand = _cell(r, map, 'brand') || '';
     var model = _cell(r, map, 'model') || '';
     if (!brand && !model) continue;
-    var id    = _shoeIdentity(brand, model, _cell(r, map, 'pair'));
+    var id    = _shoeIdentity(brand, model, _cell(r, map, 'color'), _cell(r, map, 'pair'));
     var goalV = _cell(r, map, 'goal');
     shoes.push({
       brand:     brand,
@@ -503,9 +511,11 @@ function _stripCopyNum(s) {
 
 function _addShoe(shoe) {
   shoe = shoe || {};
-  var brand     = (shoe.brand || '').trim();
-  var baseModel = _stripCopyNum(shoe.model);   // ignore any number the user typed
-  if (!brand && !baseModel) return _json({ error: 'Brand or model required' });
+  var brand = (shoe.brand || '').trim();
+  var color = (shoe.color || '').trim();
+  var norm  = _shoeIdentity(brand, shoe.model, color, '');  // strips color/# → base
+  var base  = norm.base;
+  if (!brand && !base) return _json({ error: 'Brand or model required' });
 
   var sheet = _shoesSheet();
   if (!sheet) return _json({ error: 'Sheet "' + SHOES_SHEET + '" not found' });
@@ -515,7 +525,7 @@ function _addShoe(shoe) {
 
   // Write a pair's copy number. Prefers the Pair column; if there's no Pair
   // column, falls back to "#n" in Model (so it still works pre-column).
-  function writePair(rowIdx, base, n) {
+  function writePair(rowIdx, n) {
     if (map.pair != null) {
       sheet.getRange(rowIdx, map.pair + 1).setValue(n);
       if (map.model != null) sheet.getRange(rowIdx, map.model + 1).setValue(base);
@@ -524,31 +534,32 @@ function _addShoe(shoe) {
     }
   }
 
-  // Existing copies of the same brand + base model. First pair stays
-  // unnumbered; on the 2nd add, the original becomes #1 and the new one #2.
+  // Existing copies of the same brand + base model + COLOR. First of a given
+  // color stays unnumbered; on the 2nd, the original becomes #1, new one #2.
   var existing = [];
   for (var i = 1; i < data.length; i++) {
-    var b = String(_cell(data[i], map, 'brand') || '').trim().toLowerCase();
-    var mRaw = _cell(data[i], map, 'model');
-    if (b !== brand.toLowerCase() ||
-        _stripCopyNum(mRaw).toLowerCase() !== baseModel.toLowerCase()) continue;
-    var idr = _shoeIdentity(brand, mRaw, _cell(data[i], map, 'pair'));
-    existing.push({ row: i + 1, num: idr.pair ? parseInt(idr.pair, 10) : null });
+    var rid = _shoeIdentity(_cell(data[i], map, 'brand'), _cell(data[i], map, 'model'),
+                            _cell(data[i], map, 'color'), _cell(data[i], map, 'pair'));
+    var rBrand = String(_cell(data[i], map, 'brand') || '').trim().toLowerCase();
+    if (rBrand !== brand.toLowerCase() ||
+        rid.base.toLowerCase()  !== base.toLowerCase() ||
+        rid.color.toLowerCase() !== color.toLowerCase()) continue;
+    existing.push({ row: i + 1, num: rid.pair ? parseInt(rid.pair, 10) : null });
   }
 
   var pair;
   if (existing.length === 0) {
-    pair = '';                                 // lone pair — no number
+    pair = '';                                 // first of this color — no number
   } else {
     var maxN = 0;
     existing.forEach(function(x) {
-      if (x.num == null) { writePair(x.row, baseModel, 1); x.num = 1; }   // promote original → #1
+      if (x.num == null) { writePair(x.row, 1); x.num = 1; }   // promote original → #1
       if (x.num > maxN) maxN = x.num;
     });
     pair = maxN + 1;
   }
 
-  var id = _shoeIdentity(brand, baseModel, pair);
+  var id = _shoeIdentity(brand, base, color, pair);
   var ph = shoe.photo ? _pushPhoto(_slug(id.name), shoe.photo) : { path: '', err: '' };
 
   // Build the row in this sheet's actual column order (by header).
@@ -557,9 +568,9 @@ function _addShoe(shoe) {
   for (var c = 0; c < width; c++) row.push('');
   function put(key, val) { if (map[key] != null) row[map[key]] = val; }
   put('brand', brand);
-  put('model', (map.pair != null || !pair) ? baseModel : (baseModel + ' #' + pair));
+  put('model', (map.pair != null || !pair) ? base : (base + ' #' + pair));
   put('pair', pair);
-  put('color', shoe.color || '');
+  put('color', color);
   put('goal',  (shoe.goal != null ? shoe.goal : ''));
   put('purchased', shoe.purchased || '');
   put('retired', '');
@@ -583,7 +594,7 @@ function _updateShoe(req) {
   var want = name.toLowerCase();
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
-    var idr = _shoeIdentity(_cell(r, map, 'brand'), _cell(r, map, 'model'), _cell(r, map, 'pair'));
+    var idr = _shoeIdentity(_cell(r, map, 'brand'), _cell(r, map, 'model'), _cell(r, map, 'color'), _cell(r, map, 'pair'));
     if (idr.name.toLowerCase() !== want &&
         idr.display.toLowerCase() !== want &&
         idr.keys.indexOf(want) < 0) continue;

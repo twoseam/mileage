@@ -375,7 +375,7 @@
 <div class="mt-pill" id="pill"></div>
 
 <footer class="mt-footer">
-  <div class="mt-build">2026.05.17.030</div>
+  <div class="mt-build">2026.05.17.031</div>
 </footer>
 
 <script>
@@ -473,7 +473,9 @@
       : '<span class="ph">&#128095;</span>';
     var pairNum = (s.pair != null && s.pair !== '') ? String(s.pair)
                 : (String(s.model || s.name || '').match(/#(\d+)\s*$/) || [])[1];
-    var badge = pairNum ? '<span class="shoe-num">' + esc(pairNum) + '</span>' : '';
+    // Only badge #2 and up — a lone/first pair shows no number.
+    var badge = (pairNum && parseInt(pairNum, 10) >= 2)
+              ? '<span class="shoe-num">' + esc(pairNum) + '</span>' : '';
 
     return '' +
       '<div class="shoe-card reveal' + (retired ? ' retired' : '') + '" data-name="' + esc(s.name) + '">' +

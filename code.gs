@@ -62,32 +62,75 @@ function _fmtTime(t) {
   return ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2);
 }
 
+// Map logical entry fields → 0-based column index, by header name (row 1).
+// Same idea as shoes: the Entries tab can be reordered freely.
+function _entryColMap(headerRow) {
+  var map = {};
+  (headerRow || []).forEach(function(h, idx) {
+    var k = String(h || '').trim().toLowerCase();
+    if (k === 'date')                              map.date = idx;
+    else if (k === 'miles')                        map.miles = idx;
+    else if (k === 'walk/run' || k === 'type')     map.type = idx;
+    else if (k === 'start time' || k === 'start_time') map.start_time = idx;
+    else if (k === 'lat')                          map.lat = idx;
+    else if (k === 'lon')                          map.lon = idx;
+    else if (k === 'temp' || k === 'temp_f')       map.temp_f = idx;
+    else if (k === 'weather')                      map.weather = idx;
+    else if (k === 'shoe')                         map.shoe = idx;
+    else if (k === 'notes')                        map.notes = idx;
+  });
+  return map;
+}
+
 function _readEntries() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ENTRIES_SHEET);
   if (!sheet) return [];
   var data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
+  var map = _entryColMap(data[0]);
   var rows = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
-    if (!r[0]) continue;
-    var miles = parseFloat(r[1]);
+    var dateRaw = _cell(r, map, 'date');
+    if (!dateRaw) continue;
+    var miles = parseFloat(_cell(r, map, 'miles'));
     if (isNaN(miles) || miles <= 0) continue;
-    // Cols: Date, Miles, Walk/Run, Start Time, Lat, Lon, Temp, Weather, Shoe, Notes
+    var lat = _cell(r, map, 'lat'), lon = _cell(r, map, 'lon'), tf = _cell(r, map, 'temp_f');
     rows.push({
-      date:       _fmtDate(r[0]),
+      date:       _fmtDate(dateRaw),
       miles:      miles,
-      type:       r[2] || 'Walk',
-      start_time: _fmtTime(r[3]),
-      lat:        r[4] !== '' ? r[4] : null,
-      lon:        r[5] !== '' ? r[5] : null,
-      temp_f:     r[6] !== '' ? r[6] : null,
-      weather:    r[7] || '',
-      shoe:       r[8] || '',
-      notes:      r[9] || ''
+      type:       _cell(r, map, 'type') || 'Walk',
+      start_time: _fmtTime(_cell(r, map, 'start_time')),
+      lat:        lat !== '' ? lat : null,
+      lon:        lon !== '' ? lon : null,
+      temp_f:     tf !== '' ? tf : null,
+      weather:    _cell(r, map, 'weather') || '',
+      shoe:       _cell(r, map, 'shoe') || '',
+      notes:      _cell(r, map, 'notes') || ''
     });
   }
   return rows;
+}
+
+// Map logical shoe fields → 0-based column index, by header name (row 1).
+// Lets the Shoes tab be in ANY column order without code changes.
+function _shoeColMap(headerRow) {
+  var map = {};
+  (headerRow || []).forEach(function(h, idx) {
+    var k = String(h || '').trim().toLowerCase();
+    if (k === 'brand')                     map.brand = idx;
+    else if (k === 'model')                map.model = idx;
+    else if (k === 'color')                map.color = idx;
+    else if (k === 'goal')                 map.goal = idx;
+    else if (k === 'purchased')            map.purchased = idx;
+    else if (k === 'retired')              map.retired = idx;
+    else if (k === 'photo' || k === 'photos') map.photo = idx;
+    else if (k === 'notes')                map.notes = idx;
+  });
+  return map;
+}
+function _cell(row, map, key) {
+  return (map[key] != null) ? row[map[key]] : '';
 }
 
 function _readShoes() {
@@ -95,22 +138,25 @@ function _readShoes() {
   if (!sheet) return [];
   var data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
+  var map = _shoeColMap(data[0]);
   var shoes = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
-    if (!r[0] && !r[1]) continue;
-    var name = ((r[0] || '') + ' ' + (r[1] || '')).trim();
-    // Cols: Brand, Model, Purchased, Retired, Notes, Photo, Goal, Color
+    var brand = _cell(r, map, 'brand') || '';
+    var model = _cell(r, map, 'model') || '';
+    if (!brand && !model) continue;
+    var name  = (brand + ' ' + model).trim();
+    var goalV = _cell(r, map, 'goal');
     shoes.push({
-      brand:     r[0] || '',
-      model:     r[1] || '',
+      brand:     brand,
+      model:     model,
       name:      name,
-      purchased: _fmtDate(r[2]),
-      retired:   _fmtDate(r[3]),
-      notes:     r[4] || '',
-      photo:     r[5] || '',
-      goal:      (typeof r[6] === 'number' && r[6] > 0) ? r[6] : (parseFloat(r[6]) || 0),
-      color:     r[7] || ''
+      purchased: _fmtDate(_cell(r, map, 'purchased')),
+      retired:   _fmtDate(_cell(r, map, 'retired')),
+      notes:     _cell(r, map, 'notes') || '',
+      photo:     _cell(r, map, 'photo') || '',
+      goal:      (typeof goalV === 'number' && goalV > 0) ? goalV : (parseFloat(goalV) || 0),
+      color:     _cell(r, map, 'color') || ''
     });
   }
   return shoes;
@@ -412,30 +458,78 @@ function _pushPhoto(slug, dataUrl) {
 
 function _shoesSheet() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHOES_SHEET);
-  if (sheet && sheet.getLastColumn() < 8) {
-    var hdr = ['Brand', 'Model', 'Purchased', 'Retired', 'Notes', 'Photo', 'Goal', 'Color'];
+  // Only seed headers on a brand-new/empty sheet. An existing sheet keeps
+  // whatever header order you've arranged — code reads/writes by header name.
+  if (sheet && sheet.getLastRow() === 0) {
+    var hdr = ['Brand', 'Model', 'Color', 'Goal', 'Purchased', 'Retired', 'Photos', 'Notes'];
     sheet.getRange(1, 1, 1, 8).setValues([hdr]).setFontWeight('bold');
   }
   return sheet;
 }
 
+function _stripCopyNum(s) {
+  return String(s || '').trim().replace(/\s*#\d+\s*$/, '');
+}
+
 function _addShoe(shoe) {
   shoe = shoe || {};
-  var brand = (shoe.brand || '').trim();
-  var model = (shoe.model || '').trim();
-  var name  = (brand + ' ' + model).trim() || (shoe.name || '').trim();
-  if (!name) return _json({ error: 'Brand or model required' });
+  var brand     = (shoe.brand || '').trim();
+  var baseModel = _stripCopyNum(shoe.model);   // ignore any number the user typed
+  if (!brand && !baseModel) return _json({ error: 'Brand or model required' });
 
   var sheet = _shoesSheet();
   if (!sheet) return _json({ error: 'Sheet "' + SHOES_SHEET + '" not found' });
 
+  // Copies of the same brand + base model. The FIRST pair stays unnumbered.
+  // When a 2nd is added, the original is retroactively relabeled "#1" and
+  // the new one becomes "#2"; thereafter it's max+1.
+  var data = sheet.getDataRange().getValues();
+  var map  = _shoeColMap(data[0] || []);
+  var mc   = (map.model != null) ? map.model : 1;   // model column (0-based)
+
+  var matches = [];
+  for (var i = 1; i < data.length; i++) {
+    var b = String(_cell(data[i], map, 'brand') || '').trim().toLowerCase();
+    var mRaw = String(_cell(data[i], map, 'model') || '').trim();
+    if (b === brand.toLowerCase() &&
+        _stripCopyNum(mRaw).toLowerCase() === baseModel.toLowerCase()) {
+      var mm = mRaw.match(/#(\d+)\s*$/);
+      matches.push({ row: i + 1, base: _stripCopyNum(mRaw), num: mm ? parseInt(mm[1], 10) : null });
+    }
+  }
+
+  var model;
+  if (matches.length === 0) {
+    model = baseModel;                       // first pair — no number
+  } else {
+    var maxN = 0;
+    matches.forEach(function(x) {
+      if (x.num == null) {                   // the lone original → make it #1
+        sheet.getRange(x.row, mc + 1).setValue(x.base + ' #1');
+        x.num = 1;
+      }
+      if (x.num > maxN) maxN = x.num;
+    });
+    model = (baseModel + ' #' + (maxN + 1)).trim();
+  }
+  var name = (brand + ' ' + model).trim();
+
   var ph = shoe.photo ? _pushPhoto(_slug(name), shoe.photo) : { path: '', err: '' };
 
-  // Cols: Brand, Model, Purchased, Retired, Notes, Photo, Goal, Color
-  sheet.appendRow([
-    brand, model, shoe.purchased || '', '', '',
-    ph.path, (shoe.goal != null ? shoe.goal : ''), shoe.color || ''
-  ]);
+  // Build the row in this sheet's actual column order (by header).
+  var width = Math.max((data[0] || []).length, 8);
+  var row = [];
+  for (var c = 0; c < width; c++) row.push('');
+  function put(key, val) { if (map[key] != null) row[map[key]] = val; }
+  put('brand', brand);
+  put('model', model);
+  put('color', shoe.color || '');
+  put('goal',  (shoe.goal != null ? shoe.goal : ''));
+  put('purchased', shoe.purchased || '');
+  put('retired', '');
+  put('photo', ph.path);
+  put('notes', '');
+  sheet.appendRow(row);
   return _json({ addedShoe: true, name: name, photo: ph.path, photoError: ph.err });
 }
 
@@ -448,24 +542,26 @@ function _updateShoe(req) {
   var sheet = _shoesSheet();
   if (!sheet) return _json({ error: 'Sheet "' + SHOES_SHEET + '" not found' });
   var data = sheet.getDataRange().getValues();
+  var map  = _shoeColMap(data[0] || []);
 
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
-    var rowName = ((r[0] || '') + ' ' + (r[1] || '')).trim();
+    var rowName = ((_cell(r, map, 'brand') || '') + ' ' + (_cell(r, map, 'model') || '')).trim();
     if (rowName !== name) continue;
     var rowIdx = i + 1;
+    function col(key) { return (map[key] != null) ? map[key] + 1 : 0; } // 1-based, 0 = absent
 
-    if (req.retire && !r[3]) {
-      sheet.getRange(rowIdx, 4).setValue(_todayStr());
+    if (req.retire && col('retired') && !_cell(r, map, 'retired')) {
+      sheet.getRange(rowIdx, col('retired')).setValue(_todayStr());
     }
     var photoErr = '';
     if (req.photo) {
       var ph = _pushPhoto(_slug(name), req.photo);
-      if (ph.path) sheet.getRange(rowIdx, 6).setValue(ph.path);
+      if (ph.path && col('photo')) sheet.getRange(rowIdx, col('photo')).setValue(ph.path);
       photoErr = ph.err;
     }
-    if (req.goal  != null) sheet.getRange(rowIdx, 7).setValue(req.goal);
-    if (req.color != null) sheet.getRange(rowIdx, 8).setValue(req.color);
+    if (req.goal  != null && col('goal'))  sheet.getRange(rowIdx, col('goal')).setValue(req.goal);
+    if (req.color != null && col('color')) sheet.getRange(rowIdx, col('color')).setValue(req.color);
 
     return _json({ updatedShoe: true, name: name, photoError: photoErr });
   }
@@ -495,24 +591,28 @@ function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ENTRIES_SHEET);
   if (!sheet) return _json({ error: 'Sheet "' + ENTRIES_SHEET + '" not found' });
 
+  var hdr   = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
+  var emap  = _entryColMap(hdr);
+  var width = Math.max(hdr.length, 10);
+
   var rowsToAppend = [];
   var results = [];
   entries.forEach(function(entry) {
     var miles = parseFloat(entry.miles);
     if (isNaN(miles) || miles <= 0) return;
-    // Cols: Date, Miles, Walk/Run, Start Time, Lat, Lon, Temp, Weather, Shoe, Notes
-    var row = [
-      entry.date       || '',
-      miles,
-      entry.type       || 'Walk',
-      entry.start_time || '',
-      entry.lat        != null ? entry.lat    : '',
-      entry.lon        != null ? entry.lon    : '',
-      entry.temp_f     != null ? entry.temp_f : '',
-      entry.weather    || '',
-      entry.shoe       || '',
-      entry.notes      || ''
-    ];
+    var row = [];
+    for (var c = 0; c < width; c++) row.push('');
+    function put(key, val) { if (emap[key] != null) row[emap[key]] = val; }
+    put('date',       entry.date || '');
+    put('miles',      miles);
+    put('type',       entry.type || 'Walk');
+    put('start_time', entry.start_time || '');
+    put('lat',        entry.lat    != null ? entry.lat    : '');
+    put('lon',        entry.lon    != null ? entry.lon    : '');
+    put('temp_f',     entry.temp_f != null ? entry.temp_f : '');
+    put('weather',    entry.weather || '');
+    put('shoe',       entry.shoe || '');
+    put('notes',      entry.notes || '');
     rowsToAppend.push(row);
     results.push({ date: entry.date, miles: miles });
   });

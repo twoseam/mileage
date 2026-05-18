@@ -896,6 +896,13 @@ function doPost(e) {
     return _json({ error: 'Invalid JSON' });
   }
 
+  // Health Auto Export ingest — auth via ?secret= on the URL (it can't put
+  // our secret in its own body; Apps Script can't read POST headers).
+  if (body.workouts || (body.data && body.data.workouts)) {
+    if (!_authed(e) && body.secret !== SECRET) return _json({ error: 'Unauthorized' });
+    return _ingestWorkouts(body);
+  }
+
   if (body.secret !== SECRET) return _json({ error: 'Unauthorized' });
 
   // Add a pair:    { secret, shoe: { brand, model, purchased, goal?, color?, photo? } }

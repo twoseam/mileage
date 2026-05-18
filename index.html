@@ -731,6 +731,102 @@
       font-size: 0.58rem; font-weight: 700; color: #E89A1F;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    /* ---------- APPROVAL QUEUE ---------- */
+    #mt-pending { margin-bottom: 2.75rem; }
+    #mt-pending:empty { display: none; }
+    .mt-pq-head {
+      font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase;
+      opacity: 0.5; margin-bottom: 12px;
+    }
+    .mt-pq-card {
+      background: #f6f1e7; color: #1a1a1a;
+      border-radius: 18px;
+      padding: 1.15rem 1.15rem 1rem;
+      margin-bottom: 14px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+      transition: opacity 0.35s ease, transform 0.35s ease,
+        max-height 0.45s cubic-bezier(0.2,0.8,0.2,1),
+        margin 0.45s ease, padding 0.45s ease;
+    }
+    .mt-pq-card.mt-pq-gone {
+      opacity: 0; transform: translateY(-8px);
+      max-height: 0 !important; margin-bottom: 0;
+      padding-top: 0; padding-bottom: 0;
+    }
+    .mt-pq-top {
+      display: flex; align-items: baseline; justify-content: space-between;
+    }
+    .mt-pq-date { font-size: 1.15rem; font-weight: 900; letter-spacing: -0.01em; }
+    .mt-pq-auto {
+      font-size: 0.52rem; font-weight: 800; letter-spacing: 0.14em;
+      text-transform: uppercase; opacity: 0.4;
+    }
+    .mt-pq-meta { display: flex; gap: 22px; margin: 11px 0 16px; }
+    .mt-pq-meta b {
+      display: block; font-size: 0.95rem; font-weight: 800;
+      letter-spacing: -0.01em; line-height: 1.1;
+    }
+    .mt-pq-meta span {
+      font-size: 0.48rem; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase; opacity: 0.42;
+    }
+    .mt-pq-card .mt-field { margin-bottom: 0.95rem; }
+    .mt-pq-card .mt-field > label {
+      display: block; font-size: 0.56rem; font-weight: 800;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      opacity: 0.5; margin-bottom: 7px; color: #1a1a1a;
+    }
+    .mt-pq-card input[type="text"] {
+      width: 100%; background: #fff; color: #1a1a1a;
+      border: 1px solid rgba(0, 0, 0, 0.10); border-radius: 11px;
+      padding: 11px 13px; font-size: 0.95rem; font-family: inherit;
+      -webkit-appearance: none; appearance: none;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    .mt-pq-card input[type="text"]:focus {
+      outline: none; border-color: #E89A1F;
+      box-shadow: 0 0 0 3px rgba(232, 154, 31, 0.18);
+    }
+    .mt-pq-actions { display: flex; gap: 10px; margin-top: 1.15rem; }
+    .mt-pq-approve {
+      flex: 1; border: none; border-radius: 12px; padding: 15px;
+      font-family: inherit; font-size: 0.78rem; font-weight: 900;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: #1a1a1a; background: #E89A1F; cursor: pointer;
+      box-shadow: 0 5px 14px rgba(232, 154, 31, 0.42);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.2s ease;
+    }
+    .mt-pq-approve:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 7px rgba(232, 154, 31, 0.42);
+    }
+    .mt-pq-approve.mt-busy { opacity: 0.5; pointer-events: none; }
+    .mt-pq-reject {
+      background: transparent; border: none; color: #1a1a1a;
+      opacity: 0.4; font-family: inherit; font-size: 0.66rem;
+      font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+      cursor: pointer; padding: 15px 14px;
+    }
+    .mt-pq-reject:hover { opacity: 0.7; }
+
+    /* ---------- MANUAL ENTRY (collapsed behind one button) ---------- */
+    #mt-manual-toggle {
+      display: block; width: 100%;
+      background: none; color: inherit;
+      border: 1px dashed rgba(255, 255, 255, 0.22);
+      border-radius: 12px; padding: 16px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 800;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      opacity: 0.55; cursor: pointer;
+      transition: opacity 0.2s ease, border-color 0.2s ease;
+    }
+    #mt-manual-toggle:hover { opacity: 1; border-color: rgba(255, 255, 255, 0.45); }
+    #mt-manual-toggle.mt-hidden { display: none; }
+    html[data-theme="light"] #mt-manual-toggle { border-color: rgba(0, 0, 0, 0.22); }
+    #mt-form { display: none; }
+    #mt-form.mt-open { display: block; }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.001ms !important;
@@ -802,6 +898,10 @@
     <div id="mt-chart"></div>
     <div id="mt-chart-labels"></div>
   </div>
+
+  <div id="mt-pending"></div>
+
+  <button type="button" id="mt-manual-toggle" onclick="mtOpenManual()">+ Log a walk manually</button>
 
   <div id="mt-form">
 

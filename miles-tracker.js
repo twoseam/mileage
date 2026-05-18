@@ -154,6 +154,44 @@
     fetchAllEntries: function(callback) {
       _swr('allEntries', 'mt_c_allEntries',
         function(d) { return d && d.rows ? d.rows : []; }, callback);
+    },
+
+    // Auto-synced workouts waiting for review. Not cached — the queue
+    // must always reflect the live Pending tab.
+    fetchPending: function(callback) {
+      _get('pending')
+        .then(function(d) { callback(d && d.rows ? d.rows : []); })
+        .catch(function() { callback([]); });
+    },
+
+    // req: { activity_id, shoe?, notes?, type?, miles? } — callback(ok, payloadOrError)
+    approveWorkout: function(req, callback) {
+      fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ secret: SECRET, approve: req })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data.error) { if (callback) callback(false, data.error); }
+        else                    { if (callback) callback(true, data); }
+      })
+      .catch(function(err) { if (callback) callback(false, String(err)); });
+    },
+
+    // req: { activity_id } — callback(ok, payloadOrError)
+    rejectWorkout: function(req, callback) {
+      fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ secret: SECRET, reject: req })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data.error) { if (callback) callback(false, data.error); }
+        else                    { if (callback) callback(true, data); }
+      })
+      .catch(function(err) { if (callback) callback(false, String(err)); });
     }
 
   };

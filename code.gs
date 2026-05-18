@@ -100,6 +100,7 @@ function _entryColMap(headerRow) {
     else if (k === 'weather')                      map.weather = idx;
     else if (k === 'shoe')                         map.shoe = idx;
     else if (k === 'notes')                        map.notes = idx;
+    else if (k === 'activity id' || k === 'activity_id') map.activity_id = idx;
   });
   return map;
 }
@@ -131,7 +132,8 @@ function _readEntries() {
       temp_f:     tf !== '' ? tf : null,
       weather:    _cell(r, map, 'weather') || '',
       shoe:       _cell(r, map, 'shoe') || '',
-      notes:      _cell(r, map, 'notes') || ''
+      notes:      _cell(r, map, 'notes') || '',
+      activity_id: _cell(r, map, 'activity_id') || ''
     });
   }
   return rows;
@@ -468,7 +470,7 @@ function doGet(e) {
           date: r.date, miles: r.miles, type: r.type, shoe: r.shoe,
           pace: r.pace, start_time: r.start_time, end_time: r.end_time,
           temp_f: r.temp_f, weather: r.weather, notes: r.notes,
-          lat: r.lat, lon: r.lon
+          lat: r.lat, lon: r.lon, activity_id: r.activity_id
         };
       })
     });

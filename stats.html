@@ -30,6 +30,9 @@
   <link rel="preconnect" href="https://p.typekit.net" crossorigin>
   <link rel="stylesheet" href="https://use.typekit.net/ymz2nvi.css">
 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <script src="miles-tracker.js"></script>
   <script src="nav.js"></script>
 
@@ -481,6 +484,14 @@
       font-size: 0.8rem; font-weight: 700; opacity: 0.6;
       letter-spacing: 0.02em; text-align: center;
     }
+    .rstats-map {
+      height: 220px; width: 100%;
+      margin-top: 1rem; border-radius: 14px;
+      overflow: hidden; background: rgba(0, 0, 0, 0.06);
+    }
+    .rstats-map .leaflet-control-attribution {
+      font-size: 9px; background: rgba(255, 255, 255, 0.7);
+    }
     .rstats-row {
       display: flex; justify-content: space-between; gap: 1rem;
       padding: 0.6rem 0;
@@ -873,10 +884,34 @@
            '</span><span class="v">' + v + '</span></div>';
   }
 
+  var rsMap = null;
+  function rsClearMap() {
+    if (rsMap) { try { rsMap.remove(); } catch (e) {} rsMap = null; }
+  }
+  function rsLoadRoute(aid) {
+    fetch('routes/' + encodeURIComponent(aid) + '.json')
+      .then(function(res) { if (!res.ok) throw 0; return res.json(); })
+      .then(function(pts) {
+        var el = document.getElementById('rstats-map');
+        if (!el || !pts || pts.length < 2 || typeof L === 'undefined') return;
+        rsMap = L.map(el, { scrollWheelZoom: true, attributionControl: true });
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          subdomains: 'abcd', maxZoom: 19,
+          attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }).addTo(rsMap);
+        var line = L.polyline(pts, { color: '#E89A1F', weight: 4, opacity: 0.9 }).addTo(rsMap);
+        rsMap.fitBounds(line.getBounds(), { padding: [16, 16] });
+        setTimeout(function() { if (rsMap) rsMap.invalidateSize(); }, 60);
+      })
+      .catch(function() { /* no route file for this entry — skip silently */ });
+  }
+
   function openRunStats(idx) {
     var r = rcRecent[idx];
     if (!r) return;
+    rsClearMap();
     var isRun = r.type === 'Run';
+    var aid = String(r.activity_id || '').trim();
     var miles = (parseFloat(r.miles) || 0).toFixed(1);
 
     var dur = '';
@@ -926,13 +961,16 @@
       rcRow('Location', loc) +
       (r.notes ? '<div class="rstats-notes">' + rcEsc(r.notes) + '</div>' : '') +
       shoeBlock +
+      (aid ? '<div class="rstats-map" id="rstats-map"></div>' : '') +
       '<button class="rstats-close" type="button">Close</button>';
 
     document.getElementById('rstats').classList.add('show');
+    if (aid) rsLoadRoute(aid);
   }
 
   function closeRunStats() {
     document.getElementById('rstats').classList.remove('show');
+    rsClearMap();
   }
 
   (function wireRunStats() {

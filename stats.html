@@ -104,7 +104,7 @@
       align-items: center;
       justify-content: center;
       gap: 1rem;
-      margin-bottom: 1.25rem;
+      margin-top: 1.1rem;
       min-height: 36px;
     }
     .range-arrow {
@@ -683,12 +683,6 @@
 
 <div id="stats-shell">
 
-  <div class="range-nav">
-    <button class="range-arrow" id="range-prev" aria-label="Previous">←</button>
-    <div class="range-label" id="range-label">—</div>
-    <button class="range-arrow" id="range-next" aria-label="Next">→</button>
-  </div>
-
   <div class="chart-card">
     <div class="chart-summary">
       <div>
@@ -728,6 +722,12 @@
     <button class="zoom-btn"           data-zoom="year" >Year</button>
     <button class="zoom-btn is-active" data-zoom="month">Month</button>
     <button class="zoom-btn"           data-zoom="week" >Week</button>
+  </div>
+
+  <div class="range-nav">
+    <button class="range-arrow" id="range-prev" aria-label="Previous">←</button>
+    <div class="range-label" id="range-label">—</div>
+    <button class="range-arrow" id="range-next" aria-label="Next">→</button>
   </div>
 
   <section class="recent">

@@ -74,16 +74,18 @@
     }
     /* NRC-style: date·time, big title, rule, hero, stat grid */
     .a-when {
-      font-size: 0.92rem; font-weight: 700; opacity: 0.5;
-      letter-spacing: 0.01em;
+      display: flex; align-items: center; gap: 0.7rem;
+      font-size: 0.92rem; font-weight: 700; letter-spacing: 0.01em;
     }
+    .a-when .wt { opacity: 0.5; }
     .a-name {
       font-size: 2rem; font-weight: 900; letter-spacing: -0.02em;
       margin: 0.35rem 0 1rem; line-height: 1.04;
     }
     .a-rule {
-      height: 1px; border: none; margin: 0 0 1.6rem;
-      background: rgba(255, 255, 255, 0.12);
+      height: 3px; border: none; border-radius: 2px; margin: 0 0 1.7rem;
+      background: linear-gradient(90deg,
+        #016074, #94D3BE, #E7D7A4, #EB9A00, #CA6902, #B02113);
     }
     .a-hero { margin-bottom: 1.8rem; }
     .a-hero b {
@@ -120,9 +122,8 @@
     }
     .a-shoe .snm { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.01em; }
     .a-shoe .smd { font-size: 0.95rem; font-weight: 600; opacity: 0.55; margin-top: 0.2rem; }
-    .a-shoe img {
-      display: block; width: 100%; max-width: 360px;
-      margin: 1.1rem auto 0; aspect-ratio: 4 / 3;
+    .a-shoe-pic img {
+      display: block; width: 100%; aspect-ratio: 4 / 3;
       object-fit: contain; border-radius: 16px;
       background: rgba(255, 255, 255, 0.05);
     }
@@ -162,41 +163,48 @@
 
     .a-msg { text-align: center; opacity: 0.5; padding: 4rem 1rem; font-size: 0.95rem; }
 
-    #mt-loader {
-      position: fixed; inset: 0; background: #252525;
+    /* color accents */
+    .a-type {
+      display: inline-block; flex: 0 0 auto;
+      font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase;
+      font-weight: 800; padding: 3px 9px; border-radius: 999px;
+      color: #1a1a1a; background: #8FCFC2;
+    }
+    .a-type.run { background: #E7D7A4; }
+    .a-hero span { color: #94D3BE; opacity: 0.95; }
+    .a-hero.run span { color: #E7D7A4; }
+
+    /* tap the shoe photo to view it full screen */
+    .a-shoe-pic { position: relative; max-width: 360px; margin: 1.1rem auto 0; }
+    .a-shoe-full {
+      position: absolute; top: 10px; right: 10px;
+      width: 34px; height: 34px; padding: 0; border: none; border-radius: 8px;
+      background: rgba(0, 0, 0, 0.5); color: #fff;
+      font-size: 0.95rem; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      z-index: 10000; transition: opacity 0.5s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
     }
-    #mt-loader.mt-loader-hide { opacity: 0; pointer-events: none; }
-    .mt-loader-bar {
-      width: 240px; height: 12px; border-radius: 6px;
-      background: rgba(255, 255, 255, 0.08); overflow: hidden;
+    #sfull {
+      display: none; position: fixed; inset: 0; z-index: 10001;
+      background: rgba(10, 10, 10, 0.96);
+      align-items: center; justify-content: center; padding: 1.5rem;
     }
-    .mt-loader-fill {
-      height: 100%; width: 0%;
-      background: linear-gradient(to right,
-        #016074 0%, #016074 16.67%, #94D3BE 16.67%, #94D3BE 33.33%,
-        #E7D7A4 33.33%, #E7D7A4 50%, #EB9A00 50%, #EB9A00 66.67%,
-        #CA6902 66.67%, #CA6902 83.33%, #B02113 83.33%, #B02113 100%);
-      background-size: 240px 100%; transition: width 0.3s ease-out;
-    }
-    html[data-theme="light"] #mt-loader { background: #f1ebdd; }
-    html[data-theme="light"] .mt-loader-bar { background: rgba(0, 0, 0, 0.10); }
-    html[data-theme="light"] .a-rule { background: rgba(0, 0, 0, 0.12); }
+    #sfull.show { display: flex; }
+    #sfull img { max-width: 100%; max-height: 100%; object-fit: contain; }
     html[data-theme="light"] .a-notes,
     html[data-theme="light"] .a-shoe { border-top-color: rgba(0, 0, 0, 0.12); }
     html[data-theme="light"] .a-cell a { color: #016074; }
     html[data-theme="light"] .a-map,
-    html[data-theme="light"] .a-shoe img { background: rgba(0, 0, 0, 0.06); }
+    html[data-theme="light"] .a-shoe-pic img { background: rgba(0, 0, 0, 0.06); }
   </style>
 </head>
 <body>
 
-<div id="mt-loader"><div class="mt-loader-bar"><div class="mt-loader-fill"></div></div></div>
-
 <button class="a-back" type="button" aria-label="Back" onclick="aBack()"></button>
 
-<div class="a-wrap"><div id="a-content"></div></div>
+<div class="a-wrap"><div id="a-content"><div class="a-msg">Loading…</div></div></div>
+
+<div id="sfull" onclick="aCloseShoe()"><img id="sfull-img" alt=""></div>
 
 <div id="afull">
   <div id="afull-map"></div>
@@ -327,6 +335,14 @@
   window.aCloseFull = function() {
     document.getElementById('afull').classList.remove('show');
   };
+  window.aOpenShoe = function(src) {
+    var ov = document.getElementById('sfull');
+    document.getElementById('sfull-img').src = src;
+    ov.classList.add('show');
+  };
+  window.aCloseShoe = function() {
+    document.getElementById('sfull').classList.remove('show');
+  };
 
   function aShoeIndex(shoes) {
     var idx = {};
@@ -349,14 +365,21 @@
       var so = shoeIdx[String(r.shoe).trim().toLowerCase()];
       var snm = aEsc((so && (so.display || so.name)) || r.shoe);
       var smd = so ? aEsc(((so.brand || '') + ' ' + (so.model || '')).trim()) : '';
-      var si = (so && so.photo)
-        ? '<img src="' + aEsc(so.photo) + '" alt="" loading="lazy" ' +
-          'onerror="this.style.display=\'none\'">' : '';
+      var pic = '';
+      if (so && so.photo) {
+        var ps = aEsc(so.photo);
+        pic = '<div class="a-shoe-pic">' +
+          '<img src="' + ps + '" alt="" loading="lazy" ' +
+            'onerror="this.closest(\'.a-shoe-pic\').style.display=\'none\'">' +
+          '<button class="a-shoe-full" type="button" aria-label="View photo" ' +
+            'onclick="aOpenShoe(\'' + ps + '\')">⤢</button>' +
+        '</div>';
+      }
       shoeBlock = '<div class="a-shoe">' +
         '<div class="snm">' + snm + '</div>' +
         (smd && smd.toLowerCase() !== snm.toLowerCase()
           ? '<div class="smd">' + smd + '</div>' : '') +
-        si + '</div>';
+        pic + '</div>';
     }
 
     var num = function(v) { return (v != null && v !== '') ? v : ''; };
@@ -383,10 +406,13 @@
       cell('Weather', r.weather ? aEsc(r.weather) : '');
 
     document.getElementById('a-content').innerHTML =
-        '<div class="a-when">' + when + '</div>' +
+        '<div class="a-when"><span class="wt">' + when + '</span>' +
+          '<span class="a-type' + (isRun ? ' run' : '') + '">' +
+            (isRun ? 'Run' : 'Walk') + '</span></div>' +
         '<div class="a-name">' + aEsc(aTitle(r)) + '</div>' +
         '<hr class="a-rule">' +
-        '<div class="a-hero"><b>' + miles + '</b><span>Miles</span></div>' +
+        '<div class="a-hero' + (isRun ? ' run' : '') + '"><b>' + miles +
+          '</b><span>Miles</span></div>' +
         (primary ? '<div class="a-grid">' + primary + '</div>' : '') +
       (aid ? '<div class="a-map">' +
                '<div id="a-map" class="a-map-canvas"></div>' +
@@ -412,52 +438,39 @@
     if (mp) mp.style.display = 'none';
   }
 
-  function aHideLoader() {
-    var l = document.getElementById('mt-loader');
-    var f = document.querySelector('.mt-loader-fill');
-    if (f) f.style.width = '100%';
-    setTimeout(function() {
-      if (l) l.classList.add('mt-loader-hide');
-      // start the slide-in as the loader fades, so it's actually seen
-      var w = document.querySelector('.a-wrap');
-      if (w) requestAnimationFrame(function() {
-        requestAnimationFrame(function() { w.classList.add('a-ready'); });
-      });
-    }, 300);
-  }
-
   (function () {
     var want = aQ('id');
-    var f = document.querySelector('.mt-loader-fill'), v = 0;
-    var t = setInterval(function () {
-      if (v >= 95) return;
-      v += Math.max(0.4, (95 - v) * 0.05);
-      if (f) f.style.width = v + '%';
-    }, 100);
+
+    // No full-screen loader: the data is SWR-cached (we came from a list
+    // that already fetched it), so it's effectively instant. Just slide
+    // the page in right away over the dark background.
+    var w = document.querySelector('.a-wrap');
+    if (w) requestAnimationFrame(function() {
+      requestAnimationFrame(function() { w.classList.add('a-ready'); });
+    });
 
     var rowsIn = null, shoesIn = null, done = false;
-    // SWR may fire cached then fresh. Render the moment we find the row;
-    // only declare "not found" once (via the timeout) so a stale cache
-    // miss doesn't lock in a false negative before fresh data lands.
+    // Wait for shoes too before rendering a match, so the shoe photo
+    // isn't missed by an early rows-only callback. The timeout still
+    // forces a final render if shoes never arrive.
     function tryRender(finalCall) {
       if (done) return;
+      if (!finalCall && (rowsIn == null || shoesIn == null)) return;
       var rows = rowsIn || [], shoes = shoesIn || [];
       var match = null;
       for (var i = 0; i < rows.length; i++) {
         if (aKey(rows[i]) === want) { match = rows[i]; break; }
       }
       if (match) {
-        done = true; clearInterval(t);
+        done = true;
         aRender(match, aShoeIndex(shoes));
-        aHideLoader();
       } else if (finalCall) {
-        done = true; clearInterval(t);
+        done = true;
         document.getElementById('a-content').innerHTML =
           '<div class="a-msg">That activity couldn’t be found.</div>';
-        aHideLoader();
       }
     }
-    setTimeout(function () { tryRender(true); }, 15000);
+    setTimeout(function () { tryRender(true); }, 12000);
 
     MilesTracker.fetchAllEntries(function (rows) { rowsIn = rows || []; tryRender(false); });
     MilesTracker.fetchShoes(function (shoes) { shoesIn = shoes || []; tryRender(false); });

@@ -60,16 +60,25 @@
     '#016074 0 16.66%,#94D3BE 16.66% 33.33%,#E7D7A4 33.33% 50%,',
     '#EB9A00 50% 66.66%,#CA6902 66.66% 83.33%,#B02113 83.33% 100%);}',
     '.a-hero{margin-bottom:1.8rem;}',
-    '.a-hero b{display:block;color:#94D3BE;font-size:clamp(3.4rem,18vw,4.6rem);',
+    '.a-hero b{display:block;font-size:clamp(3.4rem,18vw,4.6rem);',
     'font-weight:900;letter-spacing:-.02em;line-height:.95;}',
-    '.a-hero.run b{color:#E7D7A4;}',
-    '.a-hero span{display:block;margin-top:.5rem;font-size:.9rem;font-weight:700;color:#94D3BE;opacity:.95;}',
-    '.a-hero.run span{color:#E7D7A4;}',
+    '.a-hero span{display:block;margin-top:.5rem;font-size:.9rem;font-weight:700;opacity:.5;}',
     '.a-grid{display:grid;grid-template-columns:repeat(3,1fr);row-gap:1.7rem;column-gap:1rem;}',
     '.a-cell b{display:block;font-size:1.55rem;font-weight:900;letter-spacing:-.01em;line-height:1;}',
-    '.a-cell span{display:block;margin-top:.35rem;font-size:.82rem;font-weight:600;opacity:.5;line-height:1.15;}',
+    '.a-cell span{display:block;margin-top:.4rem;font-size:.78rem;font-weight:800;',
+    'letter-spacing:.05em;line-height:1.15;}',
+    /* one brand color per row, contrast-picked for the dark surface */
+    '.a-grid .a-cell:nth-child(-n+3) span{color:#94D3BE;}',
+    '.a-grid .a-cell:nth-child(n+4) span{color:#EB9A00;}',
+    'html[data-theme="light"] .a-grid .a-cell:nth-child(-n+3) span{color:#0E7A8C;}',
+    'html[data-theme="light"] .a-grid .a-cell:nth-child(n+4) span{color:#C77A0C;}',
     '.a-cell a{color:#8FCFC2;text-decoration:none;}',
     'html[data-theme="light"] .a-cell a{color:#016074;}',
+    /* fade + slide cascade (count-up handled in JS) */
+    '.a-hero.ap-anim,.a-cell.ap-anim{opacity:0;transform:translateY(8px);}',
+    '.a-hero.ap-anim.in,.a-cell.ap-anim.in{opacity:1;transform:none;',
+    'transition:opacity .45s ease,transform .45s ease;}',
+    '@media (prefers-reduced-motion:reduce){.a-hero.ap-anim,.a-cell.ap-anim{opacity:1;transform:none;}}',
     '.a-notes{margin-top:1.8rem;padding-top:1.2rem;border-top:1px solid rgba(255,255,255,.12);',
     'font-size:.95rem;line-height:1.55;opacity:.82;white-space:pre-wrap;word-break:break-word;}',
     '.a-shoe{margin-top:1.8rem;padding-top:1.4rem;border-top:1px solid rgba(255,255,255,.12);}',
@@ -304,6 +313,8 @@
       drawMap(em, curPts, true).catch(function() { elAfull.classList.remove('show'); });
     });
 
+    animateIn();
+
     if (aid) {
       fetch('routes/' + encodeURIComponent(aid) + '.json')
         .then(function(res) { if (!res.ok) throw 0; return res.json(); })
@@ -314,6 +325,45 @@
         })
         .catch(hideMap);
     }
+  }
+
+  // count a numeric <b> up from 0; leaves pace/time/text untouched
+  function countEl(host) {
+    var b = host.querySelector('b'); if (!b) return;
+    var raw = b.textContent.trim();
+    if (raw.indexOf(':') !== -1) return;                 // pace / time
+    var m = raw.match(/^([\d,]+(?:\.\d+)?)(.*)$/);
+    if (!m) return;                                      // non-numeric
+    var target = parseFloat(m[1].replace(/,/g, ''));
+    if (isNaN(target)) return;
+    var dec = (m[1].split('.')[1] || '').length;
+    var suffix = m[2] || '', dur = 850, t0 = null;
+    b.textContent = (dec ? (0).toFixed(dec) : '0') + suffix;
+    requestAnimationFrame(function step(now) {
+      if (t0 === null) t0 = now;
+      var t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 3);
+      var v = target * e;
+      b.textContent = (dec ? v.toFixed(dec)
+                           : Math.round(v).toLocaleString()) + suffix;
+      if (t < 1) requestAnimationFrame(step);
+    });
+  }
+
+  // stagger hero + every stat cell so they cascade in
+  function animateIn() {
+    var seq = [];
+    var hero = elContent.querySelector('.a-hero');
+    if (hero) seq.push(hero);
+    [].forEach.call(elContent.querySelectorAll('.a-cell'), function(c) {
+      seq.push(c);
+    });
+    seq.forEach(function(el) { el.classList.add('ap-anim'); });
+    seq.forEach(function(el, i) {
+      setTimeout(function() {
+        el.classList.add('in');
+        countEl(el);
+      }, 90 + i * 55);
+    });
   }
   function hideMap() {
     var mp = elContent.querySelector('.a-map');

@@ -70,10 +70,10 @@
     .h-month:first-of-type { margin-top: 0; }
 
     .h-card {
-      display: block; width: 100%; text-align: left;
+      display: flex; align-items: stretch; width: 100%; text-align: left;
       background: #2c2c2e; color: #f3f3f3;
       border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 18px;
-      padding: 1rem 1.05rem;
+      padding: 0; overflow: hidden;
       margin-bottom: 12px;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
       cursor: pointer; font-family: inherit;
@@ -81,15 +81,15 @@
       transition: transform 0.12s ease, box-shadow 0.12s ease;
     }
     .h-card:active { transform: scale(0.985); box-shadow: 0 3px 9px rgba(0, 0, 0, 0.26); }
-    .h-head { display: flex; align-items: center; gap: 0.85rem; }
     .h-thumb {
-      flex: 0 0 56px; width: 56px; height: 56px;
-      border-radius: 12px; overflow: hidden;
+      flex: 0 0 108px; align-self: stretch;
       background: #ECE0BE;
       display: flex; align-items: center; justify-content: center;
     }
     .h-thumb svg { width: 100%; height: 100%; display: block; }
-    .h-thumb .ph { font-size: 1.4rem; opacity: 0.35; }
+    .h-thumb .ph { font-size: 1.7rem; opacity: 0.35; }
+    .h-body { flex: 1; min-width: 0; padding: 1rem 1.2rem; }
+    .h-head { display: flex; align-items: center; gap: 0.7rem; }
     .h-meta { min-width: 0; flex: 1; }
     .h-badge {
       flex: 0 0 auto; align-self: flex-start;
@@ -105,10 +105,11 @@
       margin-top: 1px;
     }
     .h-stats {
-      display: flex; gap: 1.4rem;
+      display: flex; justify-content: space-between; gap: 1.8rem;
       margin-top: 0.85rem; padding-top: 0.85rem;
       border-top: 1px solid rgba(255, 255, 255, 0.10);
     }
+    .h-stat { flex: 1; min-width: 0; }
     .h-stat b {
       display: block; font-size: 1.05rem; font-weight: 900;
       letter-spacing: -0.01em; line-height: 1.1;
@@ -297,20 +298,22 @@
     var dur  = hDuration(r) || '—';
     return '<button class="h-card" type="button" onclick="hOpen(this)" ' +
         'data-key="' + hEsc(hKey(r)) + '">' +
-      '<div class="h-head">' +
-        thumb +
-        '<div class="h-meta">' +
-          '<div class="h-date">' + hEsc(hShortDate(r.date)) + '</div>' +
-          '<div class="h-name">' + hEsc(hTitle(r)) + '</div>' +
+      thumb +
+      '<div class="h-body">' +
+        '<div class="h-head">' +
+          '<div class="h-meta">' +
+            '<div class="h-date">' + hEsc(hShortDate(r.date)) + '</div>' +
+            '<div class="h-name">' + hEsc(hTitle(r)) + '</div>' +
+          '</div>' +
+          '<span class="h-badge' + (r.type === 'Run' ? ' run' : '') + '">' +
+            (r.type === 'Run' ? 'Run' : 'Walk') + '</span>' +
         '</div>' +
-        '<span class="h-badge' + (r.type === 'Run' ? ' run' : '') + '">' +
-          (r.type === 'Run' ? 'Run' : 'Walk') + '</span>' +
-      '</div>' +
-      '<div class="h-stats">' +
-        '<div class="h-stat"><b>' + (r.miles != null ? r.miles.toFixed(2) : '—') +
-          '</b><span>Miles</span></div>' +
-        '<div class="h-stat"><b>' + pace + '</b><span>Avg Pace</span></div>' +
-        '<div class="h-stat"><b>' + dur + '</b><span>Time</span></div>' +
+        '<div class="h-stats">' +
+          '<div class="h-stat"><b>' + (r.miles != null ? r.miles.toFixed(2) : '—') +
+            '</b><span>Miles</span></div>' +
+          '<div class="h-stat"><b>' + pace + '</b><span>Avg Pace</span></div>' +
+          '<div class="h-stat"><b>' + dur + '</b><span>Time</span></div>' +
+        '</div>' +
       '</div>' +
     '</button>';
   }

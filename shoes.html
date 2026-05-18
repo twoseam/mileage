@@ -476,9 +476,8 @@
   // ---------- show retired toggle ----------
   document.getElementById('toggle-retired').addEventListener('click', function() {
     var rw = document.getElementById('retired-wrap');
-    var shown = rw.style.display !== 'none';
-    rw.style.display = shown ? 'none' : '';
-    this.textContent = shown ? 'Show retired' : 'Hide retired';
+    var open = rw.classList.toggle('open');
+    this.textContent = open ? 'Hide retired' : 'Show retired';
   });
 
   // ---------- add-pair sheet ----------

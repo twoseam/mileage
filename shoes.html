@@ -359,7 +359,7 @@
 <div class="mt-pill" id="pill"></div>
 
 <footer class="mt-footer">
-  <div class="mt-build">2026.05.17.027</div>
+  <div class="mt-build">2026.05.17.028</div>
 </footer>
 
 <script>
@@ -450,7 +450,7 @@
       '<div class="shoe-card reveal' + (retired ? ' retired' : '') + '" data-name="' + esc(s.name) + '">' +
         '<div class="shoe-photo">' + photo + badge + '</div>' +
         '<div class="shoe-body">' +
-          '<div class="shoe-name">' + esc(s.name || 'Unnamed pair') + '</div>' +
+          '<div class="shoe-name">' + esc(title) + '</div>' +
           '<div class="shoe-meta">' + esc(meta) + '</div>' +
           '<div class="shoe-miles">' + miles.toFixed(1) + ' <span>/ ' + goal + ' mi</span></div>' +
           '<div class="shoe-walks">' + (s.walks || 0) + (s.walks === 1 ? ' walk' : ' walks') + '</div>' +
@@ -499,7 +499,8 @@
           cnt[k] = (cnt[k] || 0) + 1;
         });
         shoes.forEach(function(s) {
-          var keys = [s.name, s.model, ((s.brand || '') + ' ' + (s.model || '')).trim()];
+          // Use the exact label set the backend matches miles on.
+          var keys = s.matchKeys || [s.name, s.model];
           var seen = {}, n = 0;
           keys.forEach(function(key) {
             key = String(key || '').trim().toLowerCase();

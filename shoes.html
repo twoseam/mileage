@@ -86,8 +86,19 @@
       border-radius: 14px;
       padding: 0.9rem;
       margin-bottom: 0.85rem;
+      transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2,0.8,0.2,1);
     }
     .shoe-card.retired { opacity: 0.55; }
+    /* entrance: cards start hidden, JS lifts .reveal to fade them in (staggered) */
+    .shoe-card.reveal { opacity: 0 !important; transform: translateY(12px); }
+
+    #retired-wrap {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.4s cubic-bezier(0.2,0.8,0.2,1), opacity 0.3s ease;
+    }
+    #retired-wrap.open { max-height: 1600px; opacity: 1; }
     .shoe-photo {
       width: 84px; height: 84px; flex: 0 0 84px;
       border-radius: 10px; overflow: hidden;
@@ -269,7 +280,7 @@
   <div class="section-head"><h2>Current</h2></div>
   <div id="current-list"></div>
 
-  <div id="retired-wrap" style="display:none">
+  <div id="retired-wrap">
     <div class="section-head"><h2>Retired</h2></div>
     <div id="retired-list"></div>
   </div>
@@ -417,7 +428,7 @@
       ? '<img src="' + esc(s.photo) + '" alt="' + esc(s.name) + '">'
       : '<span class="ph">&#128095;</span>';
     return '' +
-      '<div class="shoe-card' + (retired ? ' retired' : '') + '" data-name="' + esc(s.name) + '">' +
+      '<div class="shoe-card reveal' + (retired ? ' retired' : '') + '" data-name="' + esc(s.name) + '">' +
         '<div class="shoe-photo">' + photo + '</div>' +
         '<div class="shoe-body">' +
           '<div class="shoe-name">' + esc(s.name || 'Unnamed pair') + '</div>' +

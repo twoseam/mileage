@@ -33,17 +33,15 @@
       min-height: 100vh;
       -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
     }
-    .mt-bg {
-      position: fixed; inset: 0; z-index: -1; pointer-events: none;
-      transform: translateY(50px);
-      background: linear-gradient(159deg,
-        transparent 0%, transparent 76.6%,
-        #016074 76.6%, #016074 78.8%,
-        #94D3BE 78.8%, #94D3BE 81.1%,
-        #E7D7A4 81.1%, #E7D7A4 83.9%,
-        #EB9A00 83.9%, #EB9A00 86.6%,
-        #CA6902 86.6%, #CA6902 89.3%,
-        #B02113 89.3%, #B02113 100%);
+    /* full-screen detail (no stripes, no card) — slides in from the right
+       like an iOS push; native back / swipe returns to the list. */
+    body { overflow-x: hidden; }
+    @keyframes aSlideIn {
+      from { transform: translateX(100%); }
+      to   { transform: translateX(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      @keyframes aSlideIn { from { transform: none; } to { transform: none; } }
     }
 
     .a-back {
@@ -62,62 +60,74 @@
     }
     .a-back:active { transform: scale(0.93); }
 
-    .a-wrap { max-width: 500px; margin: 0 auto; padding: 4.5rem 1.4rem 3rem; }
-
-    .a-card {
-      background: #2c2c2e; color: #f3f3f3;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 22px; overflow: hidden;
-      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+    .a-wrap {
+      max-width: 520px; margin: 0 auto;
+      min-height: 100vh;
+      padding: 4.6rem 1.5rem 3rem;
+      background: inherit;
+      animation: aSlideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      will-change: transform;
     }
-    .a-pad { padding: 1.8rem 1.5rem 1.6rem; }
-    .a-top { display: flex; align-items: baseline; gap: 0.6rem; }
-    .a-date { font-size: 1.05rem; font-weight: 700; opacity: 0.55; }
-    .a-type {
-      font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;
-      font-weight: 800; padding: 2px 7px; border-radius: 999px;
-      color: #1a1a1a; background: #8FCFC2;
+    /* NRC-style: date·time, big title, rule, hero, stat grid */
+    .a-when {
+      font-size: 0.92rem; font-weight: 700; opacity: 0.5;
+      letter-spacing: 0.01em;
     }
-    .a-type.run { background: #E7D7A4; }
     .a-name {
-      font-size: 1.7rem; font-weight: 900; letter-spacing: -0.01em;
-      margin: 0.25rem 0 0.7rem; line-height: 1.05;
+      font-size: 2rem; font-weight: 900; letter-spacing: -0.02em;
+      margin: 0.35rem 0 1rem; line-height: 1.04;
     }
-    .a-hero { font-size: 2.8rem; font-weight: 900; letter-spacing: 0.01em; }
-    .a-hero span { font-size: 0.85rem; font-weight: 700; opacity: 0.5; margin-left: 6px; }
-
-    .a-row {
-      display: flex; justify-content: space-between; gap: 1rem;
-      padding: 0.62rem 0; border-top: 1px solid rgba(255, 255, 255, 0.10);
-      font-size: 0.92rem;
+    .a-rule {
+      height: 1px; border: none; margin: 0 0 1.6rem;
+      background: rgba(255, 255, 255, 0.12);
     }
-    .a-row:first-of-type { margin-top: 0.6rem; }
-    .a-row .k {
-      text-transform: uppercase; letter-spacing: 0.08em;
-      font-size: 0.6rem; font-weight: 800; opacity: 0.5; align-self: center;
+    .a-hero { margin-bottom: 1.8rem; }
+    .a-hero b {
+      display: block;
+      font-size: clamp(3.4rem, 18vw, 4.6rem); font-weight: 900;
+      letter-spacing: -0.02em; line-height: 0.95; font-style: italic;
     }
-    .a-row .v { font-weight: 700; text-align: right; }
-    .a-row .v a { color: #8FCFC2; text-decoration: none; font-weight: 800; }
+    .a-hero span {
+      display: block; margin-top: 0.5rem;
+      font-size: 0.9rem; font-weight: 700; opacity: 0.5;
+    }
+    .a-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      row-gap: 1.7rem; column-gap: 1rem;
+    }
+    .a-cell b {
+      display: block; font-size: 1.55rem; font-weight: 900;
+      letter-spacing: -0.01em; line-height: 1;
+    }
+    .a-cell span {
+      display: block; margin-top: 0.35rem;
+      font-size: 0.82rem; font-weight: 600; opacity: 0.5; line-height: 1.15;
+    }
+    .a-cell a { color: #8FCFC2; text-decoration: none; }
     .a-notes {
-      margin-top: 0.7rem; padding-top: 0.8rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.10);
-      font-size: 0.92rem; line-height: 1.5; opacity: 0.82;
+      margin-top: 1.8rem; padding-top: 1.2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 0.95rem; line-height: 1.55; opacity: 0.82;
       white-space: pre-wrap; word-break: break-word;
     }
     .a-shoe {
-      display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
-      margin-top: 1.2rem; padding-top: 1.2rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.10);
+      margin-top: 1.8rem; padding-top: 1.4rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
     }
+    .a-shoe .snm { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.01em; }
+    .a-shoe .smd { font-size: 0.95rem; font-weight: 600; opacity: 0.55; margin-top: 0.2rem; }
     .a-shoe img {
-      width: 200px; max-width: 70%; aspect-ratio: 1 / 1;
-      object-fit: cover; border-radius: 16px; background: rgba(255, 255, 255, 0.06);
+      display: block; width: 100%; max-width: 360px;
+      margin: 1.1rem auto 0; aspect-ratio: 4 / 3;
+      object-fit: contain; border-radius: 16px;
+      background: rgba(255, 255, 255, 0.05);
     }
-    .a-shoe .sn { font-size: 0.82rem; font-weight: 700; opacity: 0.6; }
 
     .a-map {
-      position: relative; height: 320px; width: 100%;
-      margin-top: 1.3rem; background: rgba(0, 0, 0, 0.06);
+      position: relative; height: 340px;
+      margin: 1.6rem -1.5rem 0; /* break out to the page gutter */
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px; overflow: hidden;
     }
     .a-map-canvas { position: absolute; inset: 0; }
     .a-map-full {
@@ -168,21 +178,16 @@
     }
     html[data-theme="light"] #mt-loader { background: #f1ebdd; }
     html[data-theme="light"] .mt-loader-bar { background: rgba(0, 0, 0, 0.10); }
-    html[data-theme="light"] .a-card {
-      background: #f6f1e7; color: #1a1a1a;
-      border-color: rgba(0, 0, 0, 0.06);
-      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.2);
-    }
-    html[data-theme="light"] .a-row,
+    html[data-theme="light"] .a-rule { background: rgba(0, 0, 0, 0.12); }
     html[data-theme="light"] .a-notes,
-    html[data-theme="light"] .a-shoe { border-top-color: rgba(0, 0, 0, 0.10); }
-    html[data-theme="light"] .a-row .v a { color: #016074; }
+    html[data-theme="light"] .a-shoe { border-top-color: rgba(0, 0, 0, 0.12); }
+    html[data-theme="light"] .a-cell a { color: #016074; }
+    html[data-theme="light"] .a-map,
     html[data-theme="light"] .a-shoe img { background: rgba(0, 0, 0, 0.06); }
   </style>
 </head>
 <body>
 
-<div class="mt-bg"></div>
 <div id="mt-loader"><div class="mt-loader-bar"><div class="mt-loader-fill"></div></div></div>
 
 <button class="a-back" type="button" aria-label="Back" onclick="aBack()"></button>
@@ -215,6 +220,10 @@
   function aDateParts(d) {
     var m = String(d || '').match(/(\d{4})-(\d{2})-(\d{2})/);
     return m ? { y:+m[1], mo:+m[2]-1, da:+m[3] } : null;
+  }
+  function aShort(d) {
+    var p = aDateParts(d); if (!p) return String(d || '');
+    return (p.mo + 1) + '/' + p.da + '/' + String(p.y).slice(-2);
   }
   function aLongDate(d) {
     var p = aDateParts(d); if (!p) return String(d || '');
@@ -334,51 +343,57 @@
     var shoeBlock = '';
     if (r.shoe) {
       var so = shoeIdx[String(r.shoe).trim().toLowerCase()];
-      var sn = aEsc((so && (so.display || so.name)) || r.shoe);
+      var snm = aEsc((so && (so.display || so.name)) || r.shoe);
+      var smd = so ? aEsc(((so.brand || '') + ' ' + (so.model || '')).trim()) : '';
       var si = (so && so.photo)
         ? '<img src="' + aEsc(so.photo) + '" alt="" loading="lazy">' : '';
-      shoeBlock = '<div class="a-shoe">' + si + '<span class="sn">' + sn + '</span></div>';
+      shoeBlock = '<div class="a-shoe">' +
+        '<div class="snm">' + snm + '</div>' +
+        (smd && smd.toLowerCase() !== snm.toLowerCase()
+          ? '<div class="smd">' + smd + '</div>' : '') +
+        si + '</div>';
     }
 
     var loc = '';
     if (r.location) loc = aEsc(r.location);
     else if (r.lat != null && r.lon != null && r.lat !== '' && r.lon !== '') {
-      var ll = (+r.lat).toFixed(4) + ', ' + (+r.lon).toFixed(4);
+      var ll = (+r.lat).toFixed(3) + ', ' + (+r.lon).toFixed(3);
       loc = '<a href="https://www.openstreetmap.org/?mlat=' + r.lat + '&mlon=' + r.lon +
             '#map=15/' + r.lat + '/' + r.lon + '" target="_blank" rel="noopener">' + ll + '</a>';
     }
     var num = function(v) { return (v != null && v !== '') ? v : ''; };
+    function cell(label, val) {
+      if (val === '' || val == null) return '';
+      return '<div class="a-cell"><b>' + val + '</b><span>' + label + '</span></div>';
+    }
+    var when = aEsc(aShort(r.date)) + (a12(r.start_time) ? ' · ' + a12(r.start_time) : '');
 
     document.getElementById('a-content').innerHTML =
-      '<div class="a-card"><div class="a-pad">' +
-        '<div class="a-top">' +
-          '<span class="a-date">' + aEsc(aLongDate(r.date)) + '</span>' +
-          '<span class="a-type' + (isRun ? ' run' : '') + '">' +
-            (isRun ? 'Run' : 'Walk') + '</span>' +
-        '</div>' +
+        '<div class="a-when">' + when + '</div>' +
         '<div class="a-name">' + aEsc(aTitle(r)) + '</div>' +
-        '<div class="a-hero">' + miles + '<span>miles</span></div>' +
-        aRow('Pace', r.pace ? aEsc(r.pace) + ' /mi' : '') +
-        aRow('Avg Speed', num(r.avg_speed) !== '' ? (+r.avg_speed).toFixed(1) + ' mph' : '') +
-        aRow('Duration', r.duration ? aEsc(r.duration) : '') +
-        aRow('Start', a12(r.start_time)) +
-        aRow('End', a12(r.end_time)) +
-        aRow('Avg Heart Rate', num(r.avg_hr) !== '' ? Math.round(r.avg_hr) + ' bpm' : '') +
-        aRow('Calories', num(r.calories) !== '' ? Math.round(r.calories) + ' cal' : '') +
-        aRow('Steps', num(r.steps) !== '' ? Math.round(r.steps).toLocaleString() : '') +
-        aRow('Ascent', num(r.ascent) !== '' ? Math.round(r.ascent) + ' ft' : '') +
-        aRow('Descent', num(r.descent) !== '' ? Math.round(r.descent) + ' ft' : '') +
-        aRow('Temp', (r.temp_f != null && r.temp_f !== '') ? Math.round(r.temp_f) + '°F' : '') +
-        aRow('Weather', r.weather ? aEsc(r.weather) : '') +
-        aRow('Location', loc) +
-        (r.notes ? '<div class="a-notes">' + aEsc(r.notes) + '</div>' : '') +
-        shoeBlock +
-      '</div>' +
+        '<hr class="a-rule">' +
+        '<div class="a-hero"><b>' + miles + '</b><span>Miles</span></div>' +
+        '<div class="a-grid">' +
+          cell('Avg. Pace', r.pace ? aEsc(r.pace) : '') +
+          cell('Time', r.duration ? aEsc(r.duration) : '') +
+          cell('Calories', num(r.calories) !== '' ? Math.round(r.calories) : '') +
+          cell('Elevation Gain', num(r.ascent) !== '' ? Math.round(r.ascent) + ' ft' : '') +
+          cell('Avg. Heart Rate', num(r.avg_hr) !== '' ? Math.round(r.avg_hr) : '') +
+          cell('Avg. Speed', num(r.avg_speed) !== '' ? (+r.avg_speed).toFixed(1) + ' mph' : '') +
+          cell('Steps', num(r.steps) !== '' ? Math.round(r.steps).toLocaleString() : '') +
+          cell('Elevation Loss', num(r.descent) !== '' ? Math.round(r.descent) + ' ft' : '') +
+          cell('Start', a12(r.start_time)) +
+          cell('End', a12(r.end_time)) +
+          cell('Temp', (r.temp_f != null && r.temp_f !== '') ? Math.round(r.temp_f) + '°F' : '') +
+          cell('Weather', r.weather ? aEsc(r.weather) : '') +
+          cell('Location', loc) +
+        '</div>' +
       (aid ? '<div class="a-map">' +
                '<div id="a-map" class="a-map-canvas"></div>' +
                '<button class="a-map-full" type="button" aria-label="Fullscreen map" ' +
                'onclick="aOpenFull()">⤢</button></div>' : '') +
-      '</div>';
+        (r.notes ? '<div class="a-notes">' + aEsc(r.notes) + '</div>' : '') +
+        shoeBlock;
 
     if (aid) {
       fetch('routes/' + encodeURIComponent(aid) + '.json')

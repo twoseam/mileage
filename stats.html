@@ -190,47 +190,6 @@
       font-size: 0.62rem; font-weight: 700; opacity: 0.7; }
     .cf-legend i { display: inline-block; width: 9px; height: 9px;
       border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
-    .bar-pop {
-      position: absolute;
-      z-index: 50;
-      background: #f5f0e6;
-      color: #1a1a1a;
-      border-radius: 10px;
-      padding: 8px 12px;
-      min-width: 130px;
-      font-size: 0.72rem;
-      line-height: 1.4;
-      white-space: nowrap;
-      box-shadow: 0 10px 28px rgba(0,0,0,0.4);
-      transform: translate(-50%, -100%) scale(0.9);
-      transform-origin: center bottom;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.12s ease, transform 0.12s ease;
-    }
-    .bar-pop.show { opacity: 1; transform: translate(-50%, -100%) scale(1); }
-    .bar-pop .bp-title {
-      font-weight: 800;
-      font-size: 0.6rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      opacity: 0.55;
-      margin-bottom: 4px;
-    }
-    .bar-pop .bp-row { display: flex; justify-content: space-between; gap: 16px; }
-    .bar-pop .bp-row b { font-weight: 800; }
-    .bar-pop .bp-total {
-      margin-top: 4px;
-      border-top: 1px solid rgba(0,0,0,0.12);
-      padding-top: 4px;
-    }
-    .bar-pop .bp-dot {
-      display: inline-block;
-      width: 8px; height: 8px;
-      border-radius: 2px;
-      margin-right: 6px;
-      vertical-align: middle;
-    }
     .chart-summary {
       display: flex;
       gap: 1.5rem;
@@ -799,7 +758,6 @@
         </div>
       </div>
     </div>
-    <div class="bar-pop" id="bar-pop"></div>
 
     <div id="chart-fly">
       <div class="cf-top">
@@ -1821,11 +1779,9 @@
     };
   })();
 
-  // Drill-down: tap a bar in the centre pane (a swipe won't trigger this).
-  var suppressBarClick = false;
+  // Tap a bar in the centre pane (a swipe won't trigger this).
   document.getElementById('chart-track').addEventListener('click', function(e) {
     if (dragged) { dragged = false; return; }
-    if (suppressBarClick) { suppressBarClick = false; return; } // came from a long-press
     // tapping the chart again while the overview is up dismisses it
     if (fly.classList.contains('show')) { closeFly(); return; }
     var bar = e.target.closest('.chart-pane[data-pane="center"] .chart-bar');
@@ -1905,54 +1861,6 @@
     fly.addEventListener('touchcancel', end);
   })();
 
-  // Long-press a bar to preview its stats (a quick tap still drills in).
-  (function() {
-    var card = document.querySelector('.chart-card');
-    var pop  = document.getElementById('bar-pop');
-    if (!card || !pop) return;
-    var timer = null, sx = 0, sy = 0;
-
-    function hide() { pop.classList.remove('show'); }
-    function showFor(bar) {
-      var bin = centerBins[parseInt(bar.getAttribute('data-idx'), 10)];
-      if (!bin) return;
-      var html =
-        '<div class="bp-title">' + bin.tooltip + '</div>' +
-        '<div class="bp-row"><span><span class="bp-dot" style="background:#8FCFC2"></span>Walk</span><b>' + bin.walkMiles.toFixed(1) + '</b></div>';
-      if (bin.runMiles > 0) {
-        html += '<div class="bp-row"><span><span class="bp-dot" style="background:#E7D7A4"></span>Run</span><b>' + bin.runMiles.toFixed(1) + '</b></div>';
-      }
-      html += '<div class="bp-row bp-total"><span>Total</span><b>' + bin.miles.toFixed(1) + ' mi</b></div>';
-      pop.innerHTML = html;
-      var br = bar.getBoundingClientRect(), cr = card.getBoundingClientRect();
-      var x = br.left - cr.left + br.width / 2;
-      x = Math.max(72, Math.min(cr.width - 72, x)); // keep the bubble on the card
-      pop.style.left = x + 'px';
-      pop.style.top  = (br.top - cr.top - 8) + 'px';
-      pop.classList.add('show');
-      suppressBarClick = true; // the release that ends the hold must not drill
-    }
-    function cancelTimer() { if (timer) { clearTimeout(timer); timer = null; } }
-
-    card.addEventListener('pointerdown', function(e) {
-      suppressBarClick = false; // fresh gesture — never inherit a stuck flag
-      var bar = e.target.closest('.chart-pane[data-pane="center"] .chart-bar');
-      if (!bar) return;
-      sx = e.clientX; sy = e.clientY;
-      cancelTimer();
-      timer = setTimeout(function() { timer = null; showFor(bar); }, 420);
-    });
-    card.addEventListener('pointermove', function(e) {
-      if (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8) {
-        cancelTimer();                                  // a swipe, not a hold
-        if (pop.classList.contains('show')) hide();
-      }
-    });
-    function release() { cancelTimer(); hide(); }
-    card.addEventListener('pointerup', release);
-    card.addEventListener('pointercancel', release);
-    card.addEventListener('pointerleave', release);
-  })();
 
   document.querySelectorAll('.zoom-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {

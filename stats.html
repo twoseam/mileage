@@ -136,8 +136,56 @@
       border-radius: 14px;
       padding: 1.1rem 0.85rem 0.75rem;
       margin-bottom: 1.25rem;
-      position: relative;            /* anchor for the long-press preview */
+      position: relative;            /* anchor for the flydown + preview */
+      overflow: hidden;              /* clip the flydown when it's parked above */
     }
+
+    /* flydown: tap a bar → overview of that span slides down over the chart */
+    #chart-fly {
+      position: absolute; left: 0; right: 0; top: 0; height: 67%;
+      z-index: 6; background: #20201c; color: #f5f5f5;
+      border-radius: 14px 14px 18px 18px;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+      padding: 1.2rem 1.3rem;
+      display: flex; flex-direction: column;
+      transform: translateY(-101%);
+      transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+      touch-action: none;
+    }
+    #chart-fly.show { transform: translateY(0); }
+    #chart-fly.dragging { transition: none; }
+    html[data-theme="light"] #chart-fly { background: #fffdf7; color: #171717; }
+    .cf-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+    .cf-title { font-size: 1.05rem; font-weight: 900; letter-spacing: -0.01em; }
+    .cf-arrow {
+      flex: 0 0 auto; width: 38px; height: 38px; padding: 0;
+      border: none; border-radius: 50%; cursor: pointer;
+      background: #E89A1F; color: #1a1a1a;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 0 #b9760f;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .cf-arrow:active { transform: translateY(4px); box-shadow: 0 0 0 #b9760f; }
+    .cf-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor;
+      stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .cf-hero { margin-top: 0.7rem; }
+    .cf-hero b { font-size: 2.6rem; font-weight: 900; letter-spacing: -0.02em; line-height: 1; }
+    .cf-hero span { font-size: 0.85rem; font-weight: 700; opacity: 0.5; margin-left: 6px; }
+    .cf-stats { display: flex; gap: 1.8rem; margin-top: 1rem; }
+    .cf-stat b { display: block; font-size: 1.15rem; font-weight: 900; line-height: 1.1; }
+    .cf-stat span { font-size: 0.5rem; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase; opacity: 0.45; }
+    .cf-split { display: flex; height: 8px; border-radius: 4px; overflow: hidden;
+      margin-top: auto; background: rgba(255,255,255,0.08); }
+    html[data-theme="light"] .cf-split { background: rgba(0,0,0,0.06); }
+    .cf-split i { display: block; height: 100%; }
+    .cf-legend { display: flex; gap: 1.2rem; margin-top: 0.6rem;
+      font-size: 0.62rem; font-weight: 700; opacity: 0.7; }
+    .cf-legend i { display: inline-block; width: 9px; height: 9px;
+      border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+    .cf-hint { text-align: center; font-size: 0.55rem; font-weight: 800;
+      letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.3;
+      margin-top: 0.7rem; }
     .bar-pop {
       position: absolute;
       z-index: 50;
@@ -747,6 +795,27 @@
       </div>
     </div>
     <div class="bar-pop" id="bar-pop"></div>
+
+    <div id="chart-fly">
+      <div class="cf-top">
+        <div class="cf-title" id="cf-title">—</div>
+        <button class="cf-arrow" id="cf-arrow" type="button" aria-label="See activities">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      <div class="cf-hero"><b id="cf-miles">0</b><span>miles</span></div>
+      <div class="cf-stats">
+        <div class="cf-stat"><b id="cf-days">0</b><span>Days</span></div>
+        <div class="cf-stat"><b id="cf-acts">0</b><span>Activities</span></div>
+        <div class="cf-stat"><b id="cf-pace">—</b><span>Avg Pace</span></div>
+      </div>
+      <div class="cf-split" id="cf-split"></div>
+      <div class="cf-legend">
+        <span><i style="background:#8FCFC2"></i>Walk <b id="cf-walk">0</b></span>
+        <span><i style="background:#E7D7A4"></i>Run <b id="cf-run">0</b></span>
+      </div>
+      <div class="cf-hint">Swipe up to dismiss</div>
+    </div>
   </div>
 
   <div class="zoom-buttons">
@@ -869,6 +938,7 @@
         });
         state.dailyWalk = walk;
         state.dailyRun  = run;
+        state.rows = rows;
         state.firstEntryDate = firstDate;
         renderRecent(rows);
         render();
@@ -1310,7 +1380,9 @@
         miles:     opts.walk + opts.run,
         isCurrent: !!opts.isCurrent,
         tooltip:   opts.tooltip,
-        drillTo:   opts.drillTo
+        drillTo:   opts.drillTo,
+        start:     opts.start || null,   // Date range this bar covers
+        end:       opts.end   || null
       });
     }
 
@@ -1324,7 +1396,8 @@
           walk:  w[k] || 0,
           run:   r[k] || 0,
           isCurrent: sameDate(dt, today),
-          tooltip: dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })
+          tooltip: dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }),
+          start: new Date(dt), end: new Date(dt)
         });
       }
     } else if (state.zoom === 'month') {
@@ -1343,12 +1416,15 @@
           }
         }
         var satCursor = addDays(sunCursor, 6);
+        var wStart = sunCursor < first ? new Date(first) : new Date(sunCursor);
+        var wEnd   = satCursor > last  ? new Date(last)  : new Date(satCursor);
         pushBin({
           label: 'W' + weekIdx,
           walk: sumW, run: sumR,
           isCurrent: today >= sunCursor && today <= satCursor,
           tooltip: 'Week of ' + sunCursor.toLocaleDateString('en-US', { month:'short', day:'numeric' }),
-          drillTo: { zoom: 'week', cursor: new Date(sunCursor) }
+          drillTo: { zoom: 'week', cursor: new Date(sunCursor) },
+          start: wStart, end: wEnd
         });
         sunCursor = addDays(sunCursor, 7);
         weekIdx++;
@@ -1365,7 +1441,9 @@
           walk: sumW, run: sumR,
           isCurrent: sameMonth(monthDate, today),
           tooltip: monthDate.toLocaleDateString('en-US', { month:'long', year:'numeric' }),
-          drillTo: { zoom: 'month', cursor: monthDate }
+          drillTo: { zoom: 'month', cursor: monthDate },
+          start: new Date(state.cursor.getFullYear(), m, 1, 12),
+          end:   new Date(state.cursor.getFullYear(), m + 1, 0, 12)
         });
       }
     } else if (state.zoom === 'all') {
@@ -1382,7 +1460,9 @@
           walk: sumW, run: sumR,
           isCurrent: yr === today.getFullYear(),
           tooltip: yrStr + ' total',
-          drillTo: { zoom: 'year', cursor: new Date(yr, 0, 1, 12) }
+          drillTo: { zoom: 'year', cursor: new Date(yr, 0, 1, 12) },
+          start: new Date(yr, 0, 1, 12),
+          end:   new Date(yr, 11, 31, 12)
         });
       }
     }
@@ -1745,11 +1825,79 @@
     var bar = e.target.closest('.chart-pane[data-pane="center"] .chart-bar');
     if (!bar) return;
     var bin = centerBins[parseInt(bar.getAttribute('data-idx'), 10)];
-    if (!bin || !bin.drillTo) return;
-    state.zoom = bin.drillTo.zoom;
-    state.cursor = bin.drillTo.cursor;
-    render();
+    if (!bin || bin.miles <= 0) return;
+    openFly(bin);
   });
+
+  /* ---- flydown overview ---- */
+  function paceSec(p) {
+    var m = /^(\d{1,3}):(\d{2})$/.exec(String(p || '').trim());
+    return m ? (+m[1]) * 60 + (+m[2]) : null;
+  }
+  var fly = document.getElementById('chart-fly');
+  function openFly(bin) {
+    var s = fmtDate(bin.start), eD = fmtDate(bin.end);
+    var rows = (state.rows || []).filter(function(r) {
+      return r.date && r.date >= s && r.date <= eD && (parseFloat(r.miles) || 0) > 0;
+    });
+    var days = {}, paces = [];
+    rows.forEach(function(r) {
+      days[r.date] = 1;
+      var ps = paceSec(r.pace); if (ps) paces.push(ps);
+    });
+    var avg = paces.length
+      ? (function() {
+          var a = Math.round(paces.reduce(function(x, y) { return x + y; }, 0) / paces.length);
+          return Math.floor(a / 60) + ':' + ('0' + (a % 60)).slice(-2);
+        })() : '—';
+    document.getElementById('cf-title').textContent = bin.tooltip;
+    document.getElementById('cf-miles').textContent = bin.miles.toFixed(1);
+    document.getElementById('cf-days').textContent  = Object.keys(days).length;
+    document.getElementById('cf-acts').textContent  = rows.length;
+    document.getElementById('cf-pace').textContent  = avg;
+    document.getElementById('cf-walk').textContent  = bin.walkMiles.toFixed(1);
+    document.getElementById('cf-run').textContent   = bin.runMiles.toFixed(1);
+    var wp = bin.miles > 0 ? (bin.walkMiles / bin.miles) * 100 : 0;
+    document.getElementById('cf-split').innerHTML =
+      '<i style="width:' + wp + '%;background:#8FCFC2"></i>' +
+      '<i style="width:' + (100 - wp) + '%;background:#E7D7A4"></i>';
+    document.getElementById('cf-arrow').setAttribute('data-q',
+      'from=' + s + '&to=' + eD + '&title=' + encodeURIComponent(bin.tooltip));
+    fly.classList.remove('dragging');
+    fly.style.transform = '';
+    fly.classList.add('show');
+  }
+  function closeFly() {
+    fly.classList.remove('dragging');
+    fly.style.transform = '';
+    fly.classList.remove('show');
+  }
+  document.getElementById('cf-arrow').addEventListener('click', function() {
+    var q = this.getAttribute('data-q') || '';
+    location.href = 'history.html' + (q ? '?' + q : '');
+  });
+  (function() {
+    var sy = 0, h = 0, drag = false;
+    fly.addEventListener('touchstart', function(e) {
+      sy = e.touches[0].clientY; h = fly.offsetHeight; drag = false;
+    }, { passive: true });
+    fly.addEventListener('touchmove', function(e) {
+      var dy = e.touches[0].clientY - sy;
+      if (!drag) { if (dy > -4) return; drag = true; fly.classList.add('dragging'); }
+      if (e.cancelable) e.preventDefault();
+      fly.style.transform = 'translateY(' + Math.min(0, dy) + 'px)';
+    }, { passive: false });
+    function end(e) {
+      if (!drag) return;
+      drag = false; fly.classList.remove('dragging');
+      var t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+      var dy = (t ? t.clientY : sy) - sy;
+      if (dy < -(h * 0.28)) closeFly();
+      else { fly.style.transform = ''; }
+    }
+    fly.addEventListener('touchend', end);
+    fly.addEventListener('touchcancel', end);
+  })();
 
   // Long-press a bar to preview its stats (a quick tap still drills in).
   (function() {

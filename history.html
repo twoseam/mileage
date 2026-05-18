@@ -358,7 +358,23 @@
     }
   }
 
+  function hQ(n) {
+    var m = new RegExp('[?&]' + n + '=([^&]*)').exec(location.search);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
   function hSetup(rows) {
+    // optional date-range filter (from the Stats chart flydown arrow)
+    var qf = hQ('from'), qt = hQ('to'), qTitle = hQ('title');
+    if (qf && qt) {
+      rows = rows.filter(function(r) {
+        return r.date && r.date >= qf && r.date <= qt;
+      });
+    }
+    if (qTitle) {
+      var ttl = document.querySelector('.h-title');
+      if (ttl) ttl.textContent = qTitle;
+      document.title = 'Mileage — ' + qTitle;
+    }
     // newest first; same day → later sheet row first
     hItems = rows
       .map(function(r, i) { return { r: r, i: i }; })

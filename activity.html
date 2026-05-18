@@ -65,8 +65,12 @@
       min-height: 100vh;
       padding: 4.6rem 1.5rem 3rem;
       background: inherit;
-      animation: aSlideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      transform: translateX(100%);
       will-change: transform;
+    }
+    /* slide-in is triggered AFTER the loader hides so it's actually seen */
+    .a-wrap.a-ready {
+      animation: aSlideIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     }
     /* NRC-style: date·time, big title, rule, hero, stat grid */
     .a-when {
@@ -85,7 +89,7 @@
     .a-hero b {
       display: block;
       font-size: clamp(3.4rem, 18vw, 4.6rem); font-weight: 900;
-      letter-spacing: -0.02em; line-height: 0.95; font-style: italic;
+      letter-spacing: -0.02em; line-height: 0.95;
     }
     .a-hero span {
       display: block; margin-top: 0.5rem;
@@ -125,7 +129,7 @@
 
     .a-map {
       position: relative; height: 340px;
-      margin: 1.6rem -1.5rem 0; /* break out to the page gutter */
+      margin: 1.6rem 0; /* a little L/R padding (sits inside the gutter) */
       background: rgba(255, 255, 255, 0.05);
       border-radius: 16px; overflow: hidden;
     }
@@ -346,7 +350,8 @@
       var snm = aEsc((so && (so.display || so.name)) || r.shoe);
       var smd = so ? aEsc(((so.brand || '') + ' ' + (so.model || '')).trim()) : '';
       var si = (so && so.photo)
-        ? '<img src="' + aEsc(so.photo) + '" alt="" loading="lazy">' : '';
+        ? '<img src="' + aEsc(so.photo) + '" alt="" loading="lazy" ' +
+          'onerror="this.style.display=\'none\'">' : '';
       shoeBlock = '<div class="a-shoe">' +
         '<div class="snm">' + snm + '</div>' +
         (smd && smd.toLowerCase() !== snm.toLowerCase()
@@ -354,13 +359,6 @@
         si + '</div>';
     }
 
-    var loc = '';
-    if (r.location) loc = aEsc(r.location);
-    else if (r.lat != null && r.lon != null && r.lat !== '' && r.lon !== '') {
-      var ll = (+r.lat).toFixed(3) + ', ' + (+r.lon).toFixed(3);
-      loc = '<a href="https://www.openstreetmap.org/?mlat=' + r.lat + '&mlon=' + r.lon +
-            '#map=15/' + r.lat + '/' + r.lon + '" target="_blank" rel="noopener">' + ll + '</a>';
-    }
     var num = function(v) { return (v != null && v !== '') ? v : ''; };
     function cell(label, val) {
       if (val === '' || val == null) return '';
@@ -368,30 +366,33 @@
     }
     var when = aEsc(aShort(r.date)) + (a12(r.start_time) ? ' · ' + a12(r.start_time) : '');
 
+    // Primary stats sit above the map; the rest below it.
+    var primary =
+      cell('Avg. Pace', r.pace ? aEsc(r.pace) : '') +
+      cell('Time', r.duration ? aEsc(r.duration) : '') +
+      cell('Calories', num(r.calories) !== '' ? Math.round(r.calories) : '') +
+      cell('Elevation Gain', num(r.ascent) !== '' ? Math.round(r.ascent) + ' ft' : '') +
+      cell('Avg. Heart Rate', num(r.avg_hr) !== '' ? Math.round(r.avg_hr) : '') +
+      cell('Avg. Speed', num(r.avg_speed) !== '' ? (+r.avg_speed).toFixed(1) + ' mph' : '');
+    var secondary =
+      cell('Steps', num(r.steps) !== '' ? Math.round(r.steps).toLocaleString() : '') +
+      cell('Elevation Loss', num(r.descent) !== '' ? Math.round(r.descent) + ' ft' : '') +
+      cell('Start', a12(r.start_time)) +
+      cell('End', a12(r.end_time)) +
+      cell('Temp', (r.temp_f != null && r.temp_f !== '') ? Math.round(r.temp_f) + '°F' : '') +
+      cell('Weather', r.weather ? aEsc(r.weather) : '');
+
     document.getElementById('a-content').innerHTML =
         '<div class="a-when">' + when + '</div>' +
         '<div class="a-name">' + aEsc(aTitle(r)) + '</div>' +
         '<hr class="a-rule">' +
         '<div class="a-hero"><b>' + miles + '</b><span>Miles</span></div>' +
-        '<div class="a-grid">' +
-          cell('Avg. Pace', r.pace ? aEsc(r.pace) : '') +
-          cell('Time', r.duration ? aEsc(r.duration) : '') +
-          cell('Calories', num(r.calories) !== '' ? Math.round(r.calories) : '') +
-          cell('Elevation Gain', num(r.ascent) !== '' ? Math.round(r.ascent) + ' ft' : '') +
-          cell('Avg. Heart Rate', num(r.avg_hr) !== '' ? Math.round(r.avg_hr) : '') +
-          cell('Avg. Speed', num(r.avg_speed) !== '' ? (+r.avg_speed).toFixed(1) + ' mph' : '') +
-          cell('Steps', num(r.steps) !== '' ? Math.round(r.steps).toLocaleString() : '') +
-          cell('Elevation Loss', num(r.descent) !== '' ? Math.round(r.descent) + ' ft' : '') +
-          cell('Start', a12(r.start_time)) +
-          cell('End', a12(r.end_time)) +
-          cell('Temp', (r.temp_f != null && r.temp_f !== '') ? Math.round(r.temp_f) + '°F' : '') +
-          cell('Weather', r.weather ? aEsc(r.weather) : '') +
-          cell('Location', loc) +
-        '</div>' +
+        (primary ? '<div class="a-grid">' + primary + '</div>' : '') +
       (aid ? '<div class="a-map">' +
                '<div id="a-map" class="a-map-canvas"></div>' +
                '<button class="a-map-full" type="button" aria-label="Fullscreen map" ' +
                'onclick="aOpenFull()">⤢</button></div>' : '') +
+        (secondary ? '<div class="a-grid">' + secondary + '</div>' : '') +
         (r.notes ? '<div class="a-notes">' + aEsc(r.notes) + '</div>' : '') +
         shoeBlock;
 
@@ -415,7 +416,14 @@
     var l = document.getElementById('mt-loader');
     var f = document.querySelector('.mt-loader-fill');
     if (f) f.style.width = '100%';
-    setTimeout(function() { if (l) l.classList.add('mt-loader-hide'); }, 300);
+    setTimeout(function() {
+      if (l) l.classList.add('mt-loader-hide');
+      // start the slide-in as the loader fades, so it's actually seen
+      var w = document.querySelector('.a-wrap');
+      if (w) requestAnimationFrame(function() {
+        requestAnimationFrame(function() { w.classList.add('a-ready'); });
+      });
+    }, 300);
   }
 
   (function () {

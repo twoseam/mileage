@@ -117,6 +117,15 @@ function _entryColMap(headerRow) {
     else if (k === 'shoe')                         map.shoe = idx;
     else if (k === 'notes')                        map.notes = idx;
     else if (k === 'activity id' || k === 'activity_id') map.activity_id = idx;
+    else if (k === 'duration')                     map.duration = idx;
+    else if (k === 'avg speed mph' || k === 'avg speed') map.avg_speed = idx;
+    else if (k === 'avg heart rate' || k === 'avg hr')   map.avg_hr = idx;
+    else if (k === 'calories')                     map.calories = idx;
+    else if (k === 'steps')                        map.steps = idx;
+    else if (k === 'ascent ft' || k === 'ascent')  map.ascent = idx;
+    else if (k === 'descent ft' || k === 'descent') map.descent = idx;
+    else if (k === 'location')                     map.location = idx;
+    else if (k === 'name')                         map.name = idx;
   });
   return map;
 }
@@ -149,7 +158,16 @@ function _readEntries() {
       weather:    _cell(r, map, 'weather') || '',
       shoe:       _cell(r, map, 'shoe') || '',
       notes:      _cell(r, map, 'notes') || '',
-      activity_id: _cell(r, map, 'activity_id') || ''
+      activity_id: _cell(r, map, 'activity_id') || '',
+      duration:   _fmtDur(_cell(r, map, 'duration'), tz),
+      avg_speed:  _num(_cell(r, map, 'avg_speed')),
+      avg_hr:     _num(_cell(r, map, 'avg_hr')),
+      calories:   _num(_cell(r, map, 'calories')),
+      steps:      _num(_cell(r, map, 'steps')),
+      ascent:     _num(_cell(r, map, 'ascent')),
+      descent:    _num(_cell(r, map, 'descent')),
+      location:   _cell(r, map, 'location') || '',
+      name:       _cell(r, map, 'name') || ''
     });
   }
   return rows;
@@ -176,6 +194,13 @@ function _shoeColMap(headerRow) {
 }
 function _cell(row, map, key) {
   return (map[key] != null) ? row[map[key]] : '';
+}
+
+// Parse a numeric cell -> Number, or null if blank/non-numeric.
+function _num(v) {
+  if (v === '' || v == null) return null;
+  var n = parseFloat(v);
+  return isNaN(n) ? null : n;
 }
 
 function _reEsc(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
@@ -496,7 +521,10 @@ function doGet(e) {
           date: r.date, miles: r.miles, type: r.type, shoe: r.shoe,
           pace: r.pace, start_time: r.start_time, end_time: r.end_time,
           temp_f: r.temp_f, weather: r.weather, notes: r.notes,
-          lat: r.lat, lon: r.lon, activity_id: r.activity_id
+          lat: r.lat, lon: r.lon, activity_id: r.activity_id,
+          duration: r.duration, avg_speed: r.avg_speed, avg_hr: r.avg_hr,
+          calories: r.calories, steps: r.steps, ascent: r.ascent,
+          descent: r.descent, location: r.location, name: r.name
         };
       })
     });

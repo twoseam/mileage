@@ -13,11 +13,12 @@
   var PAGES = [
     { href: 'index.html', label: 'Entry' },
     { href: 'stats.html', label: 'Stats' },
+    { href: 'history.html', label: 'History' },
     { href: 'shoes.html', label: 'Shoes' }
   ];
 
   // Bump this on every release; mirror it in the footer link + changelog.html.
-  var VERSION = 'v4.4.1';
+  var VERSION = 'v4.5.0';
 
   /* ===================== Theme (light / dark) =====================
      Default is dark. The user's choice is remembered in localStorage.

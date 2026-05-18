@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mileage — Activity</title>
+
+  <meta name="description" content="The full picture of one walk or run.">
+  <link rel="icon" type="image/png" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Mileage">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#252525">
+
+  <link rel="preconnect" href="https://use.typekit.net" crossorigin>
+  <link rel="preconnect" href="https://p.typekit.net" crossorigin>
+  <link rel="stylesheet" href="https://use.typekit.net/ymz2nvi.css">
+
+  <script src="miles-tracker.js"></script>
+  <script src="nav.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    html { scrollbar-width: none; -ms-overflow-style: none; }
+    body::-webkit-scrollbar { display: none; }
+    body {
+      background: #252525; color: #f5f5f5;
+      font-family: "omnes", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    }
+    .mt-bg {
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      transform: translateY(50px);
+      background: linear-gradient(159deg,
+        transparent 0%, transparent 76.6%,
+        #016074 76.6%, #016074 78.8%,
+        #94D3BE 78.8%, #94D3BE 81.1%,
+        #E7D7A4 81.1%, #E7D7A4 83.9%,
+        #EB9A00 83.9%, #EB9A00 86.6%,
+        #CA6902 86.6%, #CA6902 89.3%,
+        #B02113 89.3%, #B02113 100%);
+    }
+
+    .a-back {
+      position: fixed; top: 18px; left: 18px; z-index: 50;
+      width: 42px; height: 42px; padding: 0;
+      border: none; border-radius: 50%;
+      background: rgba(0, 0, 0, 0.45); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+      -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    }
+    .a-back::before {
+      content: ''; width: 11px; height: 11px;
+      border-left: 2.5px solid #fff; border-bottom: 2.5px solid #fff;
+      transform: translateX(2px) rotate(45deg); border-radius: 1px;
+    }
+    .a-back:active { transform: scale(0.93); }
+
+    .a-wrap { max-width: 500px; margin: 0 auto; padding: 4.5rem 1.4rem 3rem; }
+
+    .a-card {
+      background: #f6f1e7; color: #1a1a1a;
+      border-radius: 22px; overflow: hidden;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4);
+    }
+    .a-pad { padding: 1.8rem 1.5rem 1.6rem; }
+    .a-top { display: flex; align-items: baseline; gap: 0.6rem; }
+    .a-date { font-size: 1.05rem; font-weight: 700; opacity: 0.55; }
+    .a-type {
+      font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;
+      font-weight: 800; padding: 2px 7px; border-radius: 999px;
+      color: #1a1a1a; background: #8FCFC2;
+    }
+    .a-type.run { background: #E7D7A4; }
+    .a-name {
+      font-size: 1.7rem; font-weight: 900; letter-spacing: -0.01em;
+      margin: 0.25rem 0 0.7rem; line-height: 1.05;
+    }
+    .a-hero { font-size: 2.8rem; font-weight: 900; letter-spacing: 0.01em; }
+    .a-hero span { font-size: 0.85rem; font-weight: 700; opacity: 0.5; margin-left: 6px; }
+
+    .a-row {
+      display: flex; justify-content: space-between; gap: 1rem;
+      padding: 0.62rem 0; border-top: 1px solid rgba(0, 0, 0, 0.10);
+      font-size: 0.92rem;
+    }
+    .a-row:first-of-type { margin-top: 0.6rem; }
+    .a-row .k {
+      text-transform: uppercase; letter-spacing: 0.08em;
+      font-size: 0.6rem; font-weight: 800; opacity: 0.5; align-self: center;
+    }
+    .a-row .v { font-weight: 700; text-align: right; }
+    .a-row .v a { color: #016074; text-decoration: none; font-weight: 800; }
+    .a-notes {
+      margin-top: 0.7rem; padding-top: 0.8rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.10);
+      font-size: 0.92rem; line-height: 1.5; opacity: 0.82;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .a-shoe {
+      display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+      margin-top: 1.2rem; padding-top: 1.2rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.10);
+    }
+    .a-shoe img {
+      width: 200px; max-width: 70%; aspect-ratio: 1 / 1;
+      object-fit: cover; border-radius: 16px; background: rgba(0, 0, 0, 0.06);
+    }
+    .a-shoe .sn { font-size: 0.82rem; font-weight: 700; opacity: 0.6; }
+
+    .a-map {
+      position: relative; height: 320px; width: 100%;
+      margin-top: 1.3rem; background: rgba(0, 0, 0, 0.06);
+    }
+    .a-map-canvas { position: absolute; inset: 0; }
+    .a-map-full {
+      position: absolute; top: 10px; right: 10px; z-index: 400;
+      width: 36px; height: 36px; padding: 0; border: none; border-radius: 8px;
+      background: rgba(0, 0, 0, 0.55); color: #fff;
+      font-size: 1rem; line-height: 1; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    }
+    #afull {
+      display: none; position: fixed; inset: 0; z-index: 10001; background: #ECE0BE;
+    }
+    #afull.show { display: block; }
+    #afull-map { position: absolute; inset: 0; }
+    .afull-x {
+      position: absolute; top: 16px; right: 16px; z-index: 2;
+      width: 42px; height: 42px; padding: 0; border: none; border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6); cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    }
+    .afull-x::before, .afull-x::after {
+      content: ''; position: absolute; top: 50%; left: 50%;
+      width: 18px; height: 2px; border-radius: 1px; background: #fff;
+    }
+    .afull-x::before { transform: translate(-50%, -50%) rotate(45deg); }
+    .afull-x::after  { transform: translate(-50%, -50%) rotate(-45deg); }
+
+    .a-msg { text-align: center; opacity: 0.5; padding: 4rem 1rem; font-size: 0.95rem; }
+
+    #mt-loader {
+      position: fixed; inset: 0; background: #252525;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10000; transition: opacity 0.5s ease;
+    }
+    #mt-loader.mt-loader-hide { opacity: 0; pointer-events: none; }
+    .mt-loader-bar {
+      width: 240px; height: 12px; border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08); overflow: hidden;
+    }
+    .mt-loader-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(to right,
+        #016074 0%, #016074 16.67%, #94D3BE 16.67%, #94D3BE 33.33%,
+        #E7D7A4 33.33%, #E7D7A4 50%, #EB9A00 50%, #EB9A00 66.67%,
+        #CA6902 66.67%, #CA6902 83.33%, #B02113 83.33%, #B02113 100%);
+      background-size: 240px 100%; transition: width 0.3s ease-out;
+    }
+    html[data-theme="light"] #mt-loader { background: #f1ebdd; }
+    html[data-theme="light"] .mt-loader-bar { background: rgba(0, 0, 0, 0.10); }
+  </style>
+</head>
+<body>
+
+<div class="mt-bg"></div>
+<div id="mt-loader"><div class="mt-loader-bar"><div class="mt-loader-fill"></div></div></div>
+
+<button class="a-back" type="button" aria-label="Back" onclick="aBack()"></button>
+
+<div class="a-wrap"><div id="a-content"></div></div>
+
+<div id="afull">
+  <div id="afull-map"></div>
+  <button class="afull-x" type="button" aria-label="Close map" onclick="aCloseFull()"></button>
+</div>
+
+<script>
+  function aEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c];
+    });
+  }
+  function aQ(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  window.aBack = function() {
+    if (document.referrer && /history\.html/.test(document.referrer)) history.back();
+    else if (history.length > 1) history.back();
+    else location.href = 'history.html';
+  };
+
+  var A_MONTHS = ['January','February','March','April','May','June','July',
+    'August','September','October','November','December'];
+  function aDateParts(d) {
+    var m = String(d || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+    return m ? { y:+m[1], mo:+m[2]-1, da:+m[3] } : null;
+  }
+  function aLongDate(d) {
+    var p = aDateParts(d); if (!p) return String(d || '');
+    var dt = new Date(p.y, p.mo, p.da, 12);
+    return dt.toLocaleDateString('en-US',
+      { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  }
+  function aWeekday(d) {
+    var p = aDateParts(d); if (!p) return '';
+    return new Date(p.y, p.mo, p.da, 12).toLocaleDateString('en-US', { weekday:'long' });
+  }
+  function aTitle(r) {
+    var t = String(r.start_time || '').match(/^(\d{1,2}):/);
+    var part = '';
+    if (t) {
+      var h = +t[1];
+      part = h < 12 ? 'Morning' : (h < 17 ? 'Afternoon' : (h < 21 ? 'Evening' : 'Night'));
+    }
+    return [aWeekday(r.date), part, (r.type === 'Run' ? 'Run' : 'Walk')]
+      .filter(Boolean).join(' ');
+  }
+  function a12(t) {
+    var m = String(t || '').match(/^(\d{1,2}):(\d{2})/);
+    if (!m) return '';
+    var h = +m[1], ap = h < 12 ? 'AM' : 'PM', h12 = (h % 12) || 12;
+    return h12 + ':' + m[2] + ' ' + ap;
+  }
+  function aKey(r) {
+    if (r.activity_id) return String(r.activity_id);
+    return [r.date, r.miles, r.start_time || ''].join('|');
+  }
+  function aRow(k, v) {
+    if (v === '' || v == null) return '';
+    return '<div class="a-row"><span class="k">' + k +
+           '</span><span class="v">' + v + '</span></div>';
+  }
+
+  // ---- brand-styled Google map (shared with the run popup) ----
+  var GMAPS_KEY = 'AIzaSyBKFBwCfrXN_FuC7clWzqc8G_p73kpj8oE';
+  var A_STYLE = [
+    { elementType:'geometry', stylers:[{color:'#ECE0BE'}] },
+    { elementType:'labels.text.fill', stylers:[{color:'#3A2E12'}] },
+    { elementType:'labels.text.stroke', stylers:[{color:'#F4ECD3'}] },
+    { elementType:'labels.icon', stylers:[{visibility:'off'}] },
+    { featureType:'administrative', elementType:'geometry.stroke', stylers:[{color:'#B98A3C'}] },
+    { featureType:'landscape.natural', elementType:'geometry', stylers:[{color:'#DCD3A6'}] },
+    { featureType:'poi', stylers:[{visibility:'off'}] },
+    { featureType:'poi.park', elementType:'geometry', stylers:[{color:'#BFD8B8'}] },
+    { featureType:'road', elementType:'geometry', stylers:[{color:'#E8C77A'}] },
+    { featureType:'road.arterial', elementType:'geometry', stylers:[{color:'#E3B45A'}] },
+    { featureType:'road.highway', elementType:'geometry', stylers:[{color:'#E89A1F'}] },
+    { featureType:'road', elementType:'labels', stylers:[{visibility:'off'}] },
+    { featureType:'transit', stylers:[{visibility:'off'}] },
+    { featureType:'water', elementType:'geometry', stylers:[{color:'#8FCFC2'}] }
+  ];
+  var _gmP = null;
+  function loadGMaps() {
+    if (_gmP) return _gmP;
+    if (!GMAPS_KEY) return Promise.reject('no key');
+    _gmP = new Promise(function(res, rej) {
+      var s = document.createElement('script');
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=' +
+              encodeURIComponent(GMAPS_KEY) + '&v=quarterly';
+      s.async = true; s.defer = true;
+      s.onload = function() {
+        (window.google && google.maps) ? res(google.maps) : rej('not ready');
+      };
+      s.onerror = function() { rej('failed'); };
+      document.head.appendChild(s);
+    });
+    return _gmP;
+  }
+  var aPts = null;
+  function aDrawMap(el, pts, interactive) {
+    return loadGMaps().then(function(gm) {
+      var m = new gm.Map(el, {
+        disableDefaultUI: true, clickableIcons: false, keyboardShortcuts: false,
+        gestureHandling: interactive ? 'greedy' : 'none',
+        disableDoubleClickZoom: !interactive,
+        backgroundColor: '#ECE0BE', styles: A_STYLE
+      });
+      var path = pts.map(function(p) { return { lat:p[0], lng:p[1] }; });
+      new gm.Polyline({ path:path, map:m,
+        strokeColor:'#B02113', strokeOpacity:0.95, strokeWeight:4 });
+      var b = new gm.LatLngBounds();
+      path.forEach(function(p) { b.extend(p); });
+      m.fitBounds(b, 24);
+      return m;
+    });
+  }
+  window.aOpenFull = function() {
+    if (!aPts) return;
+    var ov = document.getElementById('afull'), el = document.getElementById('afull-map');
+    el.innerHTML = ''; ov.classList.add('show');
+    aDrawMap(el, aPts, true).catch(function() { ov.classList.remove('show'); });
+  };
+  window.aCloseFull = function() {
+    document.getElementById('afull').classList.remove('show');
+  };
+
+  function aShoeIndex(shoes) {
+    var idx = {};
+    (shoes || []).forEach(function(s) {
+      var keys = [s.display, s.name].concat(s.matchKeys || []);
+      keys.forEach(function(k) {
+        if (k) idx[String(k).trim().toLowerCase()] = s;
+      });
+    });
+    return idx;
+  }
+
+  function aRender(r, shoeIdx) {
+    var isRun = r.type === 'Run';
+    var miles = (parseFloat(r.miles) || 0).toFixed(2);
+    var aid = String(r.activity_id || '').trim();
+
+    var shoeBlock = '';
+    if (r.shoe) {
+      var so = shoeIdx[String(r.shoe).trim().toLowerCase()];
+      var sn = aEsc((so && (so.display || so.name)) || r.shoe);
+      var si = (so && so.photo)
+        ? '<img src="' + aEsc(so.photo) + '" alt="" loading="lazy">' : '';
+      shoeBlock = '<div class="a-shoe">' + si + '<span class="sn">' + sn + '</span></div>';
+    }
+
+    var loc = '';
+    if (r.location) loc = aEsc(r.location);
+    else if (r.lat != null && r.lon != null && r.lat !== '' && r.lon !== '') {
+      var ll = (+r.lat).toFixed(4) + ', ' + (+r.lon).toFixed(4);
+      loc = '<a href="https://www.openstreetmap.org/?mlat=' + r.lat + '&mlon=' + r.lon +
+            '#map=15/' + r.lat + '/' + r.lon + '" target="_blank" rel="noopener">' + ll + '</a>';
+    }
+    var num = function(v) { return (v != null && v !== '') ? v : ''; };
+
+    document.getElementById('a-content').innerHTML =
+      '<div class="a-card"><div class="a-pad">' +
+        '<div class="a-top">' +
+          '<span class="a-date">' + aEsc(aLongDate(r.date)) + '</span>' +
+          '<span class="a-type' + (isRun ? ' run' : '') + '">' +
+            (isRun ? 'Run' : 'Walk') + '</span>' +
+        '</div>' +
+        '<div class="a-name">' + aEsc(aTitle(r)) + '</div>' +
+        '<div class="a-hero">' + miles + '<span>miles</span></div>' +
+        aRow('Pace', r.pace ? aEsc(r.pace) + ' /mi' : '') +
+        aRow('Avg Speed', num(r.avg_speed) !== '' ? (+r.avg_speed).toFixed(1) + ' mph' : '') +
+        aRow('Duration', r.duration ? aEsc(r.duration) : '') +
+        aRow('Start', a12(r.start_time)) +
+        aRow('End', a12(r.end_time)) +
+        aRow('Avg Heart Rate', num(r.avg_hr) !== '' ? Math.round(r.avg_hr) + ' bpm' : '') +
+        aRow('Calories', num(r.calories) !== '' ? Math.round(r.calories) + ' cal' : '') +
+        aRow('Steps', num(r.steps) !== '' ? Math.round(r.steps).toLocaleString() : '') +
+        aRow('Ascent', num(r.ascent) !== '' ? Math.round(r.ascent) + ' ft' : '') +
+        aRow('Descent', num(r.descent) !== '' ? Math.round(r.descent) + ' ft' : '') +
+        aRow('Temp', (r.temp_f != null && r.temp_f !== '') ? Math.round(r.temp_f) + '°F' : '') +
+        aRow('Weather', r.weather ? aEsc(r.weather) : '') +
+        aRow('Location', loc) +
+        (r.notes ? '<div class="a-notes">' + aEsc(r.notes) + '</div>' : '') +
+        shoeBlock +
+      '</div>' +
+      (aid ? '<div class="a-map">' +
+               '<div id="a-map" class="a-map-canvas"></div>' +
+               '<button class="a-map-full" type="button" aria-label="Fullscreen map" ' +
+               'onclick="aOpenFull()">⤢</button></div>' : '') +
+      '</div>';
+
+    if (aid) {
+      fetch('routes/' + encodeURIComponent(aid) + '.json')
+        .then(function(res) { if (!res.ok) throw 0; return res.json(); })
+        .then(function(pts) {
+          if (!pts || pts.length < 2) { aHideMap(); return; }
+          aPts = pts;
+          aDrawMap(document.getElementById('a-map'), pts).catch(aHideMap);
+        })
+        .catch(aHideMap);
+    }
+  }
+  function aHideMap() {
+    var mp = document.querySelector('.a-map');
+    if (mp) mp.style.display = 'none';
+  }
+
+  function aHideLoader() {
+    var l = document.getElementById('mt-loader');
+    var f = document.querySelector('.mt-loader-fill');
+    if (f) f.style.width = '100%';
+    setTimeout(function() { if (l) l.classList.add('mt-loader-hide'); }, 300);
+  }
+
+  (function () {
+    var want = aQ('id');
+    var f = document.querySelector('.mt-loader-fill'), v = 0;
+    var t = setInterval(function () {
+      if (v >= 95) return;
+      v += Math.max(0.4, (95 - v) * 0.05);
+      if (f) f.style.width = v + '%';
+    }, 100);
+
+    var rowsIn = null, shoesIn = null, done = false;
+    // SWR may fire cached then fresh. Render the moment we find the row;
+    // only declare "not found" once (via the timeout) so a stale cache
+    // miss doesn't lock in a false negative before fresh data lands.
+    function tryRender(finalCall) {
+      if (done) return;
+      var rows = rowsIn || [], shoes = shoesIn || [];
+      var match = null;
+      for (var i = 0; i < rows.length; i++) {
+        if (aKey(rows[i]) === want) { match = rows[i]; break; }
+      }
+      if (match) {
+        done = true; clearInterval(t);
+        aRender(match, aShoeIndex(shoes));
+        aHideLoader();
+      } else if (finalCall) {
+        done = true; clearInterval(t);
+        document.getElementById('a-content').innerHTML =
+          '<div class="a-msg">That activity couldn’t be found.</div>';
+        aHideLoader();
+      }
+    }
+    setTimeout(function () { tryRender(true); }, 15000);
+
+    MilesTracker.fetchAllEntries(function (rows) { rowsIn = rows || []; tryRender(false); });
+    MilesTracker.fetchShoes(function (shoes) { shoesIn = shoes || []; tryRender(false); });
+  })();
+</script>
+
+</body>
+</html>

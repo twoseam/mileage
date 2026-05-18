@@ -492,7 +492,7 @@
       overflow: hidden; background: rgba(0, 0, 0, 0.06);
     }
     .rstats-map-full {
-      position: absolute; top: 8px; right: 8px; z-index: 5;
+      position: absolute; top: 8px; right: 8px; z-index: 400;
       width: 34px; height: 34px; padding: 0;
       border: none; border-radius: 8px;
       background: rgba(0, 0, 0, 0.55); color: #fff;
@@ -510,11 +510,18 @@
       position: absolute; top: 16px; right: 16px; z-index: 2;
       width: 42px; height: 42px; padding: 0;
       border: none; border-radius: 50%;
-      background: rgba(0, 0, 0, 0.6); color: #fff;
-      font-size: 1.5rem; line-height: 1; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
+      background: rgba(0, 0, 0, 0.6); color: transparent;
+      font-size: 0; cursor: pointer;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
     }
+    .rsfull-x::before, .rsfull-x::after {
+      content: ''; position: absolute;
+      top: 50%; left: 50%;
+      width: 18px; height: 2px; border-radius: 1px;
+      background: #fff;
+    }
+    .rsfull-x::before { transform: translate(-50%, -50%) rotate(45deg); }
+    .rsfull-x::after  { transform: translate(-50%, -50%) rotate(-45deg); }
     .rstats-row {
       display: flex; justify-content: space-between; gap: 1rem;
       padding: 0.6rem 0;

@@ -607,6 +607,23 @@
       padding: 10px;
     }
     .mt-dialog-cancel:hover { opacity: 0.8; }
+    /* Time & Pace (entry dialog) */
+    .mt-pace-row { display: flex; gap: 8px; }
+    .mt-pace-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .mt-pace-lbl {
+      font-size: 0.58rem; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; opacity: 0.55; margin-bottom: 4px;
+    }
+    .mt-pace-row input {
+      width: 100%; padding: 10px; border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.18); background: #fff;
+      font-family: inherit; font-size: 0.95rem; color: #1a1a1a;
+      -webkit-appearance: none; appearance: none;
+    }
+    .mt-pace-hint {
+      font-size: 0.62rem; opacity: 0.45; margin-top: 6px; font-weight: 600;
+    }
+
     /* Visual shoe picker (entry dialog) */
     .mt-shoe-tiles {
       display: flex; gap: 8px;
@@ -747,8 +764,23 @@
     </div>
 
     <div class="mt-field" id="mt-time-field">
-      <label>Start Time</label>
-      <input type="time" id="mt-time-input" oninput="mtTimeEdited()" />
+      <label>Time &amp; Pace</label>
+      <div class="mt-pace-row">
+        <div class="mt-pace-col">
+          <span class="mt-pace-lbl">Start</span>
+          <input type="time" id="mt-time-input" oninput="mtPaceEdited('start')" />
+        </div>
+        <div class="mt-pace-col">
+          <span class="mt-pace-lbl">End</span>
+          <input type="time" id="mt-end-input" oninput="mtPaceEdited('end')" />
+        </div>
+        <div class="mt-pace-col">
+          <span class="mt-pace-lbl">Pace /mi</span>
+          <input type="text" id="mt-pace-input" inputmode="numeric"
+                 placeholder="9:30" oninput="mtPaceEdited('pace')" />
+        </div>
+      </div>
+      <div class="mt-pace-hint">Enter any 2 — the third fills in.</div>
     </div>
 
     <div class="mt-field">

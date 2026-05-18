@@ -461,10 +461,20 @@ function doGet(e) {
   }
 
   if (action === 'allEntries') {
-    // Returns every entry across all years for client-side aggregation
-    // (Stats page slices by zoom level).
+    // Every entry across all years (Stats page slices client-side). The
+    // payload is ~120KB — over CacheService's 100KB/item cap — so cache it
+    // GZIPPED (compresses ~5x). Invalidated on POST. Big repeat-load win.
+    var aeCache = CacheService.getScriptCache();
+    var aeHit = aeCache.get('allEntries_gz');
+    if (aeHit) {
+      try {
+        var blob = Utilities.newBlob(Utilities.base64Decode(aeHit), 'application/x-gzip');
+        return ContentService.createTextOutput(Utilities.ungzip(blob).getDataAsString())
+                 .setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {}
+    }
     var allRows = _readEntries();
-    return _json({
+    var payload = JSON.stringify({
       rows: allRows.map(function(r) {
         return {
           date: r.date, miles: r.miles, type: r.type, shoe: r.shoe,
@@ -474,6 +484,13 @@ function doGet(e) {
         };
       })
     });
+    try {
+      var gz = Utilities.base64Encode(
+                 Utilities.gzip(Utilities.newBlob(payload)).getBytes());
+      if (gz.length < 100000) aeCache.put('allEntries_gz', gz, 60);
+    } catch (err) {}
+    return ContentService.createTextOutput(payload)
+             .setMimeType(ContentService.MimeType.JSON);
   }
 
   return _json({ error: 'Unknown action' });
@@ -710,6 +727,7 @@ function doPost(e) {
   try {
     var cache = CacheService.getScriptCache();
     cache.remove('dashboard_current');
+    cache.remove('allEntries_gz');
     var thisYear = new Date().getFullYear();
     cache.remove('dashboard_' + thisYear);
   } catch (err) {}

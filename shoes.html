@@ -442,8 +442,10 @@
     var photo = s.photo
       ? '<img src="' + esc(s.photo) + '" alt="' + esc(s.name) + '">'
       : '<span class="ph">&#128095;</span>';
-    var nm = String(s.model || s.name || '').match(/#(\d+)\s*$/);
-    var badge = nm ? '<span class="shoe-num">' + nm[1] + '</span>' : '';
+    var pairNum = (s.pair != null && s.pair !== '') ? String(s.pair)
+                : (String(s.model || s.name || '').match(/#(\d+)\s*$/) || [])[1];
+    var badge = pairNum ? '<span class="shoe-num">' + esc(pairNum) + '</span>' : '';
+    var title = s.display || s.name || 'Unnamed pair';
     return '' +
       '<div class="shoe-card reveal' + (retired ? ' retired' : '') + '" data-name="' + esc(s.name) + '">' +
         '<div class="shoe-photo">' + photo + badge + '</div>' +

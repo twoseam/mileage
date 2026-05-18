@@ -355,6 +355,7 @@ function _shoesWithLifetime(allRows) {
     return {
       name:          s.name,
       display:       s.display,
+      matchKeys:     s.matchKeys,
       brand:         s.brand,
       model:         s.model,
       pair:          s.pair,
@@ -579,10 +580,13 @@ function _updateShoe(req) {
   var data = sheet.getDataRange().getValues();
   var map  = _shoeColMap(data[0] || []);
 
+  var want = name.toLowerCase();
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
-    var rowName = ((_cell(r, map, 'brand') || '') + ' ' + (_cell(r, map, 'model') || '')).trim();
-    if (rowName !== name) continue;
+    var idr = _shoeIdentity(_cell(r, map, 'brand'), _cell(r, map, 'model'), _cell(r, map, 'pair'));
+    if (idr.name.toLowerCase() !== want &&
+        idr.display.toLowerCase() !== want &&
+        idr.keys.indexOf(want) < 0) continue;
     var rowIdx = i + 1;
     function col(key) { return (map[key] != null) ? map[key] + 1 : 0; } // 1-based, 0 = absent
 

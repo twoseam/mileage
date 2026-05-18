@@ -72,6 +72,8 @@ function _entryColMap(headerRow) {
     else if (k === 'miles')                        map.miles = idx;
     else if (k === 'walk/run' || k === 'type')     map.type = idx;
     else if (k === 'start time' || k === 'start_time') map.start_time = idx;
+    else if (k === 'end time' || k === 'end_time') map.end_time = idx;
+    else if (k === 'pace')                         map.pace = idx;
     else if (k === 'lat')                          map.lat = idx;
     else if (k === 'lon')                          map.lon = idx;
     else if (k === 'temp' || k === 'temp_f')       map.temp_f = idx;
@@ -101,6 +103,8 @@ function _readEntries() {
       miles:      miles,
       type:       _cell(r, map, 'type') || 'Walk',
       start_time: _fmtTime(_cell(r, map, 'start_time')),
+      end_time:   _fmtTime(_cell(r, map, 'end_time')),
+      pace:       _cell(r, map, 'pace') || '',
       lat:        lat !== '' ? lat : null,
       lon:        lon !== '' ? lon : null,
       temp_f:     tf !== '' ? tf : null,
@@ -657,6 +661,8 @@ function doPost(e) {
     put('miles',      miles);
     put('type',       entry.type || 'Walk');
     put('start_time', entry.start_time || '');
+    put('end_time',   entry.end_time || '');
+    put('pace',       entry.pace || '');
     put('lat',        entry.lat    != null ? entry.lat    : '');
     put('lon',        entry.lon    != null ? entry.lon    : '');
     put('temp_f',     entry.temp_f != null ? entry.temp_f : '');

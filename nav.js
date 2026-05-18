@@ -25,7 +25,7 @@
       icon: '<path d="M3 16.4c0-.9.4-1.7 1.1-2.2L8 11l2 1.3L12.6 9l3 3.2c2.2.5 4.3 1 5.4 2.3.5.6.6 1.3.6 2v1.4H3z"/><path d="M3 18.7h18"/>' }
   ];
 
-  var VERSION = 'v4.15.0';
+  var VERSION = 'v4.15.1';
 
   /* ===================== Theme (light / dark) ===================== */
   var THEME_KEY = 'mt-theme';
@@ -97,13 +97,12 @@
   })();
 
   var BAR_H  = 62;   // tab-row content height (px)
-  var GRIP_H = 22;   // the little pull tab strip on top
   var BAR_LIFT = 12; // extra bottom pad so the row floats off the edge
   var BAR_PAD = 'calc(env(safe-area-inset-bottom, 0px) + ' + BAR_LIFT + 'px)';
 
   var css = [
     // content clears the closed nav (grip + tab row)
-    'body { padding-bottom: calc(' + (GRIP_H + BAR_H) + 'px + ' + BAR_PAD + '); }',
+    'body { padding-bottom: calc(' + BAR_H + 'px + ' + BAR_PAD + '); }',
 
     '#mt-nav-bd {',
     '  position: fixed; inset: 0; z-index: 7990;',
@@ -128,34 +127,16 @@
     '#mt-nav.dragging { transition: none; }',
     'html[data-theme="light"] #mt-nav { color: ' + LIGHT_TEXT + '; }',
 
-    // manila folder tab — protrudes from the left of the bar
-    '.mt-grip {',
-    '  position: relative; height: ' + GRIP_H + 'px; flex: 0 0 auto;',
-    '}',
-    '.mt-grip i {',
-    '  position: absolute; left: 22px; bottom: -1px;',
-    '  width: 78px; height: ' + (GRIP_H + 6) + 'px;',
-    '  background: #1c1c1c; border-radius: 12px 12px 0 0;',
-    '  box-shadow: 0 -5px 14px rgba(0, 0, 0, 0.22);',
-    '  cursor: pointer;',
-    '}',
-    '.mt-grip i::after {',
-    '  content: ""; position: absolute; top: 7px; left: 50%;',
-    '  width: 30px; height: 4px; margin-left: -15px; border-radius: 2px;',
-    '  background: rgba(255, 255, 255, 0.30);',
-    '}',
-    'html[data-theme="light"] .mt-grip i { background: ' + LIGHT_SURF + '; }',
-    'html[data-theme="light"] .mt-grip i::after { background: rgba(0, 0, 0, 0.26); }',
-
+    // no handle — swipe up anywhere on the bar to open
     '#mt-nav-tabs {',
-    '  display: flex; align-items: stretch;',
-    '  height: ' + BAR_H + 'px; padding-bottom: ' + BAR_PAD + ';',
-    '  background: #1c1c1c;',
-    '  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.28);',
+    '  display: flex; align-items: stretch; justify-content: center;',
+    '  gap: 18px; height: ' + BAR_H + 'px; padding-bottom: ' + BAR_PAD + ';',
+    '  background: #1c1c1c; border-radius: 14px 14px 0 0;',
+    '  box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.16);',
     '}',
     'html[data-theme="light"] #mt-nav-tabs { background: ' + LIGHT_SURF + '; }',
     '.mt-tab {',
-    '  flex: 1; position: relative;',
+    '  flex: 0 0 auto; width: 70px; position: relative;',
     '  display: flex; flex-direction: column;',
     '  align-items: center; justify-content: center; gap: 3px;',
     '  background: none; border: none; cursor: pointer;',
@@ -223,7 +204,6 @@
     var html = '' +
       '<div id="mt-nav-bd"></div>' +
       '<nav id="mt-nav">' +
-        '<div class="mt-grip"><i></i></div>' +
         '<div id="mt-nav-tabs">' + tabsHtml + '</div>' +
         '<div id="mt-nav-draw">' +
           '<div class="mt-draw-row">' +
@@ -246,7 +226,6 @@
     var navEl = document.getElementById('mt-nav');
     var draw  = document.getElementById('mt-nav-draw');
     var bd    = document.getElementById('mt-nav-bd');
-    var grip  = navEl.querySelector('.mt-grip');
 
     // Closed = the whole panel pushed down by the drawer's height, so
     // only the grip + tabs show. Measured after layout (and on resize).
@@ -266,7 +245,6 @@
       bd.classList.toggle('show', o);
       bd.style.opacity = '';
     }
-    grip.querySelector('i').addEventListener('click', function() { setOpen(!isOpen); });
     bd.addEventListener('click', function() { setOpen(false); });
 
     var themeSwitch = document.getElementById('mt-theme-switch');

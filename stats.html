@@ -81,7 +81,7 @@
     #stats-shell {
       max-width: 880px;
       margin: 0 auto;
-      padding: 4.5rem 1.5rem 2.5rem;
+      padding: 4.5rem 0.9rem 2.5rem;
     }
 
     /* Period navigation */
@@ -119,8 +119,50 @@
       background: rgba(0,0,0,0.18);
       border: 1px solid rgba(255,255,255,0.06);
       border-radius: 14px;
-      padding: 1.25rem 1.25rem 0.75rem;
+      padding: 1.1rem 0.85rem 0.75rem;
       margin-bottom: 1.25rem;
+      position: relative;            /* anchor for the long-press preview */
+    }
+    .bar-pop {
+      position: absolute;
+      z-index: 50;
+      background: #f5f0e6;
+      color: #1a1a1a;
+      border-radius: 10px;
+      padding: 8px 12px;
+      min-width: 130px;
+      font-size: 0.72rem;
+      line-height: 1.4;
+      white-space: nowrap;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.4);
+      transform: translate(-50%, -100%) scale(0.9);
+      transform-origin: center bottom;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .bar-pop.show { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+    .bar-pop .bp-title {
+      font-weight: 800;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      opacity: 0.55;
+      margin-bottom: 4px;
+    }
+    .bar-pop .bp-row { display: flex; justify-content: space-between; gap: 16px; }
+    .bar-pop .bp-row b { font-weight: 800; }
+    .bar-pop .bp-total {
+      margin-top: 4px;
+      border-top: 1px solid rgba(0,0,0,0.12);
+      padding-top: 4px;
+    }
+    .bar-pop .bp-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 2px;
+      margin-right: 6px;
+      vertical-align: middle;
     }
     .chart-summary {
       display: flex;
@@ -140,7 +182,11 @@
       font-size: 1.4rem;
       font-weight: 800;
       letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;   /* digits don't jitter while counting */
+      display: inline-block;
     }
+    #summary-miles { min-width: 4.2ch; }    /* hold the cell width steady */
+    #summary-days  { min-width: 2.2ch; }
     .chart-legend {
       margin-left: auto;
       display: flex;
@@ -165,6 +211,7 @@
       gap: 3px;
       height: 240px;
       padding-top: 18px;
+      padding-left: 22px;   /* clear the scale column so bars never cover it */
     }
     .chart-bar {
       flex: 1;
@@ -208,6 +255,7 @@
       gap: 3px;
       margin-top: 6px;
       padding-bottom: 4px;
+      padding-left: 22px;   /* align day labels under the indented bars */
     }
     .chart-label {
       flex: 1;
@@ -225,6 +273,50 @@
       opacity: 1;
       font-weight: 800;
     }
+
+    /* Value scale: faint horizontal lines behind the bars */
+    .chart-plot { position: relative; }
+    .chart-grid {
+      position: absolute;
+      left: 0; right: 0;
+      top: 18px;          /* matches .chart-bars padding-top so 100% = scale max */
+      bottom: 0;
+      pointer-events: none;
+    }
+    .chart-gridline {
+      position: absolute;
+      left: 22px; right: 0;            /* line starts after the scale column */
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .chart-gridline-minor { border-top-color: rgba(255, 255, 255, 0.035); }
+    .chart-gridline span {
+      position: absolute;
+      left: -22px;
+      width: 20px;
+      text-align: left;   /* left edge lines up with "MILES" above */
+      transform: translateY(-50%);
+      font-size: 0.5rem;
+      letter-spacing: 0.04em;
+      color: rgba(245, 245, 245, 0.32);
+    }
+
+    /* Swipeable carousel: 3 panes (prev / current / next) on a track */
+    .chart-viewport {
+      overflow: hidden;
+      touch-action: pan-y;          /* vertical scroll stays, horizontal is ours */
+      cursor: grab;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;  /* no iOS text-select/callout on long-press */
+    }
+    .chart-viewport:active { cursor: grabbing; }
+    .chart-track {
+      display: flex;
+      width: 300%;
+      transform: translateX(-33.3333%);
+      will-change: transform;
+    }
+    .chart-pane { flex: 0 0 33.3333%; width: 33.3333%; }
 
     /* Zoom buttons */
     .zoom-buttons {
@@ -343,8 +435,23 @@
         <span><span class="chart-legend-swatch" style="background:#E7D7A4"></span>Run</span>
       </div>
     </div>
-    <div class="chart-bars" id="chart-bars"></div>
-    <div class="chart-labels" id="chart-labels"></div>
+    <div class="chart-viewport" id="chart-viewport">
+      <div class="chart-track" id="chart-track">
+        <div class="chart-pane" data-pane="prev">
+          <div class="chart-plot"><div class="chart-grid"></div><div class="chart-bars"></div></div>
+          <div class="chart-labels"></div>
+        </div>
+        <div class="chart-pane" data-pane="center">
+          <div class="chart-plot"><div class="chart-grid"></div><div class="chart-bars"></div></div>
+          <div class="chart-labels"></div>
+        </div>
+        <div class="chart-pane" data-pane="next">
+          <div class="chart-plot"><div class="chart-grid"></div><div class="chart-bars"></div></div>
+          <div class="chart-labels"></div>
+        </div>
+      </div>
+    </div>
+    <div class="bar-pop" id="bar-pop"></div>
   </div>
 
   <div class="zoom-buttons">
@@ -357,7 +464,7 @@
 </div>
 
 <footer class="mt-footer">
-  <div class="mt-build">2026.05.17.003</div>
+  <div class="mt-build">2026.05.17.018</div>
 </footer>
 
 <script>
@@ -565,11 +672,21 @@
 
   // ---------- nav: prev/next ----------
 
-  function shiftCursor(direction) {
-    if (state.zoom === 'week')  state.cursor = addDays(state.cursor,   direction * 7);
-    if (state.zoom === 'month') state.cursor = addMonths(state.cursor, direction);
-    if (state.zoom === 'year')  state.cursor = addYears(state.cursor,  direction);
-    // 'all' has no nav
+  // Pure: the cursor one period away, without mutating state.
+  function stepCursor(c, dir) {
+    if (state.zoom === 'week')  return addDays(c,   dir * 7);
+    if (state.zoom === 'month') return addMonths(c, dir);
+    if (state.zoom === 'year')  return addYears(c,  dir);
+    return c; // 'all' has no nav
+  }
+  function shiftCursor(direction) { state.cursor = stepCursor(state.cursor, direction); }
+
+  // Run a cursor-reading function as if state.cursor were `c` (used to build
+  // the neighbouring carousel panes without disturbing real state).
+  function withCursor(c, fn) {
+    var save = state.cursor;
+    state.cursor = c;
+    try { return fn(); } finally { state.cursor = save; }
   }
 
   function navDisabled() {
@@ -590,42 +707,138 @@
 
   // ---------- render ----------
 
-  var lastBins = [];
+  var centerBins = [];
 
-  function render() {
-    var bins = buildBins();
-    lastBins = bins;
-    var max = 0;
-    bins.forEach(function(b) { if (b.miles > max) max = b.miles; });
-    if (max === 0) max = 1;
-
-    // "Days walked" should count distinct days, not bins, when bins are coarser than days
-    var totalMiles = bins.reduce(function(s, b) { return s + b.miles; }, 0);
-    var totalDays  = computeDaysInRange();
-
-    document.getElementById('summary-miles').textContent = totalMiles.toFixed(1);
-    document.getElementById('summary-days').textContent  = totalDays;
-
-    var barsHtml = bins.map(function(b, i) {
+  function barsHTML(bins, max) {
+    return bins.map(function(b, i) {
       var pct = (b.miles / max) * 100;
       var cls = 'chart-bar' + (b.drillTo ? ' is-drillable' : '') + (b.isCurrent ? ' is-current' : '');
       var walkPct = b.miles > 0 ? (b.walkMiles / b.miles) * 100 : 0;
       var runPct  = b.miles > 0 ? (b.runMiles  / b.miles) * 100 : 0;
       var val = b.miles > 0 ? '<div class="chart-bar-value">' + b.miles.toFixed(1) + '</div>' : '';
       var segs = '';
-      // Stack: run on top (rendered first), walk on bottom (rendered second; flex puts last at the bottom)
+      // Stack: run on top (rendered first), walk on bottom (flex puts last at bottom)
       if (b.runMiles  > 0) segs += '<div class="chart-bar-seg chart-bar-seg-run"  style="height:' + runPct  + '%"></div>';
       if (b.walkMiles > 0) segs += '<div class="chart-bar-seg chart-bar-seg-walk" style="height:' + walkPct + '%"></div>';
       return '<div class="' + cls + '" data-idx="' + i + '" style="height:' + pct + '%" title="' + b.tooltip + ': ' + b.miles.toFixed(1) + ' mi">' + val + segs + '</div>';
     }).join('');
-    var labelsHtml = bins.map(function(b) {
-      var lblCls = 'chart-label' + (b.isCurrent ? ' is-current' : '');
-      return '<div class="' + lblCls + '">' + (b.label || '') + '</div>';
+  }
+  function labelsHTML(bins) {
+    return bins.map(function(b) {
+      return '<div class="chart-label' + (b.isCurrent ? ' is-current' : '') + '">' + (b.label || '') + '</div>';
     }).join('');
+  }
 
-    document.getElementById('chart-bars').innerHTML   = barsHtml;
-    document.getElementById('chart-labels').innerHTML = labelsHtml;
-    document.getElementById('range-label').textContent = rangeLabel();
+  // Round a number up to a clean 1/2/2.5/5/10 × 10ⁿ value.
+  function niceNum(x) {
+    if (x <= 0) return 1;
+    var p = Math.pow(10, Math.floor(Math.log(x) / Math.LN10));
+    var n = x / p;
+    var m = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+    return m * p;
+  }
+  // A clean scale (~4 steps) that comfortably contains `max`.
+  // Scale is tuned to THIS period's own data, with only a little headroom so
+  // the bars fill the chart. Reference lines land on clean round values that
+  // sit within the data range.
+  function scaleFor(max) {
+    return {
+      max: max,
+      barMax: max / 0.94,       // tallest bar ≈ 94% tall — minimal headroom
+      step: niceNum(max / 3)    // ~3 reference lines, tuned to this period
+    };
+  }
+  function gridHTML(sc) {
+    var html = '';
+    // Faint unlabeled minor lines at the half-steps.
+    for (var mh = sc.step / 2; mh <= sc.max + 1e-6; mh += sc.step) {
+      html += '<div class="chart-gridline chart-gridline-minor" style="bottom:' + (mh / sc.barMax * 100) + '%"></div>';
+    }
+    // Labeled major lines.
+    for (var v = sc.step; v <= sc.max + 1e-6; v += sc.step) {
+      var lbl = sc.step < 1 ? v.toFixed(1) : String(Math.round(v));
+      html += '<div class="chart-gridline" style="bottom:' + (v / sc.barMax * 100) + '%"><span>' + lbl + '</span></div>';
+    }
+    return html;
+  }
+
+  // Largest bin value across the WHOLE dataset at the current zoom, so the
+  // scale is the same for every period and they can be compared by eye.
+  function periodStart(c) {
+    if (state.zoom === 'week')  return startOfWeek(c);
+    if (state.zoom === 'month') return startOfMonth(c);
+    if (state.zoom === 'year')  return startOfYear(c);
+    return c;
+  }
+  function computeZoomMax() {
+    var max = 0;
+    function scan(bins) { bins.forEach(function(b) { if (b.miles > max) max = b.miles; }); }
+    if (state.zoom === 'all') {
+      scan(withCursor(state.cursor, function() { return buildBins(); }));
+    } else {
+      var today = new Date(); today.setHours(12, 0, 0, 0);
+      var first = state.firstEntryDate ? parseDate(state.firstEntryDate) : state.cursor;
+      var c = periodStart(first), endC = periodStart(today), guard = 0;
+      while (c <= endC && guard++ < 1000) {
+        scan(withCursor(new Date(c), function() { return buildBins(); }));
+        c = stepCursor(c, 1);
+      }
+    }
+    return max > 0 ? max : 1;
+  }
+
+  // Fill one carousel pane (prev | center | next) for the period at `cursor`.
+  function fillPane(which, cursor, sc) {
+    var data = withCursor(cursor, function() {
+      return { bins: buildBins(), label: rangeLabel(), days: computeDaysInRange() };
+    });
+    var bins = data.bins;
+    var totalMiles = bins.reduce(function(s, b) { return s + b.miles; }, 0);
+    var pane = document.querySelector('.chart-pane[data-pane="' + which + '"]');
+    pane.querySelector('.chart-grid').innerHTML   = gridHTML(sc);
+    pane.querySelector('.chart-bars').innerHTML   = barsHTML(bins, sc.barMax);
+    pane.querySelector('.chart-labels').innerHTML = labelsHTML(bins);
+    return { bins: bins, label: data.label, days: data.days, miles: totalMiles };
+  }
+
+  // Snap the track back to the centre pane with no animation.
+  function resetTrack() {
+    var trk = document.getElementById('chart-track');
+    if (!trk) return;
+    trk.style.transition = 'none';
+    trk.style.transform  = 'translateX(-33.3333%)';
+    void trk.offsetWidth; // commit before any later animation
+  }
+
+  // Tween a number element from its previous value to `to`.
+  function animateNumber(el, to, decimals) {
+    var from = parseFloat(el.getAttribute('data-val'));
+    if (isNaN(from)) from = 0;
+    el.setAttribute('data-val', to);
+    if (el._raf) cancelAnimationFrame(el._raf);
+    if (from === to) { el.textContent = to.toFixed(decimals); return; }
+    var start = null, dur = 450;
+    function frame(ts) {
+      if (start === null) start = ts;
+      var p = Math.min(1, (ts - start) / dur);
+      var e = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      el.textContent = (from + (to - from) * e).toFixed(decimals);
+      if (p < 1) el._raf = requestAnimationFrame(frame);
+      else { el.textContent = to.toFixed(decimals); el._raf = null; }
+    }
+    el._raf = requestAnimationFrame(frame);
+  }
+
+  function render() {
+    var sc = scaleFor(computeZoomMax());
+    fillPane('prev',  stepCursor(state.cursor, -1), sc);
+    var c = fillPane('center', state.cursor, sc);
+    fillPane('next',  stepCursor(state.cursor,  1), sc);
+    centerBins = c.bins;
+
+    animateNumber(document.getElementById('summary-miles'), c.miles, 1);
+    animateNumber(document.getElementById('summary-days'),  c.days,  0);
+    document.getElementById('range-label').textContent = c.label;
 
     var nav = navDisabled();
     document.getElementById('range-prev').disabled = nav.prev;
@@ -640,14 +853,10 @@
       b.style.color      = on ? '#1a1a1a' : '';
       b.style.opacity    = on ? '1' : '0.55';
     });
-    // Force iOS Safari to actually repaint the buttons (it otherwise keeps the
-    // previously-filled one on screen even though its style is now cleared).
     var zb = document.querySelector('.zoom-buttons');
-    if (zb) {
-      zb.style.display = 'none';
-      void zb.offsetHeight; // reflow
-      zb.style.display = '';
-    }
+    if (zb) { zb.style.display = 'none'; void zb.offsetHeight; zb.style.display = ''; }
+
+    resetTrack();
   }
 
   function computeDaysInRange() {
@@ -679,20 +888,176 @@
 
   // ---------- wire UI ----------
 
-  document.getElementById('range-prev').addEventListener('click', function() { shiftCursor(-1); render(); });
-  document.getElementById('range-next').addEventListener('click', function() { shiftCursor( 1); render(); });
+  var dragged = false;
+  var slideStep = null; // set by the carousel: animated version of step()
 
-  // Drill-down: tap an All-zoom year bar → Year of that year; tap a Year-zoom month bar → Month of that month
-  document.getElementById('chart-bars').addEventListener('click', function(e) {
-    var bar = e.target.closest('.chart-bar');
+  // Step one period, honoring the same bounds the prev/next arrows use.
+  // Falls back to an instant change if the carousel isn't wired yet.
+  function step(dir) {
+    var nav = navDisabled();
+    if (dir < 0 && nav.prev) return;
+    if (dir > 0 && nav.next) return;
+    shiftCursor(dir);
+    render();
+  }
+
+  document.getElementById('range-prev').addEventListener('click', function() { (slideStep || step)(-1); });
+  document.getElementById('range-next').addEventListener('click', function() { (slideStep || step)( 1); });
+
+  // ---- swipeable carousel: chart follows the finger, snaps on release ----
+  (function() {
+    var viewport = document.getElementById('chart-viewport');
+    var track    = document.getElementById('chart-track');
+    if (!viewport || !track) return;
+
+    var CENTER = -100 / 3;   // % transform that shows the centre pane
+    var down = false, decided = false, horizontal = false, settling = false;
+    var startX = 0, startY = 0, paneW = 1, canPrev = false, canNext = false;
+
+    function setLive(px) {
+      track.style.transition = 'none';
+      track.style.transform  = 'translateX(calc(' + CENTER + '% + ' + px + 'px))';
+    }
+    function animateTo(pct, after) {
+      settling = true;
+      track.style.transition = 'transform 0.56s cubic-bezier(0.2,0.8,0.2,1)';
+      track.style.transform  = 'translateX(' + pct + '%)';
+      var done = false;
+      function fin() {
+        if (done) return;
+        done = true;
+        track.removeEventListener('transitionend', fin);
+        settling = false;
+        if (after) after();
+      }
+      track.addEventListener('transitionend', fin);
+      setTimeout(fin, 680); // safety net if transitionend is missed
+    }
+
+    function begin(e) {
+      if (settling) return;
+      down = true; decided = false; horizontal = false; dragged = false;
+      startX = e.clientX; startY = e.clientY;
+      paneW = viewport.getBoundingClientRect().width || 1;
+      var nav = navDisabled();
+      canPrev = !nav.prev;
+      canNext = !nav.next;
+      // NOTE: don't capture the pointer here — capturing on a plain tap steals
+      // the follow-up click so bar tap-to-drill never fires. Capture only once
+      // a real horizontal drag is confirmed (below).
+    }
+    function move(e) {
+      if (!down) return;
+      var dx = e.clientX - startX, dy = e.clientY - startY;
+      if (!decided) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+        decided = true;
+        horizontal = Math.abs(dx) > Math.abs(dy);
+        if (!horizontal) { down = false; return; } // vertical → let the page scroll
+        try { viewport.setPointerCapture(e.pointerId); } catch (_) {} // drag confirmed
+      }
+      dragged = true;
+      e.preventDefault();
+      if ((dx > 0 && !canPrev) || (dx < 0 && !canNext)) dx *= 0.32; // resist at edges
+      setLive(dx);
+    }
+    function end(e) {
+      if (!down) return;
+      down = false;
+      if (!horizontal) return;
+      var dx = e.clientX - startX;
+      var threshold = Math.max(45, paneW * 0.22);
+      if (dx <= -threshold && canNext) {
+        animateTo(-200 / 3, function() { state.cursor = stepCursor(state.cursor,  1); render(); });
+      } else if (dx >= threshold && canPrev) {
+        animateTo(0,         function() { state.cursor = stepCursor(state.cursor, -1); render(); });
+      } else {
+        animateTo(CENTER); // not far enough — spring back
+      }
+    }
+
+    viewport.addEventListener('pointerdown', function(e) {
+      if (e.button && e.button !== 0) return;
+      begin(e);
+    });
+    viewport.addEventListener('pointermove', move);
+    viewport.addEventListener('pointerup', end);
+    viewport.addEventListener('pointercancel', function() {
+      if (down) { down = false; if (horizontal) animateTo(CENTER); }
+    });
+
+    // Arrows reuse the same slide+commit animation as a swipe.
+    slideStep = function(dir) {
+      if (settling) return;
+      var nav = navDisabled();
+      if ((dir < 0 && nav.prev) || (dir > 0 && nav.next)) return;
+      if (dir > 0) animateTo(-200 / 3, function() { state.cursor = stepCursor(state.cursor,  1); render(); });
+      else         animateTo(0,        function() { state.cursor = stepCursor(state.cursor, -1); render(); });
+    };
+  })();
+
+  // Drill-down: tap a bar in the centre pane (a swipe won't trigger this).
+  var suppressBarClick = false;
+  document.getElementById('chart-track').addEventListener('click', function(e) {
+    if (dragged) { dragged = false; return; }
+    if (suppressBarClick) { suppressBarClick = false; return; } // came from a long-press
+    var bar = e.target.closest('.chart-pane[data-pane="center"] .chart-bar');
     if (!bar) return;
-    var idx = parseInt(bar.getAttribute('data-idx'), 10);
-    var bin = lastBins[idx];
+    var bin = centerBins[parseInt(bar.getAttribute('data-idx'), 10)];
     if (!bin || !bin.drillTo) return;
     state.zoom = bin.drillTo.zoom;
     state.cursor = bin.drillTo.cursor;
     render();
   });
+
+  // Long-press a bar to preview its stats (a quick tap still drills in).
+  (function() {
+    var card = document.querySelector('.chart-card');
+    var pop  = document.getElementById('bar-pop');
+    if (!card || !pop) return;
+    var timer = null, sx = 0, sy = 0;
+
+    function hide() { pop.classList.remove('show'); }
+    function showFor(bar) {
+      var bin = centerBins[parseInt(bar.getAttribute('data-idx'), 10)];
+      if (!bin) return;
+      var html =
+        '<div class="bp-title">' + bin.tooltip + '</div>' +
+        '<div class="bp-row"><span><span class="bp-dot" style="background:#8FCFC2"></span>Walk</span><b>' + bin.walkMiles.toFixed(1) + '</b></div>';
+      if (bin.runMiles > 0) {
+        html += '<div class="bp-row"><span><span class="bp-dot" style="background:#E7D7A4"></span>Run</span><b>' + bin.runMiles.toFixed(1) + '</b></div>';
+      }
+      html += '<div class="bp-row bp-total"><span>Total</span><b>' + bin.miles.toFixed(1) + ' mi</b></div>';
+      pop.innerHTML = html;
+      var br = bar.getBoundingClientRect(), cr = card.getBoundingClientRect();
+      var x = br.left - cr.left + br.width / 2;
+      x = Math.max(72, Math.min(cr.width - 72, x)); // keep the bubble on the card
+      pop.style.left = x + 'px';
+      pop.style.top  = (br.top - cr.top - 8) + 'px';
+      pop.classList.add('show');
+      suppressBarClick = true; // the release that ends the hold must not drill
+    }
+    function cancelTimer() { if (timer) { clearTimeout(timer); timer = null; } }
+
+    card.addEventListener('pointerdown', function(e) {
+      suppressBarClick = false; // fresh gesture — never inherit a stuck flag
+      var bar = e.target.closest('.chart-pane[data-pane="center"] .chart-bar');
+      if (!bar) return;
+      sx = e.clientX; sy = e.clientY;
+      cancelTimer();
+      timer = setTimeout(function() { timer = null; showFor(bar); }, 420);
+    });
+    card.addEventListener('pointermove', function(e) {
+      if (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8) {
+        cancelTimer();                                  // a swipe, not a hold
+        if (pop.classList.contains('show')) hide();
+      }
+    });
+    function release() { cancelTimer(); hide(); }
+    card.addEventListener('pointerup', release);
+    card.addEventListener('pointercancel', release);
+    card.addEventListener('pointerleave', release);
+  })();
 
   document.querySelectorAll('.zoom-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {

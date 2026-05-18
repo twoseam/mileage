@@ -469,7 +469,52 @@
     elPanel.addEventListener('touchcancel', end);
   }
 
+  /* ---- shared Static Maps thumbnail (real water/roads, brand-styled) ---- */
+  function encPoly(pts) {
+    var lastLat = 0, lastLon = 0, out = '';
+    function enc(v) {
+      v = v < 0 ? ~(v << 1) : (v << 1);
+      var s = '';
+      while (v >= 0x20) { s += String.fromCharCode((0x20 | (v & 0x1f)) + 63); v >>>= 5; }
+      return s + String.fromCharCode(v + 63);
+    }
+    pts.forEach(function(p) {
+      var la = Math.round(p[0] * 1e5), lo = Math.round(p[1] * 1e5);
+      out += enc(la - lastLat) + enc(lo - lastLon);
+      lastLat = la; lastLon = lo;
+    });
+    return out;
+  }
+  var _styleParams = null;
+  function styleParams() {
+    if (_styleParams != null) return _styleParams;
+    _styleParams = A_STYLE.map(function(s) {
+      var parts = [];
+      if (s.featureType) parts.push('feature:' + s.featureType);
+      if (s.elementType) parts.push('element:' + s.elementType);
+      (s.stylers || []).forEach(function(st) {
+        for (var k in st) {
+          var v = st[k];
+          if (k === 'color') v = '0x' + String(v).replace('#', '');
+          parts.push(k + ':' + v);
+        }
+      });
+      return 'style=' + encodeURIComponent(parts.join('|'));
+    }).join('&');
+    return _styleParams;
+  }
+
   var ActivityPanel = {
+    // Brand-styled Static Maps picture of a route (real water/roads).
+    staticMapUrl: function (pts) {
+      if (!GMAPS_KEY || !pts || pts.length < 2) return '';
+      var path = 'path=' + encodeURIComponent(
+        'color:0xB02113ff|weight:4|enc:' + encPoly(pts));
+      return 'https://maps.googleapis.com/maps/api/staticmap' +
+        '?size=200x200&scale=2&maptype=roadmap&' +
+        path + '&' + styleParams() + '&key=' + encodeURIComponent(GMAPS_KEY);
+    },
+
     open: function (key, opts) {
       opts = opts || {};
       mount();

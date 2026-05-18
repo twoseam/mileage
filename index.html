@@ -636,9 +636,10 @@
       text-transform: uppercase; opacity: 0.45; margin-bottom: 6px;
     }
     .mt-pace-row input {
-      width: 100%; padding: 12px 6px; border-radius: 12px;
+      width: 100%; padding: 12px 10px; border-radius: 12px;
+      min-height: 48px; box-sizing: border-box;
       border: 1px solid rgba(0, 0, 0, 0.10); background: #fff;
-      font-family: inherit; font-size: 0.84rem; color: #1a1a1a;
+      font-family: inherit; font-size: 0.95rem; color: #1a1a1a;
       text-align: center;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
       -webkit-appearance: none; appearance: none;
@@ -647,6 +648,8 @@
       outline: none; border-color: #E89A1F;
       box-shadow: 0 0 0 3px rgba(232, 154, 31, 0.18);
     }
+    .mt-toggle-sm { gap: 4px; padding: 4px; margin-bottom: 12px; }
+    .mt-toggle-sm .mt-toggle-btn { padding: 9px 12px; font-size: 0.7rem; letter-spacing: 0.08em; }
     .mt-pace-hint {
       font-size: 0.6rem; opacity: 0.4; margin-top: 8px; font-weight: 600;
     }
@@ -793,22 +796,26 @@
 
     <div class="mt-field" id="mt-time-field">
       <label>Time &amp; Pace</label>
+      <div class="mt-toggle mt-toggle-sm" id="mt-timemode">
+        <button type="button" class="mt-toggle-btn" data-tm="start"
+                onclick="mtSetTimeMode('start')">Start time</button>
+        <button type="button" class="mt-toggle-btn mt-active" data-tm="end"
+                onclick="mtSetTimeMode('end')">End time</button>
+      </div>
       <div class="mt-pace-row">
         <div class="mt-pace-col">
-          <span class="mt-pace-lbl">Start</span>
-          <input type="time" id="mt-time-input" oninput="mtPaceEdited('start')" />
-        </div>
-        <div class="mt-pace-col">
-          <span class="mt-pace-lbl">End</span>
-          <input type="time" id="mt-end-input" oninput="mtPaceEdited('end')" />
+          <span class="mt-pace-lbl" id="mt-time-lbl">End time</span>
+          <input type="time" id="mt-time-input" />
         </div>
         <div class="mt-pace-col">
           <span class="mt-pace-lbl">Pace /mi</span>
           <input type="text" id="mt-pace-input" inputmode="numeric"
-                 placeholder="9:30" oninput="mtPaceEdited('pace')" />
+                 placeholder="9:30" oninput="mtPaceFmt()" onblur="mtPaceNorm()" />
         </div>
       </div>
-      <div class="mt-pace-hint">Enter any 2 — the third fills in.</div>
+      <div class="mt-pace-hint">
+        Tip: type <b>930</b> for a 9:30 pace. With miles + pace, the other time fills in.
+      </div>
     </div>
 
     <div class="mt-field">
@@ -1042,25 +1049,12 @@
 
   var mtType = 'Walk';
   var mtTimeManuallyEdited = false;
-  // Pace for back-computing start time when miles is entered. mph.
-  var MT_PACE_MPH = 3.4;
-
   function mtSetType(t) {
     mtType = t;
-    document.querySelectorAll('.mt-toggle-btn').forEach(function(b) {
+    document.querySelectorAll('.mt-toggle-btn[data-type]').forEach(function(b) {
       if (b.getAttribute('data-type') === t) b.classList.add('mt-active');
       else b.classList.remove('mt-active');
     });
-  }
-
-  function mtTimeEdited() { mtTimeManuallyEdited = true; }
-
-  function mtAutoFillStartTime(miles) {
-    var durationMin = Math.round(miles / MT_PACE_MPH * 60);
-    var now = new Date();
-    now.setMinutes(now.getMinutes() - durationMin);
-    document.getElementById('mt-time-input').value =
-      mtPad2(now.getHours()) + ':' + mtPad2(now.getMinutes());
   }
 
   /* ---- Time & Pace: enter any 2 of Start/End/Pace, derive the 3rd ---- */
@@ -1093,33 +1087,32 @@
     } catch (_) {}
     return 0;
   }
-  function mtPaceEdited(which) {
-    mtTimeManuallyEdited = true;
-    mtPaceRecalc(which);
-  }
-  function mtPaceRecalc(lastEdited) {
-    var sEl = document.getElementById('mt-time-input');
-    var eEl = document.getElementById('mt-end-input');
-    var pEl = document.getElementById('mt-pace-input');
-    var start = mtParseClock(sEl.value);          // min
-    var end   = mtParseClock(eEl.value);          // min
-    var pace  = mtParsePace(pEl.value);           // sec/mi
-    var M     = mtSingleMiles();
-    if (!(M > 0)) return;
-    function durMin() { var d = end - start; if (d < 0) d += 1440; return d; }
+  // The single time box is tagged Start or End (default End = finished now).
+  var mtTimeMode = 'end';
+  window.mtSetTimeMode = function(m) {
+    mtTimeMode = (m === 'start') ? 'start' : 'end';
+    var tm = document.getElementById('mt-timemode');
+    [].forEach.call(tm.querySelectorAll('.mt-toggle-btn'), function(btn) {
+      btn.classList.toggle('mt-active', btn.getAttribute('data-tm') === mtTimeMode);
+    });
+    document.getElementById('mt-time-lbl').textContent =
+      mtTimeMode === 'start' ? 'Start time' : 'End time';
+  };
 
-    if (lastEdited === 'pace' && pace != null && start != null) {
-      eEl.value = mtFmtClock(start + (pace * M) / 60);
-    } else if (lastEdited === 'pace' && pace != null && end != null) {
-      sEl.value = mtFmtClock(end - (pace * M) / 60);
-    } else if (start != null && end != null) {
-      pEl.value = mtFmtPace(durMin() * 60 / M);
-    } else if (start != null && pace != null) {
-      eEl.value = mtFmtClock(start + (pace * M) / 60);
-    } else if (end != null && pace != null) {
-      sEl.value = mtFmtClock(end - (pace * M) / 60);
-    }
-  }
+  // Pace: numeric pad only — type digits, we format. "930" → 9:30, "9" → 9:00.
+  window.mtPaceFmt = function() {
+    var el = document.getElementById('mt-pace-input');
+    el.value = el.value.replace(/[^\d]/g, '').slice(0, 4);
+  };
+  window.mtPaceNorm = function() {
+    var el = document.getElementById('mt-pace-input');
+    var d = el.value.replace(/\D/g, '');
+    if (!d) { el.value = ''; return; }
+    var mm, ss;
+    if (d.length <= 2) { mm = parseInt(d, 10); ss = 0; }
+    else { ss = parseInt(d.slice(-2), 10); mm = parseInt(d.slice(0, -2), 10); }
+    el.value = mm + ':' + ('0' + ss).slice(-2);
+  };
 
   function mtDateChanged() { /* no-op now that native input is visible */ }
 
@@ -1233,7 +1226,8 @@
     var timeField = document.getElementById('mt-time-field');
     if (entries.length === 1) {
       timeField.style.display = '';
-      if (!mtTimeManuallyEdited) mtAutoFillStartTime(entries[0].miles);
+      // Default: this is the END time, set to now (you log right after finishing).
+      if (!mtTimeManuallyEdited) document.getElementById('mt-time-input').value = mtNowHHMM();
     } else {
       timeField.style.display = 'none';
     }
@@ -1419,11 +1413,22 @@
   function mtConfirmSave() {
     var entries  = mtReadEntries();
     if (entries.length === 0) { mtCloseDialog(); return; }
-    var startTime = document.getElementById('mt-time-input').value;
-    var endTime   = document.getElementById('mt-end-input').value;
-    var paceRaw   = document.getElementById('mt-pace-input').value;
-    var paceSec   = mtParsePace(paceRaw);
-    var pace      = paceSec != null ? mtFmtPace(paceSec) : (paceRaw || '');
+    mtPaceNorm();
+    var timeVal  = document.getElementById('mt-time-input').value;          // HH:MM 24h
+    var paceSec  = mtParsePace(document.getElementById('mt-pace-input').value);
+    var pace     = paceSec != null ? mtFmtPace(paceSec) : '';
+    var miles1   = mtSingleMiles();
+    // Resolve start/end from the single tagged time + pace + miles.
+    var startTime = '', endTime = '';
+    var tMin = mtParseClock(timeVal);
+    if (tMin != null) {
+      if (mtTimeMode === 'start') startTime = timeVal; else endTime = timeVal;
+      if (paceSec != null && miles1 > 0) {
+        var durMin = (paceSec * miles1) / 60;
+        if (mtTimeMode === 'start') endTime   = mtFmtClock(tMin + durMin);
+        else                        startTime = mtFmtClock(tMin - durMin);
+      }
+    }
     var shoe      = document.getElementById('mt-shoe-select').value;
     var notes     = document.getElementById('mt-notes-input').value;
 

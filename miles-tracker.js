@@ -27,7 +27,7 @@
   var MilesTracker = {
 
     onReady:   function() {},
-    onSuccess: function(result) { console.log('Walk logged:', result); },
+    onSuccess: function(result) {},
     onError:   function(err)    { console.error('MilesTracker error:', err); },
 
     init: function() {

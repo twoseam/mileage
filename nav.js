@@ -11,11 +11,9 @@
   'use strict';
 
   var PAGES = [
-    { href: 'index.html',    label: 'Entry' },
-    { href: 'stats.html',    label: 'Stats' },
-    { href: 'shoes.html',    label: 'Shoes' },
-    { href: 'history.html',  label: 'History' },
-    { href: 'settings.html', label: 'Settings' }
+    { href: 'index.html', label: 'Entry' },
+    { href: 'stats.html', label: 'Stats' },
+    { href: 'shoes.html', label: 'Shoes' }
   ];
 
   var css = [

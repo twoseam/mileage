@@ -446,9 +446,12 @@
       background: #f6f1e7; color: #1a1a1a;
       width: 100%; max-width: 384px;
       border-radius: 22px;
-      padding: 1.6rem 1.5rem 1.35rem;
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      max-height: 85vh; overflow: hidden;
+    }
+    .rstats-scroll {
       max-height: 85vh; overflow-y: auto;
+      padding: 1.6rem 1.5rem 1.35rem;
     }
     .rstats-top {
       display: flex; align-items: baseline; gap: 0.6rem;
@@ -1025,6 +1028,7 @@
 
     document.getElementById('rstats-card').innerHTML = '' +
       '<button class="rstats-close rstats-x" type="button" aria-label="Close">×</button>' +
+      '<div class="rstats-scroll">' +
       '<div class="rstats-top">' +
         '<span class="rstats-title">' + rcEsc(rcFmtDate(r.date)) + '</span>' +
         '<span class="rstats-type' + (isRun ? ' run' : '') + '">' +
@@ -1042,9 +1046,12 @@
       rcRow('Weather', r.weather ? rcEsc(r.weather) : '') +
       rcRow('Location', loc) +
       (r.notes ? '<div class="rstats-notes">' + rcEsc(r.notes) + '</div>' : '') +
-      (aid ? '<div class="rstats-map" id="rstats-map"></div>' : '') +
+      (aid ? '<div class="rstats-map" id="rstats-map">' +
+               '<button class="rstats-map-full" id="rstats-map-full" ' +
+               'type="button" aria-label="Fullscreen map">⤢</button></div>' : '') +
       shoeBlock +
-      '<button class="rstats-close" type="button">Close</button>';
+      '<button class="rstats-close" type="button">Close</button>' +
+      '</div>';
 
     document.getElementById('rstats').classList.add('show');
     if (aid) rsLoadRoute(aid);

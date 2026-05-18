@@ -27,6 +27,13 @@ var GH_OWNER  = 'twoseam';
 var GH_REPO   = 'mileage';
 var GH_BRANCH = 'main';
 
+// Run this ONCE from the Apps Script editor (select it in the toolbar →
+// Run → Allow) to grant the external-request permission GitHub photos need.
+function authorizeExternal() {
+  var r = UrlFetchApp.fetch('https://api.github.com', { muteHttpExceptions: true });
+  Logger.log('External requests authorized. GitHub responded ' + r.getResponseCode());
+}
+
 // ---------- low-level helpers ----------
 
 function _json(obj) {

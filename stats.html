@@ -990,8 +990,10 @@
         if (!el || !pts || pts.length < 2) return;
         loadGMaps().then(function(gm) {
           rsMap = new gm.Map(el, {
-            mapTypeControl: false, streetViewControl: false,
-            fullscreenControl: false, gestureHandling: 'greedy',
+            disableDefaultUI: true,      // no zoom/controls — clean map only
+            clickableIcons: false,
+            keyboardShortcuts: false,
+            gestureHandling: 'greedy',   // pinch/drag still works
             backgroundColor: '#ECE0BE', styles: RS_BRAND_STYLE
           });
           var path = pts.map(function(p) { return { lat: p[0], lng: p[1] }; });

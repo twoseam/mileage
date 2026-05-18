@@ -661,12 +661,21 @@ function _ingestWorkouts(body) {
   var hlow = hdr.map(function(h) { return String(h || '').trim().toLowerCase(); });
   var amap = _entryColMap(hdr);
 
-  // existing Activity Ids -> idempotent dedupe
-  var seen = {};
-  if (amap.activity_id != null) {
-    for (var r = 1; r < data.length; r++) {
+  // Dedupe two ways: by Activity Id (Health Auto Export resends) AND by
+  // date+distance (Health Auto Export assigns DIFFERENT UUIDs than the
+  // one-time Apple Health file export, so the same workout already in the
+  // Sheet from the historical import would otherwise double up).
+  var seen = {}, seenDM = {};
+  function dmKey(d, mi) { return d + '|' + (Math.round(Number(mi) * 10) / 10); }
+  for (var r = 1; r < data.length; r++) {
+    if (amap.activity_id != null) {
       var a = String(data[r][amap.activity_id] || '').trim();
       if (a) seen[a.toLowerCase()] = true;
+    }
+    if (amap.date != null && amap.miles != null) {
+      var dd = String(data[r][amap.date] || '').slice(0, 10);
+      var mm = parseFloat(data[r][amap.miles]);
+      if (dd && !isNaN(mm)) seenDM[dmKey(dd, mm)] = true;
     }
   }
 
@@ -690,6 +699,11 @@ function _ingestWorkouts(body) {
     if (dist != null && /km/i.test(du)) dist *= 0.621371;
     if (dist == null || dist <= 0) { summary.push({ id: id, skipped: 'no distance' }); return; }
     var miles = Math.round(dist * 100) / 100;
+
+    // already in the Sheet by date+distance (e.g. from the historical
+    // import, which used different IDs)? skip — no double-count.
+    var dmk = dmKey(sp.date, miles);
+    if (sp.date && seenDM[dmk]) { summary.push({ id: id, skipped: 'dupe (date+miles)' }); return; }
 
     var durS = _haNum(_haPick(w, ['duration', 'activeDuration']));
     if (durS != null && durS < 600 && /min/i.test(String(w.durationUnits || ''))) durS *= 60;
@@ -746,6 +760,7 @@ function _ingestWorkouts(body) {
     setByHeader(row, 'recording source', 'watch');
     rows.push(row);
     seen[id.toLowerCase()] = true;
+    seenDM[dmk] = true;
     summary.push({ id: id, date: sp.date, miles: miles, type: type, route: haveRoute, routeErr: routeErr });
   });
 

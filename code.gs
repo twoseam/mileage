@@ -552,6 +552,216 @@ function _pushPhoto(slug, dataUrl) {
   }
 }
 
+// ---------- Health Auto Export ingest (forward auto-capture) ----------
+//
+// Health Auto Export (iOS app) posts new workouts here automatically.
+// We map its JSON -> an Entries row + commit the GPS route to the repo
+// (routes/<id>.json), so future walks/runs appear with their map, no
+// manual export. Auth: ?secret=... on the endpoint URL (Apps Script can't
+// read POST headers; HAE can't inject our secret into its body).
+
+// Commit arbitrary UTF-8 text to the repo (generalized _pushPhoto).
+function _pushText(path, text, message) {
+  var token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+  if (!token) return 'GITHUB_TOKEN missing';
+  var api = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO +
+            '/contents/' + path;
+  var headers = { Authorization: 'Bearer ' + token,
+                  Accept: 'application/vnd.github+json' };
+  try {
+    var sha = null;
+    var g = UrlFetchApp.fetch(api + '?ref=' + GH_BRANCH,
+      { method: 'get', headers: headers, muteHttpExceptions: true });
+    if (g.getResponseCode() === 200) sha = JSON.parse(g.getContentText()).sha;
+    var payload = {
+      message: message || ('update ' + path),
+      content: Utilities.base64Encode(text, Utilities.Charset.UTF_8),
+      branch: GH_BRANCH
+    };
+    if (sha) payload.sha = sha;
+    var p = UrlFetchApp.fetch(api, {
+      method: 'put', headers: headers, contentType: 'application/json',
+      payload: JSON.stringify(payload), muteHttpExceptions: true
+    });
+    var c = p.getResponseCode();
+    return (c >= 200 && c < 300) ? '' : ('GitHub ' + c + ': ' +
+           p.getContentText().slice(0, 140));
+  } catch (e) {
+    return 'request blocked: ' + (e && e.message ? e.message : String(e));
+  }
+}
+
+// Ramer-Douglas-Peucker (same simplification as the historical importer).
+function _rdp(pts, tol) {
+  if (pts.length < 3) return pts;
+  var keep = [], i;
+  for (i = 0; i < pts.length; i++) keep.push(false);
+  keep[0] = keep[pts.length - 1] = true;
+  var stack = [[0, pts.length - 1]];
+  while (stack.length) {
+    var seg = stack.pop(), s = seg[0], e = seg[1];
+    var ax = pts[s][0], ay = pts[s][1], bx = pts[e][0], by = pts[e][1];
+    var dx = bx - ax, dy = by - ay;
+    var den = Math.sqrt(dx * dx + dy * dy) || 1e-12;
+    var dmax = 0, idx = -1;
+    for (i = s + 1; i < e; i++) {
+      var d = Math.abs(dx * (ay - pts[i][1]) - (ax - pts[i][0]) * dy) / den;
+      if (d > dmax) { dmax = d; idx = i; }
+    }
+    if (dmax > tol && idx !== -1) {
+      keep[idx] = true; stack.push([s, idx]); stack.push([idx, e]);
+    }
+  }
+  var out = [];
+  for (i = 0; i < pts.length; i++) if (keep[i]) out.push(pts[i]);
+  return out;
+}
+
+function _haNum(v) {
+  if (v == null) return null;
+  if (typeof v === 'number') return v;
+  if (typeof v === 'object') {
+    if (v.qty != null) return Number(v.qty);
+    if (v.value != null) return Number(v.value);
+  }
+  var n = parseFloat(v);
+  return isNaN(n) ? null : n;
+}
+function _haPick(o, keys) {
+  for (var i = 0; i < keys.length; i++) {
+    if (o && o[keys[i]] != null && o[keys[i]] !== '') return o[keys[i]];
+  }
+  return null;
+}
+function _haDateParts(s) {           // -> { date:'YYYY-MM-DD', time:'HH:MM' }
+  var m = String(s || '').match(/(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+  return m ? { date: m[1], time: m[2] } : { date: '', time: '' };
+}
+function _hms(sec) {
+  sec = Math.round(sec);
+  return ('0' + Math.floor(sec / 3600)).slice(-2) + ':' +
+         ('0' + Math.floor((sec % 3600) / 60)).slice(-2) + ':' +
+         ('0' + (sec % 60)).slice(-2);
+}
+
+function _ingestWorkouts(body) {
+  var ws = (body.data && body.data.workouts) || body.workouts || [];
+  if (!ws.length) return _json({ error: 'no workouts in payload' });
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ENTRIES_SHEET);
+  if (!sheet) return _json({ error: 'Entries sheet not found' });
+  var data = sheet.getDataRange().getValues();
+  var hdr = data[0] || [];
+  var hlow = hdr.map(function(h) { return String(h || '').trim().toLowerCase(); });
+  var amap = _entryColMap(hdr);
+
+  // existing Activity Ids -> idempotent dedupe
+  var seen = {};
+  if (amap.activity_id != null) {
+    for (var r = 1; r < data.length; r++) {
+      var a = String(data[r][amap.activity_id] || '').trim();
+      if (a) seen[a.toLowerCase()] = true;
+    }
+  }
+
+  function setByHeader(row, label, val) {
+    var j = hlow.indexOf(label);
+    if (j >= 0) row[j] = val;
+  }
+
+  var rows = [], summary = [];
+  ws.forEach(function(w) {
+    var id = String(_haPick(w, ['id', 'uuid', 'workoutID', 'identifier']) || '').trim();
+    if (id && seen[id.toLowerCase()]) { summary.push({ id: id, skipped: 'dupe' }); return; }
+
+    var nm = String(_haPick(w, ['name', 'workoutActivityType', 'activityName']) || '');
+    var type = /run/i.test(nm) ? 'Run' : 'Walk';
+    var sp = _haDateParts(_haPick(w, ['start', 'startDate']));
+    var ep = _haDateParts(_haPick(w, ['end', 'endDate']));
+
+    var dist = _haNum(_haPick(w, ['distance', 'totalDistance']));
+    var du = (w.distance && w.distance.units) || w.distanceUnits || 'mi';
+    if (dist != null && /km/i.test(du)) dist *= 0.621371;
+    if (dist == null || dist <= 0) { summary.push({ id: id, skipped: 'no distance' }); return; }
+    var miles = Math.round(dist * 100) / 100;
+
+    var durS = _haNum(_haPick(w, ['duration', 'activeDuration']));
+    if (durS != null && durS < 600 && /min/i.test(String(w.durationUnits || ''))) durS *= 60;
+    var pace = (durS && miles) ? (function() {
+      var p = (durS / 60) / miles, mm = Math.floor(p), ss = Math.round((p - mm) * 60);
+      if (ss === 60) { mm++; ss = 0; }
+      return mm + ':' + ('0' + ss).slice(-2);
+    })() : '';
+
+    var cal = _haNum(_haPick(w, ['activeEnergyBurned', 'activeEnergy', 'totalEnergyBurned', 'calories']));
+    var hr  = _haNum(_haPick(w, ['averageHeartRate', 'heartRateAverage', 'avgHeartRate', 'heartRate']));
+    var steps = _haNum(_haPick(w, ['stepCount', 'steps']));
+    var temp = _haNum(_haPick(w, ['temperature', 'weatherTemperature']));
+    var asc = _haNum(_haPick(w, ['elevationAscended', 'elevationUp', 'totalAscent']));
+    var dsc = _haNum(_haPick(w, ['elevationDescended', 'elevationDown', 'totalDescent']));
+
+    // route -> simplified [[lat,lon],...] committed to the repo
+    var routeRaw = _haPick(w, ['route', 'workoutRoute', 'routePoints', 'locations', 'gpx']);
+    var routeErr = '', haveRoute = false;
+    if (routeRaw && routeRaw.length && id) {
+      var pts = [];
+      routeRaw.forEach(function(p) {
+        var la = _haNum(_haPick(p, ['lat', 'latitude']));
+        var lo = _haNum(_haPick(p, ['lon', 'lng', 'longitude']));
+        if (la != null && lo != null) pts.push([la, lo]);
+      });
+      if (pts.length >= 2) {
+        var simp = _rdp(pts, 0.00003), last = null, clean = [];
+        simp.forEach(function(p) {
+          var c = [Math.round(p[0] * 1e5) / 1e5, Math.round(p[1] * 1e5) / 1e5];
+          if (!last || c[0] !== last[0] || c[1] !== last[1]) { clean.push(c); last = c; }
+        });
+        routeErr = _pushText('routes/' + id + '.json', JSON.stringify(clean),
+                             'route: ' + id);
+        haveRoute = !routeErr;
+      }
+    }
+
+    var width = Math.max(hdr.length, 21);
+    var row = [];
+    for (var c = 0; c < width; c++) row.push('');
+    function put(k, v) { if (amap[k] != null) row[amap[k]] = v; }
+    put('date', sp.date); put('miles', miles); put('type', type);
+    put('start_time', sp.time); put('end_time', ep.time);
+    put('pace', pace); put('activity_id', id);
+    if (temp != null) put('temp_f', Math.round(temp));
+    setByHeader(row, 'duration', durS != null ? _hms(durS) : '');
+    setByHeader(row, 'avg speed mph', (durS && miles) ? Math.round(miles / (durS / 3600) * 100) / 100 : '');
+    setByHeader(row, 'avg heart rate', hr != null ? Math.round(hr) : '');
+    setByHeader(row, 'calories', cal != null ? Math.round(cal) : '');
+    setByHeader(row, 'steps', steps != null ? Math.round(steps) : '');
+    setByHeader(row, 'ascent ft', asc != null ? Math.round(asc * 100) / 100 : '');
+    setByHeader(row, 'descent ft', dsc != null ? Math.round(dsc * 100) / 100 : '');
+    setByHeader(row, 'recording source', 'watch');
+    rows.push(row);
+    seen[id.toLowerCase()] = true;
+    summary.push({ id: id, date: sp.date, miles: miles, type: type, route: haveRoute, routeErr: routeErr });
+  });
+
+  if (rows.length) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length)
+         .setValues(rows);
+    try {
+      var ch = CacheService.getScriptCache();
+      ch.remove('dashboard_current');
+      ch.remove('allEntries_gz');
+      ch.remove('dashboard_' + new Date().getFullYear());
+    } catch (e) {}
+  }
+  // stash for the ?action=lastIngest debug peek
+  try {
+    CacheService.getScriptCache().put('haLastIngest',
+      JSON.stringify({ at: new Date().toISOString(), added: rows.length, summary: summary }),
+      21600);
+  } catch (e) {}
+  return _json({ added: rows.length, total: ws.length, summary: summary });
+}
+
 function _shoesSheet() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHOES_SHEET);
   // Only seed headers on a brand-new/empty sheet. An existing sheet keeps

@@ -340,41 +340,110 @@ function doGet(e) {
   return _json({ error: 'Unknown action' });
 }
 
-// ---------- add a shoe ----------
+// ---------- shoes: add / update / photo ----------
+
+function _slug(s) {
+  return String(s || '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'shoe';
+}
+
+function _todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' +
+    ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+    ('0' + d.getDate()).slice(-2);
+}
+
+// Commit a data: URL image into the repo at shoe-photos/<slug>.<ext>.
+// Returns the repo-relative path (served by GitHub Pages), or '' on failure.
+function _pushPhoto(slug, dataUrl) {
+  if (!dataUrl || dataUrl.indexOf('data:') !== 0) return '';
+  var token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+  if (!token) return '';
+  var m = dataUrl.match(/^data:([^;]+);base64,(.*)$/);
+  if (!m) return '';
+  var ext = m[1] === 'image/png' ? 'png' : 'jpg';
+  var path = 'shoe-photos/' + slug + '.' + ext;
+  var api = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + path;
+  var headers = { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' };
+  try {
+    // overwrite needs the existing file's sha
+    var sha = null;
+    var getRes = UrlFetchApp.fetch(api + '?ref=' + GH_BRANCH,
+      { method: 'get', headers: headers, muteHttpExceptions: true });
+    if (getRes.getResponseCode() === 200) sha = JSON.parse(getRes.getContentText()).sha;
+    var payload = { message: 'shoe photo: ' + path, content: m[2], branch: GH_BRANCH };
+    if (sha) payload.sha = sha;
+    var putRes = UrlFetchApp.fetch(api, {
+      method: 'put', headers: headers, contentType: 'application/json',
+      payload: JSON.stringify(payload), muteHttpExceptions: true
+    });
+    var code = putRes.getResponseCode();
+    return (code >= 200 && code < 300) ? path : '';
+  } catch (err) {
+    return '';
+  }
+}
+
+function _shoesSheet() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHOES_SHEET);
+  if (sheet && sheet.getLastColumn() < 8) {
+    var hdr = ['Brand', 'Model', 'Purchased', 'Retired', 'Notes', 'Photo', 'Goal', 'Color'];
+    sheet.getRange(1, 1, 1, 8).setValues([hdr]).setFontWeight('bold');
+  }
+  return sheet;
+}
 
 function _addShoe(shoe) {
-  var name = ((shoe && shoe.name) || '').trim();
-  if (!name) return _json({ error: 'Shoe name required' });
+  shoe = shoe || {};
+  var brand = (shoe.brand || '').trim();
+  var model = (shoe.model || '').trim();
+  var name  = (brand + ' ' + model).trim() || (shoe.name || '').trim();
+  if (!name) return _json({ error: 'Brand or model required' });
 
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHOES_SHEET);
+  var sheet = _shoesSheet();
   if (!sheet) return _json({ error: 'Sheet "' + SHOES_SHEET + '" not found' });
 
-  // Make sure a Photo header exists in column 6
-  if (sheet.getLastColumn() < 6) {
-    sheet.getRange(1, 6).setValue('Photo').setFontWeight('bold');
-  }
+  var photoPath = _pushPhoto(_slug(name), shoe.photo);
 
-  var photoUrl = '';
-  if (shoe.photo && shoe.photo.indexOf('data:') === 0) {
-    try {
-      var m = shoe.photo.match(/^data:([^;]+);base64,(.*)$/);
-      if (m) {
-        var blob = Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], name + '.jpg');
-        var folders = DriveApp.getFoldersByName('Mileage Shoe Photos');
-        var folder = folders.hasNext() ? folders.next()
-                                       : DriveApp.createFolder('Mileage Shoe Photos');
-        var file = folder.createFile(blob);
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        photoUrl = 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w640';
-      }
-    } catch (err) {
-      photoUrl = ''; // photo is optional — don't fail the whole add
+  // Cols: Brand, Model, Purchased, Retired, Notes, Photo, Goal, Color
+  sheet.appendRow([
+    brand, model, shoe.purchased || '', '', '',
+    photoPath, (shoe.goal != null ? shoe.goal : ''), shoe.color || ''
+  ]);
+  return _json({ addedShoe: true, name: name, photo: photoPath });
+}
+
+// Update an existing pair by name: retire today, change photo, or edit fields.
+function _updateShoe(req) {
+  req = req || {};
+  var name = (req.name || '').trim();
+  if (!name) return _json({ error: 'name required' });
+
+  var sheet = _shoesSheet();
+  if (!sheet) return _json({ error: 'Sheet "' + SHOES_SHEET + '" not found' });
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    var rowName = ((r[0] || '') + ' ' + (r[1] || '')).trim();
+    if (rowName !== name) continue;
+    var rowIdx = i + 1;
+
+    if (req.retire && !r[3]) {
+      sheet.getRange(rowIdx, 4).setValue(_todayStr());
     }
-  }
+    if (req.photo) {
+      var path = _pushPhoto(_slug(name), req.photo);
+      if (path) sheet.getRange(rowIdx, 6).setValue(path);
+    }
+    if (req.goal  != null) sheet.getRange(rowIdx, 7).setValue(req.goal);
+    if (req.color != null) sheet.getRange(rowIdx, 8).setValue(req.color);
 
-  // Cols: Brand, Model, Purchased, Retired, Notes, Photo
-  sheet.appendRow(['', name, shoe.purchased || '', '', '', photoUrl]);
-  return _json({ addedShoe: true, name: name, photo: photoUrl });
+    return _json({ updatedShoe: true, name: name });
+  }
+  return _json({ error: 'Shoe "' + name + '" not found' });
 }
 
 // ---------- doPost ----------

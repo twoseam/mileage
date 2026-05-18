@@ -976,8 +976,8 @@
       rcRow('Weather', r.weather ? rcEsc(r.weather) : '') +
       rcRow('Location', loc) +
       (r.notes ? '<div class="rstats-notes">' + rcEsc(r.notes) + '</div>' : '') +
-      shoeBlock +
       (aid ? '<div class="rstats-map" id="rstats-map"></div>' : '') +
+      shoeBlock +
       '<button class="rstats-close" type="button">Close</button>';
 
     document.getElementById('rstats').classList.add('show');

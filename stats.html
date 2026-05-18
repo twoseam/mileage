@@ -32,6 +32,7 @@
 
   <script src="miles-tracker.js"></script>
   <script src="nav.js"></script>
+  <script src="activity-panel.js"></script>
 
   <style>
     * { box-sizing: border-box; }
@@ -396,6 +397,13 @@
     .h-thumb svg { width: 100%; height: 100%; display: block; }
     .h-thumb .ph { font-size: 1.4rem; opacity: 0.35; }
     .h-meta { min-width: 0; flex: 1; }
+    .h-badge {
+      flex: 0 0 auto; align-self: flex-start;
+      font-size: 0.5rem; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+      color: #1a1a1a; background: #8FCFC2;
+    }
+    .h-badge.run { background: #E7D7A4; }
     .h-date { font-size: 0.74rem; font-weight: 700; opacity: 0.5; }
     .h-name {
       font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em;
@@ -930,8 +938,7 @@
       var h = +t[1];
       part = h < 12 ? 'Morning' : (h < 17 ? 'Afternoon' : (h < 21 ? 'Evening' : 'Night'));
     }
-    return [hWeekday(r.date), part, (r.type === 'Run' ? 'Run' : 'Walk')]
-      .filter(Boolean).join(' ');
+    return [hWeekday(r.date), part].filter(Boolean).join(' ');
   }
   function hKey(r) {
     if (r.activity_id) return String(r.activity_id);
@@ -1006,7 +1013,10 @@
           '<div class="h-meta">' +
             '<div class="h-date">' + rcEsc(hShortDate(r.date)) + '</div>' +
             '<div class="h-name">' + rcEsc(hTitle(r)) + '</div>' +
-          '</div></div>' +
+          '</div>' +
+          '<span class="h-badge' + (r.type === 'Run' ? ' run' : '') + '">' +
+            (r.type === 'Run' ? 'Run' : 'Walk') + '</span>' +
+        '</div>' +
         '<div class="h-stats">' +
           '<div class="h-stat"><b>' + (r.miles != null ? r.miles.toFixed(2) : '—') +
             '</b><span>Miles</span></div>' +
@@ -1020,7 +1030,7 @@
   }
 
   window.rcOpen = function(btn) {
-    location.href = 'activity.html?id=' + encodeURIComponent(btn.getAttribute('data-key'));
+    ActivityPanel.open(btn.getAttribute('data-key'));
   };
 
   function renderRecent(rows) {

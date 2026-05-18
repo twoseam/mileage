@@ -374,14 +374,19 @@
       font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
       font-weight: 800; opacity: 0.5; margin: 0 0 0.7rem 2px;
     }
-    .recent-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    .recent-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+    }
     .recent-card {
       background: #1f1f1f;
       border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 16px;
-      padding: 2.1rem 1.4rem;
-      min-height: 132px;
-      display: flex; align-items: center; gap: 1.1rem;
+      padding: 1.15rem 1.2rem;
+      min-height: 100px;
+      display: flex; flex-direction: column; justify-content: center;
+      gap: 0.4rem;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
       transition: transform 0.1s ease, background 0.15s ease;
@@ -391,16 +396,12 @@
       .recent-card:hover { background: #262626; }
     }
     .rc-miles {
-      font-size: 2.4rem; font-weight: 900; letter-spacing: 0.01em;
-      line-height: 1; white-space: nowrap; flex: 0 0 auto;
+      font-size: 1.5rem; font-weight: 900; letter-spacing: 0.01em;
+      line-height: 1; white-space: nowrap;
     }
-    .rc-miles span { font-size: 0.7rem; font-weight: 700; opacity: 0.5; margin-left: 4px; }
-    .rc-main { flex: 1; min-width: 0; text-align: right; }
-    .rc-top {
-      display: flex; align-items: baseline; justify-content: flex-end;
-      gap: 0.55rem;
-    }
-    .rc-date { font-size: 1.05rem; font-weight: 800; letter-spacing: 0.01em; }
+    .rc-miles span { font-size: 0.58rem; font-weight: 700; opacity: 0.5; margin-left: 3px; }
+    .rc-top { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+    .rc-date { font-size: 0.98rem; font-weight: 800; letter-spacing: 0.01em; }
     .rc-type {
       font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;
       font-weight: 800; padding: 2px 7px; border-radius: 999px;
@@ -408,11 +409,28 @@
     }
     .rc-type.run { background: #E7D7A4; }
     .rc-meta {
-      margin-top: 4px; font-size: 0.72rem; opacity: 0.55;
-      letter-spacing: 0.02em;
+      font-size: 0.7rem; opacity: 0.55; letter-spacing: 0.02em;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 100%;
     }
-    .recent-empty { opacity: 0.45; font-size: 0.85rem; padding: 0.6rem 2px; }
+    .recent-empty {
+      grid-column: 1 / -1;
+      opacity: 0.45; font-size: 0.85rem; padding: 0.6rem 2px;
+    }
+    .recent-more {
+      display: block; width: 100%;
+      margin-top: 0.8rem; padding: 12px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+      color: inherit; font-family: inherit;
+      font-size: 0.68rem; font-weight: 800;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      cursor: pointer; opacity: 0.7;
+      transition: opacity 0.15s ease, background 0.15s ease;
+    }
+    .recent-more:hover { opacity: 1; }
+    .recent-more[hidden] { display: none; }
 
     /* Run detail popup */
     #rstats {
@@ -447,6 +465,22 @@
       margin: 0.4rem 0 1rem;
     }
     .rstats-hero span { font-size: 0.85rem; font-weight: 700; opacity: 0.5; margin-left: 5px; }
+    .rstats-shoe {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 0.6rem;
+      margin-top: 1rem; padding-top: 1.1rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.10);
+    }
+    .rstats-shoe img {
+      width: 200px; max-width: 70%;
+      aspect-ratio: 1 / 1; object-fit: cover;
+      border-radius: 16px;
+      background: rgba(0, 0, 0, 0.06);
+    }
+    .rstats-shoe .sn {
+      font-size: 0.8rem; font-weight: 700; opacity: 0.6;
+      letter-spacing: 0.02em; text-align: center;
+    }
     .rstats-row {
       display: flex; justify-content: space-between; gap: 1rem;
       padding: 0.6rem 0;
@@ -552,6 +586,7 @@
     @media (hover: hover) and (pointer: fine) {
       html[data-theme="light"] .recent-card:hover { background: #fffbf0; }
     }
+    html[data-theme="light"] .recent-more { border-color: rgba(0, 0, 0, 0.18); }
 
     @media (min-width: 720px) {
       .chart-bars { height: 320px; gap: 5px; }
@@ -628,6 +663,7 @@
   <section class="recent">
     <div class="recent-head">Recent</div>
     <div class="recent-list" id="recent-list"></div>
+    <button class="recent-more" id="recent-more" type="button" hidden>Show more</button>
   </section>
 
 </div>
@@ -707,6 +743,7 @@
 
   function loadData() {
     startLoader();
+    loadRecentShoes();
     MilesTracker.fetchAllEntries(function(rows) {
       var walk = {};
       var run  = {};
@@ -735,6 +772,10 @@
     var dt = new Date(+p[1], +p[2] - 1, +p[3], 12);
     return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   }
+  function rcDMY(d) {
+    var p = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || '');
+    return p ? (p[3] + '/' + p[2] + '/' + p[1]) : (d || '');
+  }
   function rcFmt12(t) {
     var m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''));
     if (!m) return '';
@@ -756,25 +797,37 @@
   }
 
   var rcRecent = [];
+  var rcShown = 4;            // 2x2 to start
+  var RC_PAGE = 4;            // reveal 4 more per "Show more"
+  var RC_MAX  = 40;           // cap how far back the list goes
+  var rcShoeByKey = {};       // normalized shoe tag -> shoe roster object
 
-  function renderRecent(rows) {
+  function loadRecentShoes() {
+    if (!MilesTracker.fetchShoes) return;
+    MilesTracker.fetchShoes(function(shoes) {
+      (shoes || []).forEach(function(s) {
+        var keys = (s.matchKeys || []).slice();
+        if (s.name) keys.push(s.name);
+        if (s.display) keys.push(s.display);
+        keys.forEach(function(k) {
+          rcShoeByKey[String(k).trim().toLowerCase()] = s;
+        });
+      });
+    });
+  }
+
+  function rcDrawCards() {
     var box = document.getElementById('recent-list');
+    var more = document.getElementById('recent-more');
     if (!box) return;
-    rcRecent = rows
-      .map(function(r, i) { return { r: r, i: i }; })
-      .sort(function(a, b) {
-        if (a.r.date !== b.r.date) return a.r.date < b.r.date ? 1 : -1;
-        return b.i - a.i; // same day: later sheet row = logged later
-      })
-      .slice(0, 7)
-      .map(function(x) { return x.r; });
 
     if (!rcRecent.length) {
       box.innerHTML = '<div class="recent-empty">No entries yet.</div>';
+      if (more) more.hidden = true;
       return;
     }
 
-    box.innerHTML = rcRecent.map(function(r, idx) {
+    box.innerHTML = rcRecent.slice(0, rcShown).map(function(r, idx) {
       var isRun = r.type === 'Run';
       var miles = (parseFloat(r.miles) || 0).toFixed(1);
       var meta = [];
@@ -784,17 +837,38 @@
       return '' +
         '<div class="recent-card" data-idx="' + idx + '" role="button" tabindex="0">' +
           '<div class="rc-miles">' + miles + '<span>mi</span></div>' +
-          '<div class="rc-main">' +
-            '<div class="rc-top">' +
-              '<span class="rc-date">' + rcEsc(rcFmtDate(r.date)) + '</span>' +
-              '<span class="rc-type' + (isRun ? ' run' : '') + '">' +
-                (isRun ? 'Run' : 'Walk') + '</span>' +
-            '</div>' +
-            (meta.length ? '<div class="rc-meta">' + meta.join(' · ') + '</div>' : '') +
+          '<div class="rc-top">' +
+            '<span class="rc-date">' + rcEsc(rcFmtDate(r.date)) + '</span>' +
+            '<span class="rc-type' + (isRun ? ' run' : '') + '">' +
+              (isRun ? 'Run' : 'Walk') + '</span>' +
           '</div>' +
+          (meta.length ? '<div class="rc-meta">' + meta.join(' · ') + '</div>' : '') +
         '</div>';
     }).join('');
+
+    if (more) more.hidden = rcShown >= rcRecent.length;
   }
+
+  function renderRecent(rows) {
+    rcRecent = rows
+      .map(function(r, i) { return { r: r, i: i }; })
+      .sort(function(a, b) {
+        if (a.r.date !== b.r.date) return a.r.date < b.r.date ? 1 : -1;
+        return b.i - a.i; // same day: later sheet row = logged later
+      })
+      .slice(0, RC_MAX)
+      .map(function(x) { return x.r; });
+    rcShown = 4;
+    rcDrawCards();
+  }
+
+  (function wireRecentMore() {
+    var more = document.getElementById('recent-more');
+    if (more) more.addEventListener('click', function() {
+      rcShown = Math.min(rcShown + RC_PAGE, rcRecent.length);
+      rcDrawCards();
+    });
+  })();
 
   // ---------- run detail popup ----------
 
@@ -820,6 +894,17 @@
         dur = (hh ? hh + 'h ' : '') + mm + 'm';
       }
     }
+    var shoeBlock = '';
+    if (r.shoe) {
+      var shoeObj = rcShoeByKey[String(r.shoe).trim().toLowerCase()];
+      var sname = rcEsc((shoeObj && (shoeObj.display || shoeObj.name)) || r.shoe);
+      var simg = (shoeObj && shoeObj.photo)
+        ? '<img src="' + rcEsc(shoeObj.photo) + '" alt="" loading="lazy">'
+        : '';
+      shoeBlock = '<div class="rstats-shoe">' + simg +
+                  '<span class="sn">' + sname + '</span></div>';
+    }
+
     var loc = '';
     if (r.lat != null && r.lon != null && r.lat !== '' && r.lon !== '') {
       var ll = (+r.lat).toFixed(4) + ', ' + (+r.lon).toFixed(4);
@@ -834,18 +919,18 @@
           (isRun ? 'Run' : 'Walk') + '</span>' +
       '</div>' +
       '<div class="rstats-hero">' + miles + '<span>miles</span></div>' +
-      rcRow('Date', rcEsc(r.date)) +
+      rcRow('Date', rcEsc(rcDMY(r.date))) +
       rcRow('Type', isRun ? 'Run' : 'Walk') +
       rcRow('Distance', miles + ' mi') +
       rcRow('Pace', r.pace ? rcEsc(r.pace) + ' /mi' : '') +
       rcRow('Start', rcFmt12(r.start_time)) +
       rcRow('End', rcFmt12(r.end_time)) +
       rcRow('Duration', dur) +
-      rcRow('Shoe', r.shoe ? rcEsc(r.shoe) : '') +
       rcRow('Temp', (r.temp_f != null && r.temp_f !== '') ? Math.round(r.temp_f) + '°F' : '') +
       rcRow('Weather', r.weather ? rcEsc(r.weather) : '') +
       rcRow('Location', loc) +
       (r.notes ? '<div class="rstats-notes">' + rcEsc(r.notes) + '</div>' : '') +
+      shoeBlock +
       '<button class="rstats-close" type="button">Close</button>';
 
     document.getElementById('rstats').classList.add('show');

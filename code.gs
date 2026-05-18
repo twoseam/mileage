@@ -62,6 +62,26 @@ function _fmtTime(t) {
   return ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2);
 }
 
+// Pace is minutes:seconds per mile. If the Pace column is formatted as a
+// time/duration cell, Sheets hands back a Date (epoch 1899-12-30) or a
+// fraction-of-a-day number instead of text — either would otherwise leak
+// out as "1899-12-30T..." or "0.0066". Normalize all three to "m:ss".
+function _fmtPace(v, tz) {
+  if (v === '' || v == null) return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    tz = tz || SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+    var hh = parseInt(Utilities.formatDate(v, tz, 'H'), 10) || 0;
+    var mm = parseInt(Utilities.formatDate(v, tz, 'm'), 10) || 0;
+    var ss = parseInt(Utilities.formatDate(v, tz, 's'), 10) || 0;
+    return (hh * 60 + mm) + ':' + ('0' + ss).slice(-2);
+  }
+  if (typeof v === 'number') {                 // fraction of a day
+    var secs = Math.round(v * 86400);
+    return Math.floor(secs / 60) + ':' + ('0' + (secs % 60)).slice(-2);
+  }
+  return String(v).trim();                      // already clean text like "9:30"
+}
+
 // Map logical entry fields → 0-based column index, by header name (row 1).
 // Same idea as shoes: the Entries tab can be reordered freely.
 function _entryColMap(headerRow) {
@@ -90,6 +110,7 @@ function _readEntries() {
   var data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
   var map = _entryColMap(data[0]);
+  var tz  = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
   var rows = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
@@ -104,7 +125,7 @@ function _readEntries() {
       type:       _cell(r, map, 'type') || 'Walk',
       start_time: _fmtTime(_cell(r, map, 'start_time')),
       end_time:   _fmtTime(_cell(r, map, 'end_time')),
-      pace:       _cell(r, map, 'pace') || '',
+      pace:       _fmtPace(_cell(r, map, 'pace'), tz),
       lat:        lat !== '' ? lat : null,
       lon:        lon !== '' ? lon : null,
       temp_f:     tf !== '' ? tf : null,

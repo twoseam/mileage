@@ -502,6 +502,12 @@ function doGet(e) {
              .setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (action === 'lastIngest') {
+    // debug peek: what the last Health Auto Export POST mapped to
+    var li = CacheService.getScriptCache().get('haLastIngest');
+    return _json(li ? JSON.parse(li) : { note: 'no ingest yet' });
+  }
+
   return _json({ error: 'Unknown action' });
 }
 

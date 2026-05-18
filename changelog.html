@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>2026 Mileage — Changelog</title>
+
+  <meta name="description" content="What changed, version by version.">
+  <link rel="canonical" href="https://twoseam.github.io/mileage/changelog.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="2026 Mileage">
+  <meta property="og:title" content="2026 Mileage — Changelog">
+  <meta property="og:description" content="What changed, version by version.">
+  <meta property="og:url" content="https://twoseam.github.io/mileage/changelog.html">
+  <meta property="og:image" content="https://twoseam.github.io/mileage/apple-touch-icon-1024.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="2026 Mileage — Changelog">
+  <meta name="twitter:description" content="What changed, version by version.">
+  <meta name="twitter:image" content="https://twoseam.github.io/mileage/apple-touch-icon-1024.png">
+  <link rel="icon" type="image/png" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Mileage">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#252525">
+
+  <link rel="preconnect" href="https://use.typekit.net" crossorigin>
+  <link rel="preconnect" href="https://p.typekit.net" crossorigin>
+  <link rel="stylesheet" href="https://use.typekit.net/ymz2nvi.css">
+
+  <script src="nav.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    html { scrollbar-width: none; -ms-overflow-style: none; }
+    body::-webkit-scrollbar { display: none; }
+    body {
+      background: #252525;
+      color: #f5f5f5;
+      font-family: "omnes", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .mt-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      transform: translateY(50px);
+      background: linear-gradient(
+        159deg,
+        transparent 0%, transparent 76.6%,
+        #016074 76.6%, #016074 78.8%,
+        #94D3BE 78.8%, #94D3BE 81.1%,
+        #E7D7A4 81.1%, #E7D7A4 83.9%,
+        #EB9A00 83.9%, #EB9A00 86.6%,
+        #CA6902 86.6%, #CA6902 89.3%,
+        #B02113 89.3%, #B02113 100%
+      );
+    }
+
+    .wordmark {
+      max-width: 720px;
+      margin: 2.5rem auto 0.5rem;
+      padding: 0 2rem;
+      text-align: center;
+      font-family: "omnes", system-ui, sans-serif;
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: 0.01em;
+    }
+    .wordmark-year  { font-size: clamp(2.5rem, 10vw, 4rem); color: #8FCFC2; margin-bottom: 0.1em; }
+    .wordmark-title { font-size: clamp(2.5rem, 10vw, 4rem); color: #E89A1F; }
+    .page-title {
+      font-size: 0.65rem; letter-spacing: 0.24em; text-transform: uppercase;
+      opacity: 0.5; margin-top: 0.6rem; font-weight: 700;
+    }
+
+    #log-shell { max-width: 640px; margin: 0 auto; padding: 2.5rem 1.4rem 3rem; }
+
+    .log-intro {
+      text-align: center;
+      font-size: 0.95rem;
+      opacity: 0.55;
+      margin: 0 0 1.75rem;
+    }
+
+    .rel {
+      background: #1f1f1f;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 14px;
+      padding: 1.25rem 1.4rem 1.35rem;
+      margin-bottom: 1rem;
+    }
+    .rel-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 1rem; margin-bottom: 0.85rem;
+    }
+    .rel-ver {
+      font-size: 1.5rem; font-weight: 900; letter-spacing: 0.01em;
+      color: #E89A1F;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+    .rel.current .rel-ver { color: #8FCFC2; }
+    .rel-tag {
+      font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase;
+      font-weight: 700; opacity: 0.45;
+    }
+    .rel.current .rel-tag {
+      opacity: 1; color: #252525; background: #8FCFC2;
+      padding: 3px 8px; border-radius: 999px;
+    }
+    .rel-date {
+      font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+      opacity: 0.4; font-weight: 700; white-space: nowrap;
+    }
+    .rel ul { margin: 0; padding-left: 1.1rem; }
+    .rel li {
+      font-size: 0.95rem; line-height: 1.5; opacity: 0.85;
+      margin-bottom: 0.45rem;
+    }
+    .rel li:last-child { margin-bottom: 0; }
+
+    .mt-footer { text-align: center; padding: 0 1.5rem 2rem; }
+    .mt-footer a {
+      font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+      color: inherit; text-decoration: none; opacity: 0.35;
+      transition: opacity 0.2s ease;
+    }
+    .mt-footer a:hover { opacity: 0.85; }
+
+    /* ---------- LIGHT MODE (additive; dark rules above untouched) ---------- */
+    html[data-theme="light"] .wordmark-year  { color: #0E7A8C; }
+    html[data-theme="light"] .wordmark-title { color: #C77A0C; }
+    html[data-theme="light"] .rel {
+      background: #fffdf7;
+      border-color: rgba(0, 0, 0, 0.08);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    html[data-theme="light"] .rel-ver { color: #C77A0C; }
+    html[data-theme="light"] .rel.current .rel-ver { color: #0E7A8C; }
+    html[data-theme="light"] .rel.current .rel-tag {
+      background: #0E7A8C; color: #ffffff;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="mt-bg"></div>
+
+<header class="wordmark">
+  <div class="wordmark-year">2026</div>
+  <div class="wordmark-title">MILEAGE</div>
+  <div class="page-title">Changelog</div>
+</header>
+
+<main id="log-shell">
+
+  <p class="log-intro">What's new and what got better, newest at the top.</p>
+
+  <section class="rel current">
+    <div class="rel-head">
+      <span class="rel-ver">v3.0.1</span>
+      <span class="rel-tag">Current</span>
+      <span class="rel-date">May 18, 2026</span>
+    </div>
+    <ul>
+      <li>Fixed the spinning loading screen that could hang forever while the server was waking up. Now it always lets you through to the app.</li>
+    </ul>
+  </section>
+
+  <section class="rel">
+    <div class="rel-head">
+      <span class="rel-ver">v3.0.0</span>
+      <span class="rel-date">May 17, 2026</span>
+    </div>
+    <ul>
+      <li>The app is now three pages instead of one — a page to log a walk, a page for your stats and charts, and a page for your shoes. Use the menu to move between them.</li>
+      <li>The Stats page got real charts you can swipe through and zoom in on, with numbers that count up.</li>
+      <li>New Shoes page: every pair you walk in, with a photo, the miles they've done, and how close they are to worn out. Retire a pair when you're finished with it.</li>
+      <li>Logging a walk is easier — pick the shoe by tapping its photo, add your time and pace, and mark it a walk or a run.</li>
+      <li>You can add the app to your phone's home screen and it opens like a normal app.</li>
+    </ul>
+  </section>
+
+  <section class="rel">
+    <div class="rel-head">
+      <span class="rel-ver">v2.0.0</span>
+      <span class="rel-date">May 7, 2026</span>
+    </div>
+    <ul>
+      <li>Moved the whole thing onto its own faster site, with the striped look and the proper fonts.</li>
+      <li>It loads quicker now, especially the second time you open it.</li>
+      <li>Added two new stats: your longest single walk and your longest run of days in a row.</li>
+      <li>Added the loading bar, a little progress bar when you save, and a check that stops you logging a day that hasn't happened yet.</li>
+    </ul>
+  </section>
+
+  <section class="rel">
+    <div class="rel-head">
+      <span class="rel-ver">v1.1.0</span>
+      <span class="rel-date">May 3, 2026</span>
+    </div>
+    <ul>
+      <li>If you log miles for a day that already has some, it now asks whether to replace the number or add to it. Before, it quietly doubled it up.</li>
+    </ul>
+  </section>
+
+  <section class="rel">
+    <div class="rel-head">
+      <span class="rel-ver">v1.0.0</span>
+      <span class="rel-date">Apr 28, 2026</span>
+    </div>
+    <ul>
+      <li>The first working version: log a walk from your phone and see your total miles, how many days you've walked, how you're tracking against the goal, your current streak, and a six-week chart.</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer class="mt-footer">
+  <a href="index.html">← Back to tracker</a>
+</footer>
+
+</body>
+</html>

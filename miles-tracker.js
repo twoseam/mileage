@@ -20,8 +20,14 @@
   var SECRET   = '101685910168591016859';
 
   function _get(action) {
-    return fetch(ENDPOINT + '?secret=' + encodeURIComponent(SECRET) + '&action=' + action)
-      .then(function(r) { return r.json(); });
+    // Apps Script cold starts can hang a fetch indefinitely; abort after 20s
+    // so callers' .catch fires instead of leaving the UI stuck forever.
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 20000) : null;
+    return fetch(ENDPOINT + '?secret=' + encodeURIComponent(SECRET) + '&action=' + action,
+                 ctrl ? { signal: ctrl.signal } : undefined)
+      .then(function(r) { if (timer) clearTimeout(timer); return r.json(); })
+      .catch(function(err) { if (timer) clearTimeout(timer); throw err; });
   }
 
   var MilesTracker = {

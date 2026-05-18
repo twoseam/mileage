@@ -297,27 +297,32 @@
     /* Walk / Run toggle */
     .mt-toggle {
       display: flex;
-      gap: 8px;
+      gap: 4px;
+      background: rgba(0, 0, 0, 0.06);
+      border-radius: 12px;
+      padding: 4px;
     }
     .mt-toggle-btn {
       flex: 1;
-      padding: 12px 16px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 11px 16px;
+      border-radius: 9px;
+      border: none;
       background: transparent;
-      color: inherit;
+      color: #1a1a1a;
       font-family: inherit;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 800;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       cursor: pointer;
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      opacity: 0.55;
+      transition: background 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
     }
     .mt-toggle-btn.mt-active {
       background: #E89A1F;
       color: #1a1a1a;
-      border-color: #E89A1F;
+      opacity: 1;
+      box-shadow: 0 2px 6px rgba(232, 154, 31, 0.4);
     }
 
     /* Notes: hidden behind a checkbox until toggled on */
@@ -539,89 +544,111 @@
     #mt-dialog.mt-dialog-show { display: flex; }
 
     .mt-dialog-card {
-      background: #f5f0e6;
+      background: #f6f1e7;
       color: #1a1a1a;
-      padding: 1.75rem 1.75rem 1.5rem;
-      border-radius: 16px;
-      max-width: 380px;
+      padding: 2rem 1.6rem 1.5rem;
+      border-radius: 22px;
+      max-width: 384px;
       width: 100%;
-      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
     }
-    .mt-dialog-card .mt-field { margin-bottom: 1.4rem; }
-    .mt-dialog-card .mt-field label { color: #1a1a1a; }
+    .mt-dialog-card .mt-field { margin-bottom: 1.3rem; }
+    .mt-dialog-card .mt-field > label {
+      display: block;
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      opacity: 0.5;
+      margin-bottom: 9px;
+      color: #1a1a1a;
+    }
     .mt-dialog-card .mt-field input[type="text"],
     .mt-dialog-card .mt-field input[type="time"],
+    .mt-dialog-card .mt-field input[type="date"],
     .mt-dialog-card .mt-field select {
+      width: 100%;
+      background: #fff;
       color: #1a1a1a;
-      border-bottom-color: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 0, 0, 0.10);
+      border-radius: 12px;
+      padding: 13px 14px;
+      font-size: 1rem;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-    .mt-dialog-card .mt-toggle-btn {
-      color: #1a1a1a;
-      border-color: rgba(0, 0, 0, 0.22);
-    }
-    .mt-dialog-card .mt-toggle-btn.mt-active {
-      background: #E89A1F;
-      color: #1a1a1a;
+    .mt-dialog-card .mt-field input:focus,
+    .mt-dialog-card .mt-field select:focus {
+      outline: none;
       border-color: #E89A1F;
+      box-shadow: 0 0 0 3px rgba(232, 154, 31, 0.18);
     }
     .mt-dialog-card .mt-checkbox { color: #1a1a1a; }
-    .mt-dialog-card .mt-checkbox input { border-color: #1a1a1a; opacity: 0.7; }
+    .mt-dialog-card .mt-checkbox input { border-color: rgba(0,0,0,0.4); opacity: 0.7; }
     .mt-dialog-card .mt-checkbox input:checked { opacity: 1; }
 
     .mt-dialog-actions {
-      margin-top: 0.5rem;
+      margin-top: 1.4rem;
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      align-items: center;
+      gap: 4px;
+      align-items: stretch;
     }
     .mt-dialog-save {
       border: none;
-      border-radius: 10px;
-      padding: 14px 44px;
-      font-size: 0.85rem;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 0.82rem;
       font-family: inherit;
       font-weight: 900;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
       cursor: pointer;
       color: #1a1a1a;
       background: #E89A1F;
-      box-shadow: 0 4px 0 #8E5A0E, 0 8px 14px rgba(0, 0, 0, 0.25);
-      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      box-shadow: 0 6px 18px rgba(232, 154, 31, 0.45);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
     }
     .mt-dialog-save:active {
-      transform: translateY(4px);
-      box-shadow: 0 0 0 #8E5A0E, 0 2px 4px rgba(0, 0, 0, 0.2);
+      transform: translateY(1px);
+      box-shadow: 0 3px 10px rgba(232, 154, 31, 0.4);
+      filter: brightness(0.97);
     }
     .mt-dialog-cancel {
       background: transparent;
       border: none;
       cursor: pointer;
       color: #1a1a1a;
-      opacity: 0.45;
+      opacity: 0.4;
       font-family: inherit;
-      font-size: 0.7rem;
-      letter-spacing: 0.1em;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      padding: 10px;
+      padding: 12px;
     }
-    .mt-dialog-cancel:hover { opacity: 0.8; }
+    .mt-dialog-cancel:hover { opacity: 0.7; }
     /* Time & Pace (entry dialog) */
     .mt-pace-row { display: flex; gap: 8px; }
     .mt-pace-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .mt-pace-lbl {
-      font-size: 0.58rem; font-weight: 800; letter-spacing: 0.08em;
-      text-transform: uppercase; opacity: 0.55; margin-bottom: 4px;
+      font-size: 0.54rem; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase; opacity: 0.45; margin-bottom: 6px;
     }
     .mt-pace-row input {
-      width: 100%; padding: 10px; border-radius: 10px;
-      border: 1px solid rgba(0,0,0,0.18); background: #fff;
-      font-family: inherit; font-size: 0.95rem; color: #1a1a1a;
+      width: 100%; padding: 12px 6px; border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.10); background: #fff;
+      font-family: inherit; font-size: 0.84rem; color: #1a1a1a;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
       -webkit-appearance: none; appearance: none;
     }
+    .mt-pace-row input:focus {
+      outline: none; border-color: #E89A1F;
+      box-shadow: 0 0 0 3px rgba(232, 154, 31, 0.18);
+    }
     .mt-pace-hint {
-      font-size: 0.62rem; opacity: 0.45; margin-top: 6px; font-weight: 600;
+      font-size: 0.6rem; opacity: 0.4; margin-top: 8px; font-weight: 600;
     }
 
     /* Visual shoe picker (entry dialog) */
@@ -636,28 +663,28 @@
     .mt-shoe-tiles::-webkit-scrollbar { display: none; }
     .mt-shoe-empty { font-size: 0.8rem; opacity: 0.5; padding: 6px 2px; }
     .mt-shoe-tile {
-      flex: 0 0 92px; width: 92px;
+      flex: 0 0 96px; width: 96px;
       background: #fff;
-      border: 2px solid rgba(0,0,0,0.12);
-      border-radius: 12px;
-      padding: 6px;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      padding: 7px;
       cursor: pointer;
-      transition: border-color 0.15s ease, transform 0.15s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      transition: box-shadow 0.18s ease, transform 0.12s ease;
       text-align: center;
     }
     .mt-shoe-tile:active { transform: scale(0.97); }
     .mt-shoe-tile.is-sel {
-      border-color: #E89A1F;
-      box-shadow: 0 0 0 3px rgba(232,154,31,0.25);
+      box-shadow: 0 0 0 2px #E89A1F, 0 4px 12px rgba(232,154,31,0.3);
     }
     .mt-shoe-thumb {
       width: 100%; aspect-ratio: 1 / 1;
-      border-radius: 8px; overflow: hidden;
-      background: #ece6d8;
+      border-radius: 9px; overflow: hidden;
+      background: #f1ece0;
       display: flex; align-items: center; justify-content: center;
-      margin-bottom: 5px;
+      margin-bottom: 6px;
     }
-    .mt-shoe-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .mt-shoe-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 4px; }
     .mt-shoe-thumb .ph { font-size: 1.6rem; opacity: 0.3; }
     .mt-shoe-tile-name {
       font-size: 0.62rem; font-weight: 800; line-height: 1.15;

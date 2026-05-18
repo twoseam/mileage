@@ -458,8 +458,10 @@ function doPost(e) {
 
   if (body.secret !== SECRET) return _json({ error: 'Unauthorized' });
 
-  // Add-a-pair: { secret, shoe: { name, purchased, photo? } }
+  // Add a pair:    { secret, shoe: { brand, model, purchased, goal?, color?, photo? } }
   if (body.shoe) return _addShoe(body.shoe);
+  // Update a pair: { secret, updateShoe: { name, retire?, photo?, goal?, color? } }
+  if (body.updateShoe) return _updateShoe(body.updateShoe);
 
   var entries = body.entries || [];
   if (!entries.length) return _json({ error: 'No entries' });

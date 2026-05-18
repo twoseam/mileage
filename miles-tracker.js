@@ -30,6 +30,30 @@
       .catch(function(err) { if (timer) clearTimeout(timer); throw err; });
   }
 
+  // Stale-while-revalidate: hand the caller the last cached result
+  // instantly (no spinner), then refresh in the background and hand it
+  // again. Repeat visits feel instant regardless of Apps Script latency.
+  function _lsGet(k) {
+    try { var s = localStorage.getItem(k); return s ? JSON.parse(s) : undefined; }
+    catch (e) { return undefined; }
+  }
+  function _lsSet(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+  }
+  // pick: maps raw response -> value handed to callback (and cached)
+  function _swr(action, key, pick, callback) {
+    var cached = _lsGet(key);
+    var hadCache = cached !== undefined;
+    if (hadCache) { try { callback(cached); } catch (e) {} }
+    _get(action)
+      .then(function(data) {
+        var v = pick(data);
+        _lsSet(key, v);
+        callback(v);
+      })
+      .catch(function() { if (!hadCache) callback(pick(null)); });
+  }
+
   var MilesTracker = {
 
     onReady:   function() {},
@@ -66,15 +90,13 @@
     },
 
     fetchDashboard: function(callback) {
-      _get('dashboard')
-        .then(function(data) { callback(data && !data.error ? data : {}); })
-        .catch(function()    { callback({}); });
+      _swr('dashboard', 'mt_c_dashboard',
+        function(d) { return d && !d.error ? d : {}; }, callback);
     },
 
     fetchShoes: function(callback) {
-      _get('shoes')
-        .then(function(data) { callback(data && data.shoes ? data.shoes : []); })
-        .catch(function()    { callback([]); });
+      _swr('shoes', 'mt_c_shoes',
+        function(d) { return d && d.shoes ? d.shoes : []; }, callback);
     },
 
     // shoe: { name, purchased, photo? }  — photo is a data: URL (optional)
@@ -130,9 +152,8 @@
     },
 
     fetchAllEntries: function(callback) {
-      _get('allEntries')
-        .then(function(data) { callback(data && data.rows ? data.rows : []); })
-        .catch(function()    { callback([]); });
+      _swr('allEntries', 'mt_c_allEntries',
+        function(d) { return d && d.rows ? d.rows : []; }, callback);
     }
 
   };

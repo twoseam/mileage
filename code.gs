@@ -34,6 +34,15 @@ function authorizeExternal() {
   Logger.log('External requests authorized. GitHub responded ' + r.getResponseCode());
 }
 
+// Keep-warm: add a time-driven trigger (Apps Script editor → Triggers →
+// Add Trigger → warmUp → Time-driven → Minutes → every 5 minutes).
+// Runs the real handlers so the instance stays hot AND the dashboard +
+// allEntries caches are pre-populated — users rarely hit a cold start.
+function warmUp() {
+  try { doGet({ parameter: { secret: SECRET, action: 'dashboard'  } }); } catch (e) {}
+  try { doGet({ parameter: { secret: SECRET, action: 'allEntries' } }); } catch (e) {}
+}
+
 // ---------- low-level helpers ----------
 
 function _json(obj) {

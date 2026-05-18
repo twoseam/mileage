@@ -1035,6 +1035,64 @@
       mtPad2(now.getHours()) + ':' + mtPad2(now.getMinutes());
   }
 
+  /* ---- Time & Pace: enter any 2 of Start/End/Pace, derive the 3rd ---- */
+  function mtParseClock(v) {
+    var m = String(v || '').match(/^(\d{1,2}):(\d{2})/);
+    if (!m) return null;
+    var h = +m[1], mi = +m[2];
+    if (h > 23 || mi > 59) return null;
+    return h * 60 + mi;                       // minutes since midnight
+  }
+  function mtFmtClock(min) {
+    min = ((Math.round(min) % 1440) + 1440) % 1440;
+    return mtPad2(Math.floor(min / 60)) + ':' + mtPad2(min % 60);
+  }
+  function mtParsePace(v) {
+    var m = String(v || '').trim().match(/^(\d{1,3})(?::(\d{1,2}))?$/);
+    if (!m) return null;
+    var sec = m[2] ? +m[2] : 0;
+    if (sec > 59) return null;
+    return (+m[1]) * 60 + sec;                // seconds per mile
+  }
+  function mtFmtPace(secPerMi) {
+    secPerMi = Math.round(secPerMi);
+    return Math.floor(secPerMi / 60) + ':' + mtPad2(secPerMi % 60);
+  }
+  function mtSingleMiles() {
+    try {
+      var es = mtReadEntries();
+      if (es.length === 1) return parseFloat(es[0].miles) || 0;
+    } catch (_) {}
+    return 0;
+  }
+  function mtPaceEdited(which) {
+    mtTimeManuallyEdited = true;
+    mtPaceRecalc(which);
+  }
+  function mtPaceRecalc(lastEdited) {
+    var sEl = document.getElementById('mt-time-input');
+    var eEl = document.getElementById('mt-end-input');
+    var pEl = document.getElementById('mt-pace-input');
+    var start = mtParseClock(sEl.value);          // min
+    var end   = mtParseClock(eEl.value);          // min
+    var pace  = mtParsePace(pEl.value);           // sec/mi
+    var M     = mtSingleMiles();
+    if (!(M > 0)) return;
+    function durMin() { var d = end - start; if (d < 0) d += 1440; return d; }
+
+    if (lastEdited === 'pace' && pace != null && start != null) {
+      eEl.value = mtFmtClock(start + (pace * M) / 60);
+    } else if (lastEdited === 'pace' && pace != null && end != null) {
+      sEl.value = mtFmtClock(end - (pace * M) / 60);
+    } else if (start != null && end != null) {
+      pEl.value = mtFmtPace(durMin() * 60 / M);
+    } else if (start != null && pace != null) {
+      eEl.value = mtFmtClock(start + (pace * M) / 60);
+    } else if (end != null && pace != null) {
+      sEl.value = mtFmtClock(end - (pace * M) / 60);
+    }
+  }
+
   function mtDateChanged() { /* no-op now that native input is visible */ }
 
   function mtNextDay(yyyymmdd) {
@@ -1334,6 +1392,10 @@
     var entries  = mtReadEntries();
     if (entries.length === 0) { mtCloseDialog(); return; }
     var startTime = document.getElementById('mt-time-input').value;
+    var endTime   = document.getElementById('mt-end-input').value;
+    var paceRaw   = document.getElementById('mt-pace-input').value;
+    var paceSec   = mtParsePace(paceRaw);
+    var pace      = paceSec != null ? mtFmtPace(paceSec) : (paceRaw || '');
     var shoe      = document.getElementById('mt-shoe-select').value;
     var notes     = document.getElementById('mt-notes-input').value;
 
@@ -1355,6 +1417,8 @@
         // Time + location + weather only attach to single-walk submissions
         if (entries.length === 1) {
           out.start_time = startTime || '';
+          out.end_time   = endTime || '';
+          out.pace       = pace || '';
           if (coords) {
             out.lat = coords.lat;
             out.lon = coords.lon;

@@ -756,26 +756,38 @@
 
   // ---------- data ----------
 
+  var loaderWatchdog = null;
   function loadData() {
+    loaderHidden = false;
     startLoader();
     loadRecentShoes();
+    // Never let a hung/slow cold-start fetch trap the loader forever.
+    if (loaderWatchdog) clearTimeout(loaderWatchdog);
+    loaderWatchdog = setTimeout(stopLoader, 18000);
     MilesTracker.fetchAllEntries(function(rows) {
-      var walk = {};
-      var run  = {};
-      var firstDate = null;
-      rows.forEach(function(r) {
-        if (!r.date) return;
-        var miles = parseFloat(r.miles) || 0;
-        var bucket = (r.type === 'Run') ? run : walk;
-        bucket[r.date] = (bucket[r.date] || 0) + miles;
-        if (!firstDate || r.date < firstDate) firstDate = r.date;
-      });
-      state.dailyWalk = walk;
-      state.dailyRun  = run;
-      state.firstEntryDate = firstDate;
-      renderRecent(rows);
-      render();
-      stopLoader();
+      try {
+        rows = rows || [];
+        var walk = {};
+        var run  = {};
+        var firstDate = null;
+        rows.forEach(function(r) {
+          if (!r.date) return;
+          var miles = parseFloat(r.miles) || 0;
+          var bucket = (r.type === 'Run') ? run : walk;
+          bucket[r.date] = (bucket[r.date] || 0) + miles;
+          if (!firstDate || r.date < firstDate) firstDate = r.date;
+        });
+        state.dailyWalk = walk;
+        state.dailyRun  = run;
+        state.firstEntryDate = firstDate;
+        renderRecent(rows);
+        render();
+      } catch (err) {
+        // a render error must not strand the loader
+        if (window.console) console.error('stats render failed:', err);
+      } finally {
+        stopLoader();
+      }
     });
   }
 

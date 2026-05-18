@@ -266,6 +266,70 @@
     document.querySelectorAll('.mt-nav-link').forEach(function(a) {
       if (a.getAttribute('href') === path) a.classList.add('mt-nav-link-active');
     });
+
+    setupPullToRefresh();
+  }
+
+  // Custom pull-to-refresh for the standalone PWA (iOS doesn't give us one).
+  // Reloads with a cache-busting query so it can't serve the stale page.
+  function setupPullToRefresh() {
+    if (document.getElementById('mt-ptr')) return;
+    var st = document.createElement('style');
+    st.textContent =
+      '#mt-ptr{position:fixed;top:0;left:0;right:0;display:flex;' +
+      'justify-content:center;pointer-events:none;z-index:10002;' +
+      'transform:translateY(-48px);transition:transform .2s ease;}' +
+      '#mt-ptr i{margin-top:12px;width:26px;height:26px;border-radius:50%;' +
+      'border:3px solid rgba(140,140,140,.3);border-top-color:#E89A1F;' +
+      'display:block;}' +
+      '@keyframes mt-ptr-spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(st);
+    var ind = document.createElement('div');
+    ind.id = 'mt-ptr';
+    ind.innerHTML = '<i></i>';
+    document.body.appendChild(ind);
+    var spin = ind.firstChild;
+
+    var startY = 0, pulling = false, dist = 0;
+    var TRIG = 70, MAX = 110;
+
+    function blocked() {
+      var p = document.getElementById('mt-nav-panel');
+      if (p && p.classList.contains('mt-nav-open')) return true;
+      var m = document.querySelector('[aria-modal="true"]');
+      if (m && getComputedStyle(m).display !== 'none') return true;
+      return false;
+    }
+    window.addEventListener('touchstart', function(e) {
+      if (blocked() || window.scrollY > 0 || e.touches.length !== 1) {
+        pulling = false; return;
+      }
+      startY = e.touches[0].clientY; pulling = true; dist = 0;
+    }, { passive: true });
+    window.addEventListener('touchmove', function(e) {
+      if (!pulling) return;
+      dist = e.touches[0].clientY - startY;
+      if (dist <= 0 || window.scrollY > 0) {
+        pulling = false; ind.style.transform = 'translateY(-48px)'; return;
+      }
+      if (dist > 6 && e.cancelable) e.preventDefault();
+      var pull = Math.min(dist, MAX);
+      ind.style.transition = 'none';
+      ind.style.transform = 'translateY(' + (Math.min(pull, TRIG) - 48) + 'px)';
+    }, { passive: false });
+    window.addEventListener('touchend', function() {
+      if (!pulling) return;
+      pulling = false;
+      ind.style.transition = 'transform .2s ease';
+      if (dist >= TRIG) {
+        ind.style.transform = 'translateY(10px)';
+        spin.style.animation = 'mt-ptr-spin .7s linear infinite';
+        var u = location.pathname + '?r=' + Date.now() + location.hash;
+        setTimeout(function() { location.replace(u); }, 150);
+      } else {
+        ind.style.transform = 'translateY(-48px)';
+      }
+    });
   }
 
   if (document.readyState === 'loading') {

@@ -18,7 +18,7 @@
   ];
 
   // Bump this on every release; mirror it in the footer link + changelog.html.
-  var VERSION = 'v4.5.0';
+  var VERSION = 'v4.5.1';
 
   /* ===================== Theme (light / dark) =====================
      Default is dark. The user's choice is remembered in localStorage.

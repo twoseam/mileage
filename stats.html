@@ -740,7 +740,11 @@
       fill.style.width = loaderValue + '%';
     }, 100);
   }
+  var loaderHidden = false;
   function stopLoader() {
+    if (loaderHidden) return;
+    loaderHidden = true;
+    if (loaderWatchdog) { clearTimeout(loaderWatchdog); loaderWatchdog = null; }
     if (loaderTimer) { clearInterval(loaderTimer); loaderTimer = null; }
     var fill = document.querySelector('.mt-loader-fill');
     if (fill) fill.style.width = '100%';

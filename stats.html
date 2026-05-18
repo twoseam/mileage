@@ -987,8 +987,29 @@
     return _gmapsP;
   }
 
-  var rsMap = null;
-  function rsClearMap() { rsMap = null; }  // popup rebuilds the div each open
+  var rsMap = null, rsFull = null, rsPts = null;
+
+  // Brand-styled, chrome-less route map into `el`; resolves with the map.
+  function rsDrawMap(el, pts) {
+    return loadGMaps().then(function(gm) {
+      var m = new gm.Map(el, {
+        disableDefaultUI: true, clickableIcons: false, keyboardShortcuts: false,
+        gestureHandling: 'greedy',
+        backgroundColor: '#ECE0BE', styles: RS_BRAND_STYLE
+      });
+      var path = pts.map(function(p) { return { lat: p[0], lng: p[1] }; });
+      new gm.Polyline({
+        path: path, map: m,
+        strokeColor: '#B02113', strokeOpacity: 0.95, strokeWeight: 4
+      });
+      var b = new gm.LatLngBounds();
+      path.forEach(function(p) { b.extend(p); });
+      m.fitBounds(b, 24);
+      return m;
+    });
+  }
+
+  function rsClearMap() { rsMap = null; rsPts = null; }
 
   function rsLoadRoute(aid) {
     fetch('routes/' + encodeURIComponent(aid) + '.json')
@@ -996,27 +1017,37 @@
       .then(function(pts) {
         var el = document.getElementById('rstats-map');
         if (!el || !pts || pts.length < 2) return;
-        loadGMaps().then(function(gm) {
-          rsMap = new gm.Map(el, {
-            disableDefaultUI: true,      // no zoom/controls — clean map only
-            clickableIcons: false,
-            keyboardShortcuts: false,
-            gestureHandling: 'greedy',   // pinch/drag still works
-            backgroundColor: '#ECE0BE', styles: RS_BRAND_STYLE
-          });
-          var path = pts.map(function(p) { return { lat: p[0], lng: p[1] }; });
-          new gm.Polyline({
-            path: path, map: rsMap,
-            strokeColor: '#B02113', strokeOpacity: 0.95, strokeWeight: 4
-          });
-          var b = new gm.LatLngBounds();
-          path.forEach(function(p) { b.extend(p); });
-          rsMap.fitBounds(b, 24);
-        }).catch(function() {
-          el.style.display = 'none';   // no key / load fail → hide the box
-        });
+        rsPts = pts;
+        rsDrawMap(el, pts)
+          .then(function(m) { rsMap = m; })
+          .catch(function() { el.style.display = 'none'; });
+        var fb = document.getElementById('rstats-map-full');
+        if (fb) fb.addEventListener('click', rsOpenFull);
       })
       .catch(function() { /* no route file for this entry — skip silently */ });
+  }
+
+  function rsOpenFull() {
+    if (!rsPts) return;
+    var ov = document.getElementById('rsfull');
+    var el = document.getElementById('rsfull-map');
+    if (!ov || !el) return;
+    el.innerHTML = '';
+    ov.classList.add('show');
+    rsDrawMap(el, rsPts)
+      .then(function(m) { rsFull = m; })
+      .catch(function() { rsCloseFull(); });
+  }
+  function rsCloseFull() {
+    var ov = document.getElementById('rsfull');
+    var el = document.getElementById('rsfull-map');
+    if (ov) ov.classList.remove('show');
+    if (el) el.innerHTML = '';
+    rsFull = null;
+  }
+  function rsFullOpen() {
+    var ov = document.getElementById('rsfull');
+    return !!(ov && ov.classList.contains('show'));
   }
 
   function openRunStats(idx) {
@@ -1087,6 +1118,7 @@
   }
 
   function closeRunStats() {
+    rsCloseFull();
     document.getElementById('rstats').classList.remove('show');
     rsClearMap();
   }
@@ -1110,8 +1142,12 @@
         if (e.target === modal || e.target.classList.contains('rstats-close')) closeRunStats();
       });
     }
+    var fx = document.getElementById('rsfull-x');
+    if (fx) fx.addEventListener('click', rsCloseFull);
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') closeRunStats();
+      if (e.key !== 'Escape') return;
+      if (rsFullOpen()) rsCloseFull();   // Esc closes fullscreen first
+      else closeRunStats();
     });
   })();
 

@@ -1698,13 +1698,29 @@
     return (v == null || v === '') ? '' : v;
   }
 
+  function mtPqShoeVal(s) {
+    return (s.name || ((s.brand || '') + ' ' + (s.model || '')).trim());
+  }
+
+  // Default a fresh card to the most recently purchased active pair —
+  // almost always the shoe you're currently running in.
+  function mtPqDefaultShoe() {
+    var best = null, bestT = -Infinity;
+    mtPqShoes.forEach(function(s) {
+      var t = s.purchased ? Date.parse(s.purchased) : NaN;
+      if (isNaN(t)) t = -Infinity;
+      if (t >= bestT) { bestT = t; best = s; }
+    });
+    return best ? mtPqShoeVal(best) : '';
+  }
+
   function mtPqShoeTiles(id, selected) {
     if (!mtPqShoes.length) return '<div class="mt-shoe-empty">No shoes — add a pair in the Shoes tab.</div>';
     var th = '<div class="mt-shoe-tile" data-val="" onclick="mtPqPickShoe(\'' + id + '\', this)">' +
                '<div class="mt-shoe-thumb"><span class="ph">&#128683;</span></div>' +
                '<div class="mt-shoe-tile-name">None</div></div>';
     mtPqShoes.forEach(function(s) {
-      var val = (s.name || ((s.brand || '') + ' ' + (s.model || '')).trim());
+      var val = mtPqShoeVal(s);
       var nm  = ((s.brand || '') + ' ' + (s.model || '')).trim() || val;
       var img = s.photo ? '<img src="' + mtEsc(s.photo) + '" alt="">'
                         : '<span class="ph">&#128095;</span>';
@@ -1769,7 +1785,10 @@
     var id    = String(mtPqVal(row, 'Activity Id') || mtPqVal(row, 'activity_id') || '');
     var type  = mtPqGuessType(row);
     var miles = mtPqVal(row, 'Miles');
-    var shoe  = mtPqVal(row, 'Shoe');
+    // Synced workouts never carry a shoe — default to the newest pair so
+    // the common case is one tap (Approve). "None" stays available, just
+    // not pre-selected.
+    var shoe  = mtPqVal(row, 'Shoe') || mtPqDefaultShoe();
     mtPqState[id] = { type: type, shoe: shoe };
 
     function meta(label, v) {

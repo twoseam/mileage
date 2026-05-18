@@ -356,13 +356,13 @@ function _todayStr() {
 }
 
 // Commit a data: URL image into the repo at shoe-photos/<slug>.<ext>.
-// Returns the repo-relative path (served by GitHub Pages), or '' on failure.
+// Returns { path: '<repo path>' | '', err: '' | '<reason>' }.
 function _pushPhoto(slug, dataUrl) {
-  if (!dataUrl || dataUrl.indexOf('data:') !== 0) return '';
+  if (!dataUrl || dataUrl.indexOf('data:') !== 0) return { path: '', err: 'no-photo' };
   var token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
-  if (!token) return '';
+  if (!token) return { path: '', err: 'GITHUB_TOKEN script property is missing' };
   var m = dataUrl.match(/^data:([^;]+);base64,(.*)$/);
-  if (!m) return '';
+  if (!m) return { path: '', err: 'photo not a valid data URL' };
   var ext = m[1] === 'image/png' ? 'png' : 'jpg';
   var path = 'shoe-photos/' + slug + '.' + ext;
   var api = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + path;
@@ -380,9 +380,10 @@ function _pushPhoto(slug, dataUrl) {
       payload: JSON.stringify(payload), muteHttpExceptions: true
     });
     var code = putRes.getResponseCode();
-    return (code >= 200 && code < 300) ? path : '';
-  } catch (err) {
-    return '';
+    if (code >= 200 && code < 300) return { path: path, err: '' };
+    return { path: '', err: 'GitHub ' + code + ': ' + putRes.getContentText().slice(0, 160) };
+  } catch (e) {
+    return { path: '', err: 'request blocked: ' + (e && e.message ? e.message : String(e)) };
   }
 }
 
@@ -405,14 +406,14 @@ function _addShoe(shoe) {
   var sheet = _shoesSheet();
   if (!sheet) return _json({ error: 'Sheet "' + SHOES_SHEET + '" not found' });
 
-  var photoPath = _pushPhoto(_slug(name), shoe.photo);
+  var ph = shoe.photo ? _pushPhoto(_slug(name), shoe.photo) : { path: '', err: '' };
 
   // Cols: Brand, Model, Purchased, Retired, Notes, Photo, Goal, Color
   sheet.appendRow([
     brand, model, shoe.purchased || '', '', '',
-    photoPath, (shoe.goal != null ? shoe.goal : ''), shoe.color || ''
+    ph.path, (shoe.goal != null ? shoe.goal : ''), shoe.color || ''
   ]);
-  return _json({ addedShoe: true, name: name, photo: photoPath });
+  return _json({ addedShoe: true, name: name, photo: ph.path, photoError: ph.err });
 }
 
 // Update an existing pair by name: retire today, change photo, or edit fields.
@@ -434,14 +435,16 @@ function _updateShoe(req) {
     if (req.retire && !r[3]) {
       sheet.getRange(rowIdx, 4).setValue(_todayStr());
     }
+    var photoErr = '';
     if (req.photo) {
-      var path = _pushPhoto(_slug(name), req.photo);
-      if (path) sheet.getRange(rowIdx, 6).setValue(path);
+      var ph = _pushPhoto(_slug(name), req.photo);
+      if (ph.path) sheet.getRange(rowIdx, 6).setValue(ph.path);
+      photoErr = ph.err;
     }
     if (req.goal  != null) sheet.getRange(rowIdx, 7).setValue(req.goal);
     if (req.color != null) sheet.getRange(rowIdx, 8).setValue(req.color);
 
-    return _json({ updatedShoe: true, name: name });
+    return _json({ updatedShoe: true, name: name, photoError: photoErr });
   }
   return _json({ error: 'Shoe "' + name + '" not found' });
 }

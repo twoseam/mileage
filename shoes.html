@@ -333,7 +333,7 @@
 <div class="mt-pill" id="pill"></div>
 
 <footer class="mt-footer">
-  <div class="mt-build">2026.05.17.021</div>
+  <div class="mt-build">2026.05.17.022</div>
 </footer>
 
 <script>
@@ -514,16 +514,17 @@
       color: colorEl.value.trim(),
       goal: goalEl.value ? parseInt(goalEl.value, 10) : '',
       photo: addPhoto
-    }, function(ok, err) {
+    }, function(ok, res) {
       saveBtn.textContent = 'Save pair';
-      if (!ok) { saveBtn.disabled = false; pill(err || 'Could not save — try again', true); return; }
+      if (!ok) { saveBtn.disabled = false; pill(res || 'Could not save — try again', true); return; }
       closeAdd();
       brandEl.value = modelEl.value = colorEl.value = goalEl.value = '';
       addPhoto = null;
       document.getElementById('photo-preview').style.display = 'none';
       document.getElementById('photo-hint').style.display = '';
       dateEl.value = iso;
-      pill('Pair added');
+      pill((res && res.photoError) ? ('Pair saved — photo failed: ' + res.photoError) : 'Pair added',
+           !!(res && res.photoError));
       load();
     });
   });
@@ -562,9 +563,10 @@
     cropToSquare(file, function(url) {
       if (!url) { pill('Could not read that photo'); return; }
       pill('Updating photo…', true);
-      MilesTracker.updateShoe({ name: currentName, photo: url }, function(ok, err) {
+      MilesTracker.updateShoe({ name: currentName, photo: url }, function(ok, res) {
         closeAct();
-        if (!ok) { pill(err || 'Could not update photo', true); return; }
+        if (!ok) { pill(res || 'Could not update photo', true); return; }
+        if (res && res.photoError) { pill('Photo failed: ' + res.photoError, true); return; }
         pill('Photo updated'); load();
       });
     });

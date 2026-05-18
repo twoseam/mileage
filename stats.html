@@ -1035,7 +1035,10 @@
         rsPts = pts;
         rsDrawMap(el, pts)
           .then(function(m) { rsMap = m; })
-          .catch(function() { el.style.display = 'none'; });
+          .catch(function() {
+            var wrap = el.closest('.rstats-map');
+            if (wrap) wrap.style.display = 'none';
+          });
         var fb = document.getElementById('rstats-map-full');
         if (fb) fb.addEventListener('click', rsOpenFull);
       })

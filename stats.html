@@ -374,63 +374,60 @@
       font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
       font-weight: 800; opacity: 0.5; margin: 0 0 0.7rem 2px;
     }
-    .recent-list {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.7rem;
-    }
-    .recent-card {
-      background: #1f1f1f;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 16px;
-      padding: 1.15rem 1.2rem;
-      min-height: 100px;
-      display: flex; flex-direction: column; justify-content: center;
-      gap: 0.4rem;
-      cursor: pointer;
+    .recent-list { display: block; }
+    /* history-style cards (mirrors history.html) */
+    .h-card {
+      display: block; width: 100%; text-align: left;
+      background: #2c2c2e; color: #f3f3f3;
+      border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 18px;
+      padding: 1rem 1.05rem; margin-bottom: 12px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+      cursor: pointer; font-family: inherit;
       -webkit-tap-highlight-color: transparent;
-      transition: transform 0.1s ease, background 0.15s ease;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
     }
-    .recent-card:active { transform: scale(0.985); }
-    @media (hover: hover) and (pointer: fine) {
-      .recent-card:hover { background: #262626; }
+    .h-card:active { transform: scale(0.985); box-shadow: 0 5px 14px rgba(0, 0, 0, 0.4); }
+    .h-head { display: flex; align-items: center; gap: 0.85rem; }
+    .h-thumb {
+      flex: 0 0 56px; width: 56px; height: 56px;
+      border-radius: 12px; overflow: hidden; background: #ECE0BE;
+      display: flex; align-items: center; justify-content: center;
     }
-    .rc-miles {
-      font-size: 1.5rem; font-weight: 900; letter-spacing: 0.01em;
-      line-height: 1; white-space: nowrap;
+    .h-thumb svg { width: 100%; height: 100%; display: block; }
+    .h-thumb .ph { font-size: 1.4rem; opacity: 0.35; }
+    .h-meta { min-width: 0; flex: 1; }
+    .h-date { font-size: 0.74rem; font-weight: 700; opacity: 0.5; }
+    .h-name {
+      font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;
     }
-    .rc-miles span { font-size: 0.58rem; font-weight: 700; opacity: 0.5; margin-left: 3px; }
-    .rc-top { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
-    .rc-date { font-size: 0.98rem; font-weight: 800; letter-spacing: 0.01em; }
-    .rc-type {
-      font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;
-      font-weight: 800; padding: 2px 7px; border-radius: 999px;
-      color: #1a1a1a; background: #8FCFC2;
+    .h-stats {
+      display: flex; gap: 1.4rem;
+      margin-top: 0.85rem; padding-top: 0.85rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.10);
     }
-    .rc-type.run { background: #E7D7A4; }
-    .rc-meta {
-      font-size: 0.7rem; opacity: 0.55; letter-spacing: 0.02em;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      max-width: 100%;
+    .h-stat b {
+      display: block; font-size: 1.05rem; font-weight: 900;
+      letter-spacing: -0.01em; line-height: 1.1;
     }
-    .recent-empty {
-      grid-column: 1 / -1;
-      opacity: 0.45; font-size: 0.85rem; padding: 0.6rem 2px;
+    .h-stat span {
+      font-size: 0.5rem; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase; opacity: 0.45;
     }
+    .recent-empty { opacity: 0.45; font-size: 0.85rem; padding: 0.6rem 2px; }
     .recent-more {
       display: block; width: 100%;
-      margin-top: 0.8rem; padding: 12px;
+      margin-top: 0.4rem; padding: 14px;
       background: transparent;
       border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 12px;
-      color: inherit; font-family: inherit;
+      color: inherit; font-family: inherit; text-align: center;
       font-size: 0.68rem; font-weight: 800;
       letter-spacing: 0.14em; text-transform: uppercase;
-      cursor: pointer; opacity: 0.7;
+      text-decoration: none; cursor: pointer; opacity: 0.7;
       transition: opacity 0.15s ease, background 0.15s ease;
     }
     .recent-more:hover { opacity: 1; }
-    .recent-more[hidden] { display: none; }
 
     /* Run detail popup */
     #rstats {
@@ -653,12 +650,12 @@
     html[data-theme="light"] .chart-gridline span { color: rgba(23, 23, 23, 0.55); }
     html[data-theme="light"] #mt-loader { background: #f1ebdd; }
     html[data-theme="light"] .mt-loader-bar { background: rgba(0, 0, 0, 0.10); }
-    html[data-theme="light"] .recent-card {
-      background: #fffdf7; border-color: rgba(0, 0, 0, 0.08);
+    html[data-theme="light"] .h-card {
+      background: #f6f1e7; color: #1a1a1a;
+      border-color: rgba(0, 0, 0, 0.06);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
     }
-    @media (hover: hover) and (pointer: fine) {
-      html[data-theme="light"] .recent-card:hover { background: #fffbf0; }
-    }
+    html[data-theme="light"] .h-stats { border-top-color: rgba(0, 0, 0, 0.08); }
     html[data-theme="light"] .recent-more { border-color: rgba(0, 0, 0, 0.18); }
 
     @media (min-width: 720px) {
@@ -736,7 +733,7 @@
   <section class="recent">
     <div class="recent-head">Recent</div>
     <div class="recent-list" id="recent-list"></div>
-    <button class="recent-more" id="recent-more" type="button" hidden>Show more</button>
+    <a class="recent-more" id="recent-more" href="history.html">All Activity</a>
   </section>
 
 </div>
@@ -910,54 +907,133 @@
     });
   }
 
+  // ---- history-style cards (mirrors history.html) ----
+  var RC_SHOW = 7;
+  var H_MONTHS = ['January','February','March','April','May','June','July',
+    'August','September','October','November','December'];
+  function hDateParts(d) {
+    var m = String(d || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+    return m ? { y:+m[1], mo:+m[2]-1, da:+m[3] } : null;
+  }
+  function hShortDate(d) {
+    var p = hDateParts(d); if (!p) return String(d || '');
+    return (p.mo + 1) + '/' + p.da + '/' + String(p.y).slice(-2);
+  }
+  function hWeekday(d) {
+    var p = hDateParts(d); if (!p) return '';
+    return new Date(p.y, p.mo, p.da, 12).toLocaleDateString('en-US', { weekday:'long' });
+  }
+  function hTitle(r) {
+    var t = String(r.start_time || '').match(/^(\d{1,2}):/);
+    var part = '';
+    if (t) {
+      var h = +t[1];
+      part = h < 12 ? 'Morning' : (h < 17 ? 'Afternoon' : (h < 21 ? 'Evening' : 'Night'));
+    }
+    return [hWeekday(r.date), part, (r.type === 'Run' ? 'Run' : 'Walk')]
+      .filter(Boolean).join(' ');
+  }
+  function hKey(r) {
+    if (r.activity_id) return String(r.activity_id);
+    return [r.date, r.miles, r.start_time || ''].join('|');
+  }
+  function hPad2(n) { return String(n).padStart(2, '0'); }
+  function hDuration(r) {
+    if (r.duration) return String(r.duration);
+    var s = String(r.start_time || '').match(/^(\d{1,2}):(\d{2})/);
+    var e = String(r.end_time || '').match(/^(\d{1,2}):(\d{2})/);
+    if (!s || !e) return '';
+    var a = +s[1]*60 + +s[2], b = +e[1]*60 + +e[2];
+    if (b < a) b += 1440;
+    var mins = b - a;
+    return Math.floor(mins/60) ? Math.floor(mins/60) + ':' + hPad2(mins%60) + ':00'
+                               : mins + ':00';
+  }
+  function hThumbSvg(pts) {
+    var minLa=1e9,maxLa=-1e9,minLo=1e9,maxLo=-1e9;
+    pts.forEach(function(p){
+      if(p[0]<minLa)minLa=p[0]; if(p[0]>maxLa)maxLa=p[0];
+      if(p[1]<minLo)minLo=p[1]; if(p[1]>maxLo)maxLo=p[1];
+    });
+    var spanLa=(maxLa-minLa)||1e-6, spanLo=(maxLo-minLo)||1e-6;
+    var span=Math.max(spanLa,spanLo), pad=8, size=100, scale=(size-pad*2)/span;
+    var offX=(size-spanLo*scale)/2, offY=(size-spanLa*scale)/2;
+    var d=pts.map(function(p,i){
+      var x=offX+(p[1]-minLo)*scale, y=offY+(maxLa-p[0])*scale;
+      return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);
+    }).join(' ');
+    return '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">' +
+      '<path d="'+d+'" fill="none" stroke="#B02113" stroke-width="4" ' +
+      'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  var hThumbIO = null;
+  function hWireThumbs(box) {
+    if (!('IntersectionObserver' in window)) return;
+    if (!hThumbIO) {
+      hThumbIO = new IntersectionObserver(function(ents) {
+        ents.forEach(function(en) {
+          if (!en.isIntersecting) return;
+          var t = en.target; hThumbIO.unobserve(t);
+          var aid = t.getAttribute('data-aid'); if (!aid) return;
+          fetch('routes/' + encodeURIComponent(aid) + '.json')
+            .then(function(res){ if(!res.ok) throw 0; return res.json(); })
+            .then(function(pts){ if(pts && pts.length>=2) t.innerHTML = hThumbSvg(pts); })
+            .catch(function(){});
+        });
+      }, { rootMargin: '200px' });
+    }
+    [].forEach.call(box.querySelectorAll('.h-thumb[data-aid]'), function(b) {
+      hThumbIO.observe(b);
+    });
+  }
+
   function rcDrawCards() {
     var box = document.getElementById('recent-list');
-    var more = document.getElementById('recent-more');
     if (!box) return;
-
     if (!rcRecent.length) {
       box.innerHTML = '<div class="recent-empty">No entries yet.</div>';
-      if (more) more.hidden = true;
       return;
     }
-
-    box.innerHTML = rcRecent.slice(0, rcShown).map(function(r, idx) {
-      var isRun = r.type === 'Run';
-      var miles = (parseFloat(r.miles) || 0).toFixed(1);
-      return '' +
-        '<div class="recent-card" data-idx="' + idx + '" role="button" tabindex="0">' +
-          '<div class="rc-miles">' + miles + '<span>mi</span></div>' +
-          '<div class="rc-top">' +
-            '<span class="rc-date">' + rcEsc(rcFmtDate(r.date)) + '</span>' +
-            '<span class="rc-type' + (isRun ? ' run' : '') + '">' +
-              (isRun ? 'Run' : 'Walk') + '</span>' +
-          '</div>' +
-        '</div>';
+    box.innerHTML = rcRecent.slice(0, RC_SHOW).map(function(r) {
+      var aid = r.activity_id ? rcEsc(r.activity_id) : '';
+      var thumb = aid
+        ? '<div class="h-thumb" data-aid="' + aid + '"><span class="ph">&#9899;</span></div>'
+        : '<div class="h-thumb"><span class="ph">' +
+          (r.type === 'Run' ? '&#127939;' : '&#128694;') + '</span></div>';
+      return '<button class="h-card" type="button" onclick="rcOpen(this)" ' +
+          'data-key="' + rcEsc(hKey(r)) + '">' +
+        '<div class="h-head">' + thumb +
+          '<div class="h-meta">' +
+            '<div class="h-date">' + rcEsc(hShortDate(r.date)) + '</div>' +
+            '<div class="h-name">' + rcEsc(hTitle(r)) + '</div>' +
+          '</div></div>' +
+        '<div class="h-stats">' +
+          '<div class="h-stat"><b>' + (r.miles != null ? r.miles.toFixed(2) : '—') +
+            '</b><span>Miles</span></div>' +
+          '<div class="h-stat"><b>' + (r.pace ? rcEsc(r.pace) : '—') +
+            '</b><span>Avg Pace</span></div>' +
+          '<div class="h-stat"><b>' + (hDuration(r) || '—') +
+            '</b><span>Time</span></div>' +
+        '</div></button>';
     }).join('');
-
-    if (more) more.hidden = rcShown >= rcRecent.length;
+    hWireThumbs(box);
   }
+
+  window.rcOpen = function(btn) {
+    location.href = 'activity.html?id=' + encodeURIComponent(btn.getAttribute('data-key'));
+  };
 
   function renderRecent(rows) {
     rcRecent = rows
       .map(function(r, i) { return { r: r, i: i }; })
       .sort(function(a, b) {
         if (a.r.date !== b.r.date) return a.r.date < b.r.date ? 1 : -1;
-        return b.i - a.i; // same day: later sheet row = logged later
+        return b.i - a.i;
       })
-      .slice(0, RC_MAX)
+      .slice(0, RC_SHOW)
       .map(function(x) { return x.r; });
-    rcShown = 4;
     rcDrawCards();
   }
-
-  (function wireRecentMore() {
-    var more = document.getElementById('recent-more');
-    if (more) more.addEventListener('click', function() {
-      rcShown = Math.min(rcShown + RC_PAGE, rcRecent.length);
-      rcDrawCards();
-    });
-  })();
 
   // ---------- run detail popup ----------
 

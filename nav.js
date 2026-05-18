@@ -45,7 +45,7 @@
   // --- light override layer (shared chrome only; per-page surfaces
   //     are overridden in each page's own stylesheet) ---
   var LIGHT_BG     = '#f1ebdd'; // warm cream page background
-  var LIGHT_TEXT   = '#252525';
+  var LIGHT_TEXT   = '#171717'; // near-black so opacity-faded subtle text still reads on cream
   var LIGHT_SURF   = '#fffdf7'; // cards / nav panel
   var LIGHT_BORDER = 'rgba(0, 0, 0, 0.10)';
   var LIGHT_ACCENT = '#C77A0C'; // mustard deepened for contrast on cream

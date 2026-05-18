@@ -313,6 +313,22 @@
       transition: opacity 0.2s ease;
     }
     .mt-footer .mt-ver:hover { opacity: 0.7; }
+
+    /* ---------- LIGHT MODE (additive; dark rules above untouched) ---------- */
+    html[data-theme="light"] .wordmark-year  { color: #0E7A8C; }
+    html[data-theme="light"] .wordmark-title { color: #C77A0C; }
+    html[data-theme="light"] .shoe-card {
+      background: #fffdf7; border-color: rgba(0, 0, 0, 0.08);
+    }
+    html[data-theme="light"] .shoe-photo { background: #ece4d2; }
+    html[data-theme="light"] .shoe-color { color: #C77A0C; }
+    html[data-theme="light"] .wear-track { background: rgba(0, 0, 0, 0.10); }
+    html[data-theme="light"] .btn-ghost {
+      color: #252525; border-color: rgba(0, 0, 0, 0.20);
+    }
+    html[data-theme="light"] #mt-loader { background: #f1ebdd; }
+    html[data-theme="light"] .mt-loader-bar { background: rgba(0, 0, 0, 0.10); }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.001ms !important;

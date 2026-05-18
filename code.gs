@@ -814,16 +814,66 @@ function _pendingSheet() {
   return sh;
 }
 
-// Pending rows as objects for the approval queue.
+// Duration cells get coerced by Sheets into a time-of-day Date (epoch
+// 1899) just like Pace. Normalize a Date/number/string to "m:ss" or
+// "h:mm:ss" so the queue shows "21:00", not "1899-12-30T06:21:00Z".
+function _fmtDur(v, tz) {
+  if (v === '' || v == null) return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    tz = tz || SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+    var hh = parseInt(Utilities.formatDate(v, tz, 'H'), 10) || 0;
+    var mm = parseInt(Utilities.formatDate(v, tz, 'm'), 10) || 0;
+    var ss = parseInt(Utilities.formatDate(v, tz, 's'), 10) || 0;
+    return hh > 0
+      ? hh + ':' + ('0' + mm).slice(-2) + ':' + ('0' + ss).slice(-2)
+      : mm + ':' + ('0' + ss).slice(-2);
+  }
+  if (typeof v === 'number') {
+    var secs = Math.round(v * 86400);
+    var h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+    return h > 0 ? h + ':' + ('0' + m).slice(-2) + ':' + ('0' + s).slice(-2)
+                 : m + ':' + ('0' + s).slice(-2);
+  }
+  return String(v).trim();
+}
+
+// Pace written like "8:58" gets read back by Sheets as an 8h58m clock
+// time. _fmtPace (used by Entries) would turn that into "538:00", so the
+// Pending queue uses its own reader: a Date cell formats straight back
+// to "H:mm" — the original minutes:seconds-per-mile.
+function _fmtPaceCell(v, tz) {
+  if (v === '' || v == null) return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    tz = tz || SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+    return Utilities.formatDate(v, tz, 'H:mm');
+  }
+  if (typeof v === 'number') {
+    var secs = Math.round(v * 86400);
+    return Math.floor(secs / 60) + ':' + ('0' + (secs % 60)).slice(-2);
+  }
+  return String(v).trim();
+}
+
+// Pending rows as objects for the approval queue. Time-ish columns are
+// run through the same formatters as _readEntries so the front end never
+// sees a raw 1899-epoch Date.
 function _pendingRows() {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PENDING_SHEET);
   if (!sh || sh.getLastRow() < 2) return [];
   var d = sh.getDataRange().getValues();
+  var tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
   var h = d[0].map(function(x) { return String(x || '').trim(); });
   var out = [];
   for (var i = 1; i < d.length; i++) {
     var o = {};
-    for (var j = 0; j < h.length; j++) o[h[j]] = d[i][j];
+    for (var j = 0; j < h.length; j++) {
+      var key = h[j], lk = key.toLowerCase(), val = d[i][j];
+      if (lk === 'date')                            val = _fmtDate(val);
+      else if (lk === 'start time' || lk === 'end time') val = _fmtTime(val);
+      else if (lk === 'pace')                       val = _fmtPaceCell(val, tz);
+      else if (lk === 'duration')                   val = _fmtDur(val, tz);
+      o[key] = val;
+    }
     out.push(o);
   }
   return out;

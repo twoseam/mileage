@@ -809,6 +809,17 @@
       cursor: pointer; padding: 15px 14px;
     }
     .mt-pq-reject:hover { opacity: 0.7; }
+    .mt-pq-status {
+      font-size: 0.78rem; opacity: 0.45; padding: 4px 2px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .mt-pq-retry {
+      background: none; border: 1px solid currentColor; color: inherit;
+      border-radius: 8px; padding: 6px 14px; cursor: pointer;
+      font-family: inherit; font-size: 0.62rem; font-weight: 800;
+      letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8;
+    }
+    .mt-pq-retry:hover { opacity: 1; }
 
     /* ---------- MANUAL ENTRY (collapsed behind one button) ---------- */
     #mt-manual-toggle {
@@ -1861,9 +1872,25 @@
     });
   };
 
+  var mtPqShownIds = null;   // ids currently on screen (null = never rendered)
+
+  function mtPqStatus(msg, withRetry) {
+    document.getElementById('mt-pending').innerHTML =
+      '<div class="mt-pq-status">' + mtEsc(msg) +
+      (withRetry ? ' <button type="button" class="mt-pq-retry" ' +
+        'onclick="mtRenderPending()">Retry</button>' : '') + '</div>';
+  }
+
   function mtRenderPendingRows(rows) {
     var wrap = document.getElementById('mt-pending');
-    if (!rows || !rows.length) { wrap.innerHTML = ''; return; }
+    if (!rows || !rows.length) { wrap.innerHTML = ''; mtPqShownIds = ''; return; }
+    // Don't blow away cards (and any half-typed notes / shoe pick) if the
+    // exact same set is already on screen — only re-render on a change.
+    var ids = rows.map(function(r) {
+      return String(r['Activity Id'] || r.activity_id || '');
+    }).sort().join(',');
+    if (ids === mtPqShownIds && wrap.querySelector('.mt-pq-card')) return;
+    mtPqShownIds = ids;
     var html = '<div class="mt-pq-head">To review &middot; ' + rows.length +
                (rows.length === 1 ? ' workout' : ' workouts') + '</div>';
     rows.forEach(function(r) { html += mtPqCard(r); });
@@ -1883,12 +1910,41 @@
   ];
 
   function mtRenderPending() {
+    var wrap = document.getElementById('mt-pending');
+    var hasCards = !!wrap.querySelector('.mt-pq-card');
+    // Only show "checking" if there's nothing useful on screen already —
+    // a background refresh shouldn't flash the queue away.
+    if (!hasCards) mtPqStatus('Checking for new workouts…', false);
     MilesTracker.fetchShoes(function(shoes) {
       mtPqShoes = (shoes || []).filter(function(s) { return !s.retired; });
       if (MT_DEMO) { mtRenderPendingRows(MT_DEMO_ROWS); return; }
-      MilesTracker.fetchPending(function(rows) { mtRenderPendingRows(rows); });
+      MilesTracker.fetchPending(function(rows, ok) {
+        if (!ok) {
+          // Fetch failed (cold start / offline). Keep any existing cards;
+          // otherwise show a retry instead of a silent blank.
+          if (!wrap.querySelector('.mt-pq-card')) {
+            mtPqStatus("Couldn't reach the tracker.", true);
+          }
+          return;
+        }
+        mtRenderPendingRows(rows);
+      });
     });
   }
+
+  // Treat it like an inbox: re-check whenever the app comes back to the
+  // foreground, not just on a cold page load.
+  var mtPqLastCheck = 0;
+  function mtPqMaybeRefresh() {
+    if (document.visibilityState === 'hidden') return;
+    var now = Date.now();
+    if (now - mtPqLastCheck < 5000) return;   // debounce rapid focus events
+    mtPqLastCheck = now;
+    mtRenderPending();
+  }
+  document.addEventListener('visibilitychange', mtPqMaybeRefresh);
+  window.addEventListener('focus', mtPqMaybeRefresh);
+  window.addEventListener('pageshow', mtPqMaybeRefresh);
 
   MilesTracker.init();
 

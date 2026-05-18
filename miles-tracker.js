@@ -157,11 +157,24 @@
     },
 
     // Auto-synced workouts waiting for review. Not cached — the queue
-    // must always reflect the live Pending tab.
+    // must always reflect the live Pending tab. Retries once on a slow
+    // Apps Script cold start, then reports failure distinctly from
+    // "empty" so the UI can keep showing whatever's already on screen.
+    // callback(rows, ok)  — ok=false means the fetch failed, not empty.
     fetchPending: function(callback) {
-      _get('pending')
-        .then(function(d) { callback(d && d.rows ? d.rows : []); })
-        .catch(function() { callback([]); });
+      function attempt(triesLeft) {
+        _get('pending')
+          .then(function(d) {
+            if (d && d.rows) callback(d.rows, true);
+            else if (d && !d.error) callback([], true);
+            else throw new Error('pending fetch error');
+          })
+          .catch(function() {
+            if (triesLeft > 0) setTimeout(function() { attempt(triesLeft - 1); }, 1500);
+            else callback(null, false);
+          });
+      }
+      attempt(1);
     },
 
     // req: { activity_id, shoe?, notes?, type?, miles? } — callback(ok, payloadOrError)

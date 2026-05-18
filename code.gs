@@ -579,6 +579,62 @@ function _pushPhoto(slug, dataUrl) {
 // read POST headers; HAE can't inject our secret into its body).
 
 // Commit arbitrary UTF-8 text to the repo (generalized _pushPhoto).
+// Open-Meteo WMO code -> the same words the manual logger uses.
+function _weatherWord(code) {
+  if (code === 0) return 'Clear';
+  if (code <= 3) return 'Cloudy';
+  if (code === 45 || code === 48) return 'Fog';
+  if (code >= 51 && code <= 57) return 'Drizzle';
+  if (code >= 61 && code <= 67) return 'Rain';
+  if (code >= 71 && code <= 77) return 'Snow';
+  if (code >= 80 && code <= 82) return 'Showers';
+  if (code >= 85 && code <= 86) return 'Snow showers';
+  if (code >= 95) return 'Thunder';
+  return '';
+}
+
+// First [lat,lon] of a committed route, read from the public repo.
+function _routeStart(id) {
+  if (!id) return null;
+  try {
+    var url = 'https://raw.githubusercontent.com/' + GH_OWNER + '/' +
+              GH_REPO + '/' + GH_BRANCH + '/routes/' +
+              encodeURIComponent(id) + '.json';
+    var r = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (r.getResponseCode() !== 200) return null;
+    var pts = JSON.parse(r.getContentText());
+    if (pts && pts.length && pts[0].length >= 2) return [pts[0][0], pts[0][1]];
+  } catch (e) {}
+  return null;
+}
+
+// Historical hourly weather for a point + date/hour. Synced workouts are
+// fresh, so the forecast endpoint's past_days window covers them.
+function _histWeather(lat, lon, dateStr, hh) {
+  try {
+    var d = new Date(dateStr + 'T12:00:00');
+    if (isNaN(d.getTime())) return null;
+    var daysAgo = Math.round((Date.now() - d.getTime()) / 86400000);
+    var past = Math.min(92, Math.max(1, daysAgo + 1));
+    var url = 'https://api.open-meteo.com/v1/forecast' +
+      '?latitude=' + lat + '&longitude=' + lon +
+      '&hourly=temperature_2m,weather_code' +
+      '&temperature_unit=fahrenheit&timezone=auto' +
+      '&past_days=' + past + '&forecast_days=1';
+    var r = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (r.getResponseCode() !== 200) return null;
+    var data = JSON.parse(r.getContentText());
+    if (!data || !data.hourly || !data.hourly.time) return null;
+    var target = dateStr + 'T' + ('0' + (parseInt(hh, 10) || 12)).slice(-2) + ':00';
+    var idx = data.hourly.time.indexOf(target);
+    if (idx === -1) return null;
+    return {
+      temp_f:  Math.round(data.hourly.temperature_2m[idx]),
+      weather: _weatherWord(data.hourly.weather_code[idx])
+    };
+  } catch (e) { return null; }
+}
+
 function _pushText(path, text, message) {
   var token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
   if (!token) return 'GITHUB_TOKEN missing';
@@ -915,6 +971,28 @@ function _approvePending(req) {
   if (req.type  != null) setLabel('type', req.type);
   if (req.miles != null && !isNaN(parseFloat(req.miles)))
     setLabel('miles', parseFloat(req.miles));
+
+  // Synced workouts carry no weather. Backfill it from the route's start
+  // point + the workout's date/hour — no input needed from the user.
+  var curTemp = '', curWx = '', dStr = '', tStr = '';
+  for (var vk in vals) {
+    var vlk = vk.toLowerCase();
+    if (vlk === 'temp' || vlk === 'temp_f') curTemp = vals[vk];
+    else if (vlk === 'weather')             curWx = vals[vk];
+    else if (vlk === 'date')                dStr = String(vals[vk]).slice(0, 10);
+    else if (vlk === 'start time')          tStr = String(vals[vk]);
+  }
+  if ((curTemp === '' || curTemp == null) && (curWx === '' || curWx == null)) {
+    var pt = _routeStart(id);
+    if (pt) {
+      var hh = (tStr.match(/(\d{1,2}):/) || [, '12'])[1];
+      var wx = _histWeather(pt[0], pt[1], dStr, hh);
+      if (wx) {
+        if (wx.temp_f != null) setLabel('temp', wx.temp_f);
+        if (wx.weather)        setLabel('weather', wx.weather);
+      }
+    }
+  }
 
   // append to Entries in ITS header order
   var esh = ss.getSheetByName(ENTRIES_SHEET);

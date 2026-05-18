@@ -20,6 +20,13 @@ var SECRET        = '101685910168591016859';
 var ENTRIES_SHEET = 'Entries';
 var SHOES_SHEET   = 'Shoes';
 
+// Shoe photos are committed into the GitHub Pages repo so they're served
+// from the site itself. Token lives in Script Properties (key GITHUB_TOKEN),
+// never in source. File path: shoe-photos/<slug>.<ext>
+var GH_OWNER  = 'twoseam';
+var GH_REPO   = 'mileage';
+var GH_BRANCH = 'main';
+
 // ---------- low-level helpers ----------
 
 function _json(obj) {
@@ -86,6 +93,7 @@ function _readShoes() {
     var r = data[i];
     if (!r[0] && !r[1]) continue;
     var name = ((r[0] || '') + ' ' + (r[1] || '')).trim();
+    // Cols: Brand, Model, Purchased, Retired, Notes, Photo, Goal, Color
     shoes.push({
       brand:     r[0] || '',
       model:     r[1] || '',
@@ -93,7 +101,9 @@ function _readShoes() {
       purchased: _fmtDate(r[2]),
       retired:   _fmtDate(r[3]),
       notes:     r[4] || '',
-      photo:     r[5] || ''
+      photo:     r[5] || '',
+      goal:      (typeof r[6] === 'number' && r[6] > 0) ? r[6] : (parseFloat(r[6]) || 0),
+      color:     r[7] || ''
     });
   }
   return shoes;
@@ -248,10 +258,14 @@ function _shoesWithLifetime(allRows) {
   return shoes.map(function(s) {
     return {
       name:          s.name,
+      brand:         s.brand,
+      model:         s.model,
       purchased:     s.purchased,
       retired:       s.retired,
       notes:         s.notes,
       photo:         s.photo,
+      goal:          s.goal,
+      color:         s.color,
       lifetimeMiles: milesByShoe[s.name] || 0
     };
   });

@@ -482,9 +482,19 @@
       letter-spacing: 0.02em; text-align: center;
     }
     .rstats-map {
+      position: relative;
       height: 220px; width: 100%;
       margin-top: 1rem; border-radius: 14px;
       overflow: hidden; background: rgba(0, 0, 0, 0.06);
+    }
+    .rstats-map-open {
+      position: absolute; right: 8px; bottom: 8px; z-index: 5;
+      background: #B02113; color: #fff;
+      font-size: 0.62rem; font-weight: 800;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      text-decoration: none;
+      padding: 7px 10px; border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
     }
     .rstats-row {
       display: flex; justify-content: space-between; gap: 1rem;
@@ -939,6 +949,21 @@
     return _gmapsP;
   }
 
+  // Google Maps consumer Directions URL from ~8 sampled track points
+  // (walking). It snaps to roads/paths — an approximation of the real track.
+  function gmDirUrl(pts) {
+    var n = pts.length, want = 8, wp = [];
+    for (var i = 1; i <= want; i++) {
+      wp.push(pts[Math.round(i * (n - 1) / (want + 1))]);
+    }
+    var f = function(p) { return p[0].toFixed(5) + ',' + p[1].toFixed(5); };
+    return 'https://www.google.com/maps/dir/?api=1' +
+           '&origin=' + f(pts[0]) +
+           '&destination=' + f(pts[n - 1]) +
+           '&waypoints=' + wp.map(f).join('|') +
+           '&travelmode=walking';
+  }
+
   var rsMap = null;
   function rsClearMap() { rsMap = null; }  // popup rebuilds the div each open
 
@@ -962,6 +987,14 @@
           var b = new gm.LatLngBounds();
           path.forEach(function(p) { b.extend(p); });
           rsMap.fitBounds(b, 24);
+          // tap the map (not drag) OR the corner button → open in Google Maps
+          var url = gmDirUrl(pts);
+          rsMap.addListener('click', function() { window.open(url, '_blank'); });
+          var btn = document.createElement('a');
+          btn.className = 'rstats-map-open';
+          btn.href = url; btn.target = '_blank'; btn.rel = 'noopener';
+          btn.textContent = 'Open in Google Maps ↗';
+          el.appendChild(btn);
         }).catch(function() {
           el.style.display = 'none';   // no key / load fail → hide the box
         });

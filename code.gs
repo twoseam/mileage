@@ -443,7 +443,12 @@ function doGet(e) {
     var allRows = _readEntries();
     return _json({
       rows: allRows.map(function(r) {
-        return { date: r.date, miles: r.miles, type: r.type, shoe: r.shoe };
+        return {
+          date: r.date, miles: r.miles, type: r.type, shoe: r.shoe,
+          pace: r.pace, start_time: r.start_time, end_time: r.end_time,
+          temp_f: r.temp_f, weather: r.weather, notes: r.notes,
+          lat: r.lat, lon: r.lon
+        };
       })
     });
   }

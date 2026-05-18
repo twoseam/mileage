@@ -368,6 +368,117 @@
       opacity: 1;
     }
 
+    /* Recent runs list (under the chart) */
+    .recent { margin-top: 1.6rem; }
+    .recent-head {
+      font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+      font-weight: 800; opacity: 0.5; margin: 0 0 0.7rem 2px;
+    }
+    .recent-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    .recent-card {
+      background: #1f1f1f;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 2.1rem 1.4rem;
+      min-height: 132px;
+      display: flex; align-items: center; gap: 1.1rem;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s ease, background 0.15s ease;
+    }
+    .recent-card:active { transform: scale(0.985); }
+    @media (hover: hover) and (pointer: fine) {
+      .recent-card:hover { background: #262626; }
+    }
+    .rc-miles {
+      font-size: 2.4rem; font-weight: 900; letter-spacing: 0.01em;
+      line-height: 1; white-space: nowrap; flex: 0 0 auto;
+    }
+    .rc-miles span { font-size: 0.7rem; font-weight: 700; opacity: 0.5; margin-left: 4px; }
+    .rc-main { flex: 1; min-width: 0; text-align: right; }
+    .rc-top {
+      display: flex; align-items: baseline; justify-content: flex-end;
+      gap: 0.55rem;
+    }
+    .rc-date { font-size: 1.05rem; font-weight: 800; letter-spacing: 0.01em; }
+    .rc-type {
+      font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;
+      font-weight: 800; padding: 2px 7px; border-radius: 999px;
+      color: #1a1a1a; background: #8FCFC2;
+    }
+    .rc-type.run { background: #E7D7A4; }
+    .rc-meta {
+      margin-top: 4px; font-size: 0.72rem; opacity: 0.55;
+      letter-spacing: 0.02em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .recent-empty { opacity: 0.45; font-size: 0.85rem; padding: 0.6rem 2px; }
+
+    /* Run detail popup */
+    #rstats {
+      display: none;
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0, 0, 0, 0.6);
+      -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center; padding: 1.5rem;
+    }
+    #rstats.show { display: flex; }
+    .rstats-card {
+      background: #f6f1e7; color: #1a1a1a;
+      width: 100%; max-width: 384px;
+      border-radius: 22px;
+      padding: 1.6rem 1.5rem 1.35rem;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      max-height: 85vh; overflow-y: auto;
+    }
+    .rstats-top {
+      display: flex; align-items: baseline; gap: 0.6rem;
+      margin-bottom: 0.15rem;
+    }
+    .rstats-title { font-size: 1.35rem; font-weight: 900; letter-spacing: 0.01em; }
+    .rstats-type {
+      font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;
+      font-weight: 800; padding: 2px 7px; border-radius: 999px;
+      color: #1a1a1a; background: #8FCFC2;
+    }
+    .rstats-type.run { background: #E7D7A4; }
+    .rstats-hero {
+      font-size: 2.6rem; font-weight: 900; letter-spacing: 0.01em;
+      margin: 0.4rem 0 1rem;
+    }
+    .rstats-hero span { font-size: 0.85rem; font-weight: 700; opacity: 0.5; margin-left: 5px; }
+    .rstats-row {
+      display: flex; justify-content: space-between; gap: 1rem;
+      padding: 0.6rem 0;
+      border-top: 1px solid rgba(0, 0, 0, 0.10);
+      font-size: 0.92rem;
+    }
+    .rstats-row .k {
+      text-transform: uppercase; letter-spacing: 0.08em;
+      font-size: 0.62rem; font-weight: 800; opacity: 0.5;
+      align-self: center;
+    }
+    .rstats-row .v { font-weight: 700; text-align: right; }
+    .rstats-row .v a { color: #016074; text-decoration: none; font-weight: 800; }
+    .rstats-notes {
+      margin-top: 0.5rem; padding-top: 0.7rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.10);
+      font-size: 0.9rem; line-height: 1.5; opacity: 0.8;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .rstats-close {
+      display: block; width: 100%;
+      margin-top: 1.3rem;
+      padding: 13px;
+      border: none; border-radius: 12px;
+      background: #E89A1F; color: #1a1a1a;
+      font-family: inherit; font-size: 0.8rem; font-weight: 900;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #b9760f;
+    }
+    .rstats-close:active { transform: translateY(2px); box-shadow: 0 2px 0 #b9760f; }
+
     /* Loader */
     #mt-loader {
       position: fixed;
@@ -435,6 +546,12 @@
     html[data-theme="light"] .chart-gridline span { color: rgba(23, 23, 23, 0.55); }
     html[data-theme="light"] #mt-loader { background: #f1ebdd; }
     html[data-theme="light"] .mt-loader-bar { background: rgba(0, 0, 0, 0.10); }
+    html[data-theme="light"] .recent-card {
+      background: #fffdf7; border-color: rgba(0, 0, 0, 0.08);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      html[data-theme="light"] .recent-card:hover { background: #fffbf0; }
+    }
 
     @media (min-width: 720px) {
       .chart-bars { height: 320px; gap: 5px; }
@@ -508,6 +625,15 @@
     <button class="zoom-btn"           data-zoom="week" >Week</button>
   </div>
 
+  <section class="recent">
+    <div class="recent-head">Recent</div>
+    <div class="recent-list" id="recent-list"></div>
+  </section>
+
+</div>
+
+<div id="rstats" aria-modal="true" role="dialog">
+  <div class="rstats-card" id="rstats-card"></div>
 </div>
 
 <footer class="mt-footer">
@@ -595,10 +721,163 @@
       state.dailyWalk = walk;
       state.dailyRun  = run;
       state.firstEntryDate = firstDate;
+      renderRecent(rows);
       render();
       stopLoader();
     });
   }
+
+  // ---------- recent list (last 7 logged sessions, newest first) ----------
+
+  function rcFmtDate(d) {
+    var p = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || '');
+    if (!p) return d || '';
+    var dt = new Date(+p[1], +p[2] - 1, +p[3], 12);
+    return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function rcFmt12(t) {
+    var m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''));
+    if (!m) return '';
+    var h = +m[1], ap = h < 12 ? 'AM' : 'PM', hh = h % 12;
+    if (hh === 0) hh = 12;
+    return hh + ':' + m[2] + ' ' + ap;
+  }
+  function rcTime(s, e) {
+    s = rcFmt12(s); e = rcFmt12(e);
+    if (s && e) {
+      return (s.slice(-2) === e.slice(-2)) ? (s.slice(0, -3) + '–' + e) : (s + ' – ' + e);
+    }
+    return s || e || '';
+  }
+  function rcEsc(x) {
+    return String(x).replace(/[&<>"]/g, function(c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  var rcRecent = [];
+
+  function renderRecent(rows) {
+    var box = document.getElementById('recent-list');
+    if (!box) return;
+    rcRecent = rows
+      .map(function(r, i) { return { r: r, i: i }; })
+      .sort(function(a, b) {
+        if (a.r.date !== b.r.date) return a.r.date < b.r.date ? 1 : -1;
+        return b.i - a.i; // same day: later sheet row = logged later
+      })
+      .slice(0, 7)
+      .map(function(x) { return x.r; });
+
+    if (!rcRecent.length) {
+      box.innerHTML = '<div class="recent-empty">No entries yet.</div>';
+      return;
+    }
+
+    box.innerHTML = rcRecent.map(function(r, idx) {
+      var isRun = r.type === 'Run';
+      var miles = (parseFloat(r.miles) || 0).toFixed(1);
+      var meta = [];
+      if (r.pace) meta.push(rcEsc(r.pace) + '/mi');
+      var t = rcTime(r.start_time, r.end_time);
+      if (t) meta.push(t);
+      return '' +
+        '<div class="recent-card" data-idx="' + idx + '" role="button" tabindex="0">' +
+          '<div class="rc-miles">' + miles + '<span>mi</span></div>' +
+          '<div class="rc-main">' +
+            '<div class="rc-top">' +
+              '<span class="rc-date">' + rcEsc(rcFmtDate(r.date)) + '</span>' +
+              '<span class="rc-type' + (isRun ? ' run' : '') + '">' +
+                (isRun ? 'Run' : 'Walk') + '</span>' +
+            '</div>' +
+            (meta.length ? '<div class="rc-meta">' + meta.join(' · ') + '</div>' : '') +
+          '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  // ---------- run detail popup ----------
+
+  function rcRow(k, v) {
+    if (v === '' || v == null) return '';
+    return '<div class="rstats-row"><span class="k">' + k +
+           '</span><span class="v">' + v + '</span></div>';
+  }
+
+  function openRunStats(idx) {
+    var r = rcRecent[idx];
+    if (!r) return;
+    var isRun = r.type === 'Run';
+    var miles = (parseFloat(r.miles) || 0).toFixed(1);
+
+    var dur = '';
+    var sm = /^(\d{1,2}):(\d{2})/.exec(String(r.start_time || ''));
+    var em = /^(\d{1,2}):(\d{2})/.exec(String(r.end_time || ''));
+    if (sm && em) {
+      var mins = (+em[1] * 60 + +em[2]) - (+sm[1] * 60 + +sm[2]);
+      if (mins > 0) {
+        var hh = Math.floor(mins / 60), mm = mins % 60;
+        dur = (hh ? hh + 'h ' : '') + mm + 'm';
+      }
+    }
+    var loc = '';
+    if (r.lat != null && r.lon != null && r.lat !== '' && r.lon !== '') {
+      var ll = (+r.lat).toFixed(4) + ', ' + (+r.lon).toFixed(4);
+      loc = '<a href="https://www.openstreetmap.org/?mlat=' + r.lat + '&mlon=' + r.lon +
+            '#map=15/' + r.lat + '/' + r.lon + '" target="_blank" rel="noopener">' + ll + '</a>';
+    }
+
+    document.getElementById('rstats-card').innerHTML = '' +
+      '<div class="rstats-top">' +
+        '<span class="rstats-title">' + rcEsc(rcFmtDate(r.date)) + '</span>' +
+        '<span class="rstats-type' + (isRun ? ' run' : '') + '">' +
+          (isRun ? 'Run' : 'Walk') + '</span>' +
+      '</div>' +
+      '<div class="rstats-hero">' + miles + '<span>miles</span></div>' +
+      rcRow('Date', rcEsc(r.date)) +
+      rcRow('Type', isRun ? 'Run' : 'Walk') +
+      rcRow('Distance', miles + ' mi') +
+      rcRow('Pace', r.pace ? rcEsc(r.pace) + ' /mi' : '') +
+      rcRow('Start', rcFmt12(r.start_time)) +
+      rcRow('End', rcFmt12(r.end_time)) +
+      rcRow('Duration', dur) +
+      rcRow('Shoe', r.shoe ? rcEsc(r.shoe) : '') +
+      rcRow('Temp', (r.temp_f != null && r.temp_f !== '') ? Math.round(r.temp_f) + '°F' : '') +
+      rcRow('Weather', r.weather ? rcEsc(r.weather) : '') +
+      rcRow('Location', loc) +
+      (r.notes ? '<div class="rstats-notes">' + rcEsc(r.notes) + '</div>' : '') +
+      '<button class="rstats-close" type="button">Close</button>';
+
+    document.getElementById('rstats').classList.add('show');
+  }
+
+  function closeRunStats() {
+    document.getElementById('rstats').classList.remove('show');
+  }
+
+  (function wireRunStats() {
+    var list = document.getElementById('recent-list');
+    if (list) {
+      list.addEventListener('click', function(e) {
+        var card = e.target.closest('.recent-card');
+        if (card && card.hasAttribute('data-idx')) openRunStats(+card.getAttribute('data-idx'));
+      });
+      list.addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        var card = e.target.closest('.recent-card');
+        if (card && card.hasAttribute('data-idx')) { e.preventDefault(); openRunStats(+card.getAttribute('data-idx')); }
+      });
+    }
+    var modal = document.getElementById('rstats');
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal || e.target.classList.contains('rstats-close')) closeRunStats();
+      });
+    }
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeRunStats();
+    });
+  })();
 
   // ---------- bin computation per zoom ----------
 

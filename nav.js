@@ -267,6 +267,13 @@
       if (a.getAttribute('href') === path) a.classList.add('mt-nav-link-active');
     });
 
+    // Single source of truth for the displayed version: nav.js fills every
+    // footer .mt-ver link, so a release bump = change VERSION above only.
+    document.querySelectorAll('a.mt-ver').forEach(function(a) {
+      a.textContent = VERSION;
+      if (!a.getAttribute('href')) a.setAttribute('href', 'changelog.html');
+    });
+
     setupPullToRefresh();
   }
 

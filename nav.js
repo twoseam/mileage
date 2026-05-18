@@ -35,8 +35,18 @@
       return t === 'light' ? 'light' : 'dark';
     } catch (e) { return 'dark'; }
   }
+  var DARK_BG = '#252525';
   function applyTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
+    // iOS standalone paints the status-bar band from <meta theme-color>;
+    // repaint it on toggle so a dark->light flip doesn't leave a stale bar.
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (!m) {
+      m = document.createElement('meta');
+      m.setAttribute('name', 'theme-color');
+      document.head.appendChild(m);
+    }
+    m.setAttribute('content', t === 'light' ? LIGHT_BG : DARK_BG);
   }
   function saveTheme(t) {
     try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
@@ -52,8 +62,10 @@
 
   var themeCss = [
     // smooth the flip
+    'html { background: ' + DARK_BG + '; transition: background-color 0.25s ease; }',
     'body { transition: background-color 0.25s ease, color 0.25s ease; }',
     '',
+    'html[data-theme="light"] { background: ' + LIGHT_BG + '; }',
     'html[data-theme="light"] body {',
     '  background: ' + LIGHT_BG + ' !important; color: ' + LIGHT_TEXT + ' !important;',
     '}',

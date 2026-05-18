@@ -61,11 +61,10 @@
   var LIGHT_ACCENT = '#C77A0C'; // mustard deepened for contrast on cream
 
   var themeCss = [
-    // smooth the flip
-    'html { background: ' + DARK_BG + '; transition: background-color 0.25s ease; }',
+    // smooth the flip (no html background — that breaks the body-bg→canvas
+    // propagation the .mt-bg stripe wedge relies on, hiding the stripe)
     'body { transition: background-color 0.25s ease, color 0.25s ease; }',
     '',
-    'html[data-theme="light"] { background: ' + LIGHT_BG + '; }',
     'html[data-theme="light"] body {',
     '  background: ' + LIGHT_BG + ' !important; color: ' + LIGHT_TEXT + ' !important;',
     '}',

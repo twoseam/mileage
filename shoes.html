@@ -80,7 +80,7 @@
 
     /* Shoe card */
     .shoe-card {
-      display: flex; gap: 1rem; align-items: center;
+      display: flex; gap: 1.6rem; align-items: stretch;
       background: rgba(0,0,0,0.18);
       border: 1px solid rgba(255,255,255,0.06);
       border-radius: 14px;
@@ -120,23 +120,39 @@
     .shoe-photo .ph {
       font-size: 2.6rem; opacity: 0.25;
     }
-    .shoe-body { flex: 1; min-width: 0; }
+    .shoe-body {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column;
+      justify-content: center;          /* vertically centered in the card */
+    }
+    /* 1 — primary: brand + model */
     .shoe-name {
-      font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em;
+      font-size: 1.15rem; font-weight: 800; letter-spacing: -0.01em;
+      line-height: 1.1;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .shoe-meta {
-      font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
-      opacity: 0.45; margin-top: 2px;
+    /* 2 — secondary: colorway */
+    .shoe-color {
+      font-size: 0.8rem; font-weight: 700;
+      color: #E89A1F; opacity: 0.9;
+      margin-top: 1px;
     }
+    /* 3 — tertiary: walk count */
+    .shoe-walks {
+      font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+      opacity: 0.5; font-weight: 700; margin-top: 0.6rem;
+    }
+    /* 4 — the key stat */
     .shoe-miles {
-      font-size: 0.95rem; font-weight: 800; margin-top: 0.5rem;
+      font-size: 1.05rem; font-weight: 800; margin-top: 2px;
       font-variant-numeric: tabular-nums;
     }
     .shoe-miles span { font-size: 0.6rem; opacity: 0.5; font-weight: 700; }
-    .shoe-walks {
-      font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
-      opacity: 0.45; margin-top: 3px; font-weight: 700;
+    /* 6 — bottom-aligned: purchase date */
+    .shoe-when {
+      margin-top: 0.7rem;
+      font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase;
+      opacity: 0.35; font-weight: 700;
     }
     .wear-track {
       margin-top: 6px; height: 6px; border-radius: 3px;
@@ -359,7 +375,7 @@
 <div class="mt-pill" id="pill"></div>
 
 <footer class="mt-footer">
-  <div class="mt-build">2026.05.17.028</div>
+  <div class="mt-build">2026.05.17.030</div>
 </footer>
 
 <script>
@@ -435,26 +451,40 @@
     var goal = (s.goal && s.goal > 0) ? s.goal : WEAR_TARGET;
     var pct = Math.min(100, (miles / goal) * 100);
     var wearCls = miles >= goal ? 'over' : (miles >= goal * 0.8 ? 'warn' : '');
-    var when = retired
-      ? (fmtDate(s.purchased) + (s.retired ? ' – ' + fmtDate(s.retired) : ''))
-      : (s.purchased ? 'Since ' + fmtDate(s.purchased) : 'No purchase date');
-    var meta = when + (s.color ? '  ·  ' + s.color : '');
+    // Title = brand + model, with the colorway peeled off (it gets its own
+    // line); the copy number is shown on the photo badge, not in text.
+    var brand = s.brand || '';
+    var model = s.model || '';
+    var color = s.color || '';
+    var titleModel = model;
+    if (color) {
+      var re = new RegExp('\\s*' + color.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i');
+      titleModel = model.replace(re, '').trim();
+    }
+    var title = (brand + ' ' + titleModel).trim() || s.name || 'Unnamed pair';
+
+    var when = s.purchased ? ('Purchased ' + fmtDate(s.purchased)) : '';
+    if (retired && s.retired) {
+      when = (when ? when + ' · ' : '') + 'Retired ' + fmtDate(s.retired);
+    }
+
     var photo = s.photo
       ? '<img src="' + esc(s.photo) + '" alt="' + esc(s.name) + '">'
       : '<span class="ph">&#128095;</span>';
     var pairNum = (s.pair != null && s.pair !== '') ? String(s.pair)
                 : (String(s.model || s.name || '').match(/#(\d+)\s*$/) || [])[1];
     var badge = pairNum ? '<span class="shoe-num">' + esc(pairNum) + '</span>' : '';
-    var title = s.display || s.name || 'Unnamed pair';
+
     return '' +
       '<div class="shoe-card reveal' + (retired ? ' retired' : '') + '" data-name="' + esc(s.name) + '">' +
         '<div class="shoe-photo">' + photo + badge + '</div>' +
         '<div class="shoe-body">' +
           '<div class="shoe-name">' + esc(title) + '</div>' +
-          '<div class="shoe-meta">' + esc(meta) + '</div>' +
-          '<div class="shoe-miles">' + miles.toFixed(1) + ' <span>/ ' + goal + ' mi</span></div>' +
+          (color ? '<div class="shoe-color">' + esc(color) + '</div>' : '') +
           '<div class="shoe-walks">' + (s.walks || 0) + (s.walks === 1 ? ' walk' : ' walks') + '</div>' +
+          '<div class="shoe-miles">' + miles.toFixed(1) + ' <span>/ ' + goal + ' mi</span></div>' +
           '<div class="wear-track"><div class="wear-fill ' + wearCls + '" style="width:' + pct + '%"></div></div>' +
+          (when ? '<div class="shoe-when">' + esc(when) + '</div>' : '') +
         '</div>' +
       '</div>';
   }

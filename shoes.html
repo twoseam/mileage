@@ -154,7 +154,7 @@
       z-index: 10002;
     }
     #add-backdrop.show { opacity: 1; pointer-events: auto; }
-    #add-sheet {
+    #add-sheet, #act-sheet {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 10003;
       background: #f5f0e6; color: #1a1a1a;
       border-radius: 18px 18px 0 0;
@@ -163,17 +163,28 @@
       transition: transform 0.3s cubic-bezier(0.2,0.8,0.2,1);
       max-width: 520px; margin: 0 auto;
     }
-    #add-sheet.show { transform: translateY(0); }
-    #add-sheet h3 {
+    #add-sheet.show, #act-sheet.show { transform: translateY(0); }
+    #add-sheet h3, #act-sheet h3 {
       margin: 0 0 1.1rem; font-size: 1.4rem; font-weight: 900;
     }
     .fld { margin-bottom: 1rem; }
+    .fld-row { display: flex; gap: 12px; }
+    .fld-row .fld { flex: 1; }
+    .act-row {
+      display: block; width: 100%; text-align: left;
+      padding: 15px 4px; background: none; border: none;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+      font-family: inherit; font-size: 1.05rem; font-weight: 700;
+      color: #1a1a1a; cursor: pointer;
+    }
+    .act-row:last-of-type { border-bottom: none; }
+    .act-row.act-cancel { opacity: 0.5; font-weight: 600; }
     .fld label {
       display: block; font-size: 0.6rem; font-weight: 800;
       letter-spacing: 0.14em; text-transform: uppercase;
       opacity: 0.55; margin-bottom: 6px;
     }
-    .fld input[type=text], .fld input[type=date] {
+    .fld input[type=text], .fld input[type=date], .fld input[type=number] {
       width: 100%; padding: 12px; border-radius: 10px;
       border: 1px solid rgba(0,0,0,0.18); background: #fff;
       font-family: inherit; font-size: 1rem; color: #1a1a1a;
@@ -273,9 +284,25 @@
 <div id="add-backdrop"></div>
 <div id="add-sheet">
   <h3>Add a pair</h3>
-  <div class="fld">
-    <label for="sh-name">Name</label>
-    <input type="text" id="sh-name" placeholder="e.g. Hoka Clifton 9" autocomplete="off">
+  <div class="fld-row">
+    <div class="fld">
+      <label for="sh-brand">Brand</label>
+      <input type="text" id="sh-brand" placeholder="Hoka" autocomplete="off">
+    </div>
+    <div class="fld">
+      <label for="sh-model">Model</label>
+      <input type="text" id="sh-model" placeholder="Clifton 9" autocomplete="off">
+    </div>
+  </div>
+  <div class="fld-row">
+    <div class="fld">
+      <label for="sh-color">Color</label>
+      <input type="text" id="sh-color" placeholder="Black" autocomplete="off">
+    </div>
+    <div class="fld">
+      <label for="sh-goal">Mileage goal</label>
+      <input type="number" id="sh-goal" placeholder="400" inputmode="numeric" min="1">
+    </div>
   </div>
   <div class="fld">
     <label for="sh-date">Purchase date</label>
@@ -295,10 +322,18 @@
   </div>
 </div>
 
+<div id="act-sheet">
+  <h3 id="act-title">Shoe</h3>
+  <button class="act-row" id="act-photo">Change photo</button>
+  <button class="act-row" id="act-retire">Retire today</button>
+  <button class="act-row act-cancel" id="act-cancel">Cancel</button>
+  <input type="file" id="act-photo-input" accept="image/*" style="display:none">
+</div>
+
 <div class="mt-pill" id="pill"></div>
 
 <footer class="mt-footer">
-  <div class="mt-build">2026.05.17.020</div>
+  <div class="mt-build">2026.05.17.021</div>
 </footer>
 
 <script>
@@ -350,31 +385,53 @@
   }
 
   // ---------- render ----------
+  var allShoes = [];
+
+  function cropToSquare(file, cb) {
+    var img = new Image();
+    img.onload = function() {
+      var side = Math.min(img.width, img.height);
+      var sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+      var size = 640;
+      var c = document.createElement('canvas');
+      c.width = size; c.height = size;
+      c.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      var url = c.toDataURL('image/jpeg', 0.85);
+      URL.revokeObjectURL(img.src);
+      cb(url);
+    };
+    img.onerror = function() { cb(null); };
+    img.src = URL.createObjectURL(file);
+  }
+
   function shoeCard(s, retired) {
     var miles = Math.round((s.lifetimeMiles || 0) * 10) / 10;
-    var pct = Math.min(100, (miles / WEAR_TARGET) * 100);
-    var wearCls = miles >= WEAR_TARGET ? 'over' : (miles >= WEAR_TARGET * 0.8 ? 'warn' : '');
+    var goal = (s.goal && s.goal > 0) ? s.goal : WEAR_TARGET;
+    var pct = Math.min(100, (miles / goal) * 100);
+    var wearCls = miles >= goal ? 'over' : (miles >= goal * 0.8 ? 'warn' : '');
     var when = retired
       ? (fmtDate(s.purchased) + (s.retired ? ' – ' + fmtDate(s.retired) : ''))
       : (s.purchased ? 'Since ' + fmtDate(s.purchased) : 'No purchase date');
+    var meta = when + (s.color ? '  ·  ' + s.color : '');
     var photo = s.photo
       ? '<img src="' + esc(s.photo) + '" alt="' + esc(s.name) + '">'
       : '<span class="ph">&#128095;</span>';
     return '' +
-      '<div class="shoe-card' + (retired ? ' retired' : '') + '">' +
+      '<div class="shoe-card' + (retired ? ' retired' : '') + '" data-name="' + esc(s.name) + '">' +
         '<div class="shoe-photo">' + photo + '</div>' +
         '<div class="shoe-body">' +
           '<div class="shoe-name">' + esc(s.name || 'Unnamed pair') + '</div>' +
-          '<div class="shoe-meta">' + esc(when) + '</div>' +
-          '<div class="shoe-miles">' + miles.toFixed(1) + ' <span>mi</span></div>' +
+          '<div class="shoe-meta">' + esc(meta) + '</div>' +
+          '<div class="shoe-miles">' + miles.toFixed(1) + ' <span>/ ' + goal + ' mi</span></div>' +
           '<div class="wear-track"><div class="wear-fill ' + wearCls + '" style="width:' + pct + '%"></div></div>' +
         '</div>' +
       '</div>';
   }
 
   function render(shoes) {
+    allShoes = shoes || [];
     var current = [], retired = [];
-    shoes.forEach(function(s) { (s.retired ? retired : current).push(s); });
+    allShoes.forEach(function(s) { (s.retired ? retired : current).push(s); });
 
     document.getElementById('current-list').innerHTML = current.length
       ? current.map(function(s) { return shoeCard(s, false); }).join('')
@@ -409,72 +466,117 @@
 
   // ---------- add-pair sheet ----------
   var backdrop = document.getElementById('add-backdrop');
-  var sheet = document.getElementById('add-sheet');
-  var nameEl = document.getElementById('sh-name');
-  var dateEl = document.getElementById('sh-date');
-  var saveBtn = document.getElementById('add-save');
+  var addSheet = document.getElementById('add-sheet');
+  var brandEl  = document.getElementById('sh-brand');
+  var modelEl  = document.getElementById('sh-model');
+  var colorEl  = document.getElementById('sh-color');
+  var goalEl   = document.getElementById('sh-goal');
+  var dateEl   = document.getElementById('sh-date');
+  var saveBtn  = document.getElementById('add-save');
+  var addPhoto = null;
 
-  // default date = today, no future
   var today = new Date();
   var iso = today.getFullYear() + '-' +
     ('0' + (today.getMonth() + 1)).slice(-2) + '-' +
     ('0' + today.getDate()).slice(-2);
   dateEl.value = iso; dateEl.max = iso;
 
-  function openSheet() { backdrop.classList.add('show'); sheet.classList.add('show'); }
-  function closeSheet() { backdrop.classList.remove('show'); sheet.classList.remove('show'); }
+  function openAdd()  { backdrop.classList.add('show');    addSheet.classList.add('show'); }
+  function closeAdd() { backdrop.classList.remove('show'); addSheet.classList.remove('show'); }
   function refreshSaveState() {
-    saveBtn.disabled = !(nameEl.value.trim() && dateEl.value);
+    saveBtn.disabled = !((brandEl.value.trim() || modelEl.value.trim()) && dateEl.value);
   }
 
-  document.getElementById('open-add').addEventListener('click', openSheet);
-  document.getElementById('add-cancel').addEventListener('click', closeSheet);
-  backdrop.addEventListener('click', closeSheet);
-  nameEl.addEventListener('input', refreshSaveState);
-  dateEl.addEventListener('input', refreshSaveState);
+  document.getElementById('open-add').addEventListener('click', openAdd);
+  document.getElementById('add-cancel').addEventListener('click', closeAdd);
+  [brandEl, modelEl, dateEl].forEach(function(el) {
+    el.addEventListener('input', refreshSaveState);
+  });
 
-  // photo pick → center-crop to a 640px square JPEG
   document.getElementById('sh-photo').addEventListener('change', function(e) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
-    var img = new Image();
-    img.onload = function() {
-      var side = Math.min(img.width, img.height);
-      var sx = (img.width - side) / 2, sy = (img.height - side) / 2;
-      var size = 640;
-      var c = document.createElement('canvas');
-      c.width = size; c.height = size;
-      c.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, size, size);
-      photoDataUrl = c.toDataURL('image/jpeg', 0.85);
+    cropToSquare(file, function(url) {
+      if (!url) { pill('Could not read that photo'); return; }
+      addPhoto = url;
       var pv = document.getElementById('photo-preview');
-      pv.src = photoDataUrl; pv.style.display = 'block';
+      pv.src = url; pv.style.display = 'block';
       document.getElementById('photo-hint').style.display = 'none';
-      URL.revokeObjectURL(img.src);
-    };
-    img.onerror = function() { pill('Could not read that photo'); };
-    img.src = URL.createObjectURL(file);
+    });
   });
 
-  document.getElementById('add-save').addEventListener('click', function() {
-    var name = nameEl.value.trim();
-    var purchased = dateEl.value;
-    if (!name || !purchased) return;
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
-    MilesTracker.addShoe({ name: name, purchased: purchased, photo: photoDataUrl }, function(ok, err) {
+  saveBtn.addEventListener('click', function() {
+    var brand = brandEl.value.trim(), model = modelEl.value.trim();
+    if (!(brand || model) || !dateEl.value) return;
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+    MilesTracker.addShoe({
+      brand: brand, model: model, purchased: dateEl.value,
+      color: colorEl.value.trim(),
+      goal: goalEl.value ? parseInt(goalEl.value, 10) : '',
+      photo: addPhoto
+    }, function(ok, err) {
       saveBtn.textContent = 'Save pair';
-      if (!ok) {
-        saveBtn.disabled = false;
-        pill(err || 'Could not save — try again', true);
-        return;
-      }
-      closeSheet();
-      nameEl.value = ''; photoDataUrl = null;
+      if (!ok) { saveBtn.disabled = false; pill(err || 'Could not save — try again', true); return; }
+      closeAdd();
+      brandEl.value = modelEl.value = colorEl.value = goalEl.value = '';
+      addPhoto = null;
       document.getElementById('photo-preview').style.display = 'none';
       document.getElementById('photo-hint').style.display = '';
       dateEl.value = iso;
       pill('Pair added');
       load();
+    });
+  });
+
+  // ---------- tap a shoe → action sheet (change photo / retire) ----------
+  var actSheet  = document.getElementById('act-sheet');
+  var actTitle  = document.getElementById('act-title');
+  var actRetire = document.getElementById('act-retire');
+  var currentName = null;
+
+  function openAct(name) {
+    var s = allShoes.filter(function(x) { return x.name === name; })[0];
+    if (!s) return;
+    currentName = name;
+    actTitle.textContent = name;
+    actRetire.style.display = s.retired ? 'none' : '';
+    backdrop.classList.add('show'); actSheet.classList.add('show');
+  }
+  function closeAct() { backdrop.classList.remove('show'); actSheet.classList.remove('show'); }
+
+  backdrop.addEventListener('click', function() { closeAdd(); closeAct(); });
+
+  document.getElementById('shoes-shell').addEventListener('click', function(e) {
+    var card = e.target.closest('.shoe-card');
+    if (card) openAct(card.getAttribute('data-name'));
+  });
+  document.getElementById('act-cancel').addEventListener('click', closeAct);
+
+  document.getElementById('act-photo').addEventListener('click', function() {
+    document.getElementById('act-photo-input').click();
+  });
+  document.getElementById('act-photo-input').addEventListener('change', function(e) {
+    var file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file || !currentName) return;
+    cropToSquare(file, function(url) {
+      if (!url) { pill('Could not read that photo'); return; }
+      pill('Updating photo…', true);
+      MilesTracker.updateShoe({ name: currentName, photo: url }, function(ok, err) {
+        closeAct();
+        if (!ok) { pill(err || 'Could not update photo', true); return; }
+        pill('Photo updated'); load();
+      });
+    });
+  });
+
+  actRetire.addEventListener('click', function() {
+    if (!currentName) return;
+    pill('Retiring…', true);
+    MilesTracker.updateShoe({ name: currentName, retire: true }, function(ok, err) {
+      closeAct();
+      if (!ok) { pill(err || 'Could not retire', true); return; }
+      pill('Retired'); load();
     });
   });
 

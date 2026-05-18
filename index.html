@@ -1502,10 +1502,9 @@
           out.start_time = startTime || '';
           out.end_time   = endTime || '';
           out.pace       = pace || '';
-          if (coords) {
-            out.lat = coords.lat;
-            out.lon = coords.lon;
-          }
+          // lat/lon intentionally not stored — a single point is meaningless
+          // once runs carry full route tracks; coords are still used below
+          // only to fetch weather for the entry.
           if (weather) {
             out.temp_f  = weather.temp_f;
             out.weather = weather.weather;

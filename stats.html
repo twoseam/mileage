@@ -247,9 +247,15 @@
       text-transform: uppercase;
       cursor: pointer;
       opacity: 0.55;
-      transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+      /* No transition: iOS Safari can drop the final frame of a transitioned
+         background change, leaving the old button visually filled. */
+      transition: none;
     }
-    .zoom-btn:hover { opacity: 1; }
+    /* Only brighten on hover for real pointers — touch screens keep :hover
+       "stuck" after a tap, which made every tapped button look selected. */
+    @media (hover: hover) and (pointer: fine) {
+      .zoom-btn:hover { opacity: 1; }
+    }
     .zoom-btn.is-active {
       background: #E89A1F;
       color: #1a1a1a;
@@ -351,7 +357,7 @@
 </div>
 
 <footer class="mt-footer">
-  <div class="mt-build">2026.05.10.013</div>
+  <div class="mt-build">2026.05.17.002</div>
 </footer>
 
 <script>
@@ -626,9 +632,22 @@
     document.getElementById('range-next').disabled = nav.next;
 
     document.querySelectorAll('.zoom-btn').forEach(function(b) {
-      if (b.getAttribute('data-zoom') === state.zoom) b.classList.add('is-active');
-      else b.classList.remove('is-active');
+      var on = b.getAttribute('data-zoom') === state.zoom;
+      b.classList.toggle('is-active', on);
+      // Drive the visual inline too — iOS Safari sometimes fails to repaint a
+      // class-only change here, leaving the previous button looking selected.
+      b.style.background = on ? '#E89A1F' : 'transparent';
+      b.style.color      = on ? '#1a1a1a' : '';
+      b.style.opacity    = on ? '1' : '0.55';
     });
+    // Force iOS Safari to actually repaint the buttons (it otherwise keeps the
+    // previously-filled one on screen even though its style is now cleared).
+    var zb = document.querySelector('.zoom-buttons');
+    if (zb) {
+      zb.style.display = 'none';
+      void zb.offsetHeight; // reflow
+      zb.style.display = '';
+    }
   }
 
   function computeDaysInRange() {
@@ -677,6 +696,7 @@
 
   document.querySelectorAll('.zoom-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
+      btn.blur(); // drop focus so the tapped button doesn't stay highlighted on touch
       var z = btn.getAttribute('data-zoom');
       state.zoom = z;
       // Snap cursor to the START of the new period (so the label feels right)

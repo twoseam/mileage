@@ -764,7 +764,7 @@
     }
     .mt-pq-meta { display: flex; gap: 22px; margin: 11px 0 16px; }
     .mt-pq-meta b {
-      display: block; font-size: 0.95rem; font-weight: 800;
+      display: block; font-size: 0.86rem; font-weight: 800;
       letter-spacing: -0.01em; line-height: 1.1;
     }
     .mt-pq-meta span {
@@ -1699,7 +1699,9 @@
   }
 
   function mtPqShoeVal(s) {
-    return (s.name || ((s.brand || '') + ' ' + (s.model || '')).trim());
+    // `display` is the canonical "(3)" form historical Entries use;
+    // `name` is the internal "#3" form — never write that to the sheet.
+    return (s.display || s.name || ((s.brand || '') + ' ' + (s.model || '')).trim());
   }
 
   // Default a fresh card to the most recently purchased active pair —
@@ -1797,9 +1799,9 @@
     }
     var metaHtml =
       meta('Distance', miles !== '' ? (Math.round(miles * 100) / 100) + ' mi' : '') +
-      meta('Duration', mtPqVal(row, 'Duration')) +
       meta('Pace', mtPqVal(row, 'Pace')) +
-      meta('Start', mtPqVal(row, 'Start Time'));
+      meta('Avg HR', mtPqVal(row, 'Avg Heart Rate') !== '' ? mtPqVal(row, 'Avg Heart Rate') + ' bpm' : '') +
+      meta('Calories', mtPqVal(row, 'Calories') !== '' ? mtPqVal(row, 'Calories') + ' cal' : '');
 
     var wActive = type === 'Run' ? '' : ' mt-active';
     var rActive = type === 'Run' ? ' mt-active' : '';

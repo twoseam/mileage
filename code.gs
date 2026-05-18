@@ -729,10 +729,14 @@ function _ingestWorkouts(body) {
 
     var durS = _haNum(_haPick(w, ['duration', 'activeDuration']));
     if (durS != null && durS < 600 && /min/i.test(String(w.durationUnits || ''))) durS *= 60;
+    // Write pace as a sub-hour DURATION ("0:08:58"), not "8:58". Sheets
+    // reads "8:58" as an 8h58m clock time, which _fmtPace then mangles
+    // into "538:00". As 0:MM:SS it stores as 0h 8m 58s and _fmtPace
+    // (shared with Entries) decodes it back to "8:58" everywhere.
     var pace = (durS && miles) ? (function() {
       var p = (durS / 60) / miles, mm = Math.floor(p), ss = Math.round((p - mm) * 60);
       if (ss === 60) { mm++; ss = 0; }
-      return mm + ':' + ('0' + ss).slice(-2);
+      return '0:' + ('0' + mm).slice(-2) + ':' + ('0' + ss).slice(-2);
     })() : '';
 
     var cal = _haNum(_haPick(w, ['activeEnergyBurned', 'activeEnergy', 'totalEnergyBurned', 'calories']));
@@ -837,21 +841,19 @@ function _fmtDur(v, tz) {
   return String(v).trim();
 }
 
-// Pace written like "8:58" gets read back by Sheets as an 8h58m clock
-// time. _fmtPace (used by Entries) would turn that into "538:00", so the
-// Pending queue uses its own reader: a Date cell formats straight back
-// to "H:mm" — the original minutes:seconds-per-mile.
-function _fmtPaceCell(v, tz) {
-  if (v === '' || v == null) return '';
-  if (Object.prototype.toString.call(v) === '[object Date]') {
-    tz = tz || SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
-    return Utilities.formatDate(v, tz, 'H:mm');
+// Normalize one cell by its column header. Sheets stores Date/Time/Pace/
+// Duration as 1899-epoch Date objects; left raw they leak as
+// "12/30/1899" both into the queue JSON and (via approve) into Entries.
+// One place, used by the queue AND the approve copy, keeps them aligned.
+function _fmtEntryCell(label, val, tz) {
+  switch (String(label || '').trim().toLowerCase()) {
+    case 'date':                    return _fmtDate(val);
+    case 'start time':
+    case 'end time':                return _fmtTime(val);
+    case 'pace':                    return _fmtPace(val, tz);
+    case 'duration':                return _fmtDur(val, tz);
+    default:                        return val;
   }
-  if (typeof v === 'number') {
-    var secs = Math.round(v * 86400);
-    return Math.floor(secs / 60) + ':' + ('0' + (secs % 60)).slice(-2);
-  }
-  return String(v).trim();
 }
 
 // Pending rows as objects for the approval queue. Time-ish columns are
@@ -867,12 +869,7 @@ function _pendingRows() {
   for (var i = 1; i < d.length; i++) {
     var o = {};
     for (var j = 0; j < h.length; j++) {
-      var key = h[j], lk = key.toLowerCase(), val = d[i][j];
-      if (lk === 'date')                            val = _fmtDate(val);
-      else if (lk === 'start time' || lk === 'end time') val = _fmtTime(val);
-      else if (lk === 'pace')                       val = _fmtPaceCell(val, tz);
-      else if (lk === 'duration')                   val = _fmtDur(val, tz);
-      o[key] = val;
+      o[h[j]] = _fmtEntryCell(h[j], d[i][j], tz);
     }
     out.push(o);
   }
@@ -902,9 +899,14 @@ function _approvePending(req) {
   }
   if (prow < 0) return _json({ error: 'pending workout not found' });
 
-  // value object keyed by header label, from the pending row + edits
+  // value object keyed by header label, from the pending row + edits.
+  // Format time-ish cells to clean strings here too — otherwise the raw
+  // 1899-epoch Dates copy straight into Entries as "12/30/1899".
+  var tz = ss.getSpreadsheetTimeZone();
   var vals = {};
-  for (var c = 0; c < phdr.length; c++) vals[phdr[c]] = pdata[prow][c];
+  for (var c = 0; c < phdr.length; c++) {
+    vals[phdr[c]] = _fmtEntryCell(phdr[c], pdata[prow][c], tz);
+  }
   function setLabel(label, v) {
     for (var k in vals) if (k.toLowerCase() === label) { vals[k] = v; return; }
   }

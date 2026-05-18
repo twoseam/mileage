@@ -103,10 +103,10 @@
     .range-nav {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      margin-top: 1.1rem;
-      min-height: 36px;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin: 0 0 1.1rem;
+      min-height: 40px;
     }
     .range-arrow {
       background: none;
@@ -122,10 +122,10 @@
     .range-arrow:hover { opacity: 1; }
     .range-arrow:disabled { opacity: 0.15; cursor: not-allowed; }
     .range-label {
-      font-size: 0.95rem;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-      min-width: 180px;
+      flex: 1;
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: -0.01em;
       text-align: center;
     }
 
@@ -194,11 +194,15 @@
       opacity: 0.5;
     }
     .chart-summary-value {
-      font-size: 1.4rem;
+      font-size: 1.2rem;
       font-weight: 800;
       letter-spacing: -0.02em;
       font-variant-numeric: tabular-nums;   /* digits don't jitter while counting */
       display: inline-block;
+    }
+    /* Miles is the headline — make it the hero, Days secondary */
+    .chart-summary > div:first-child .chart-summary-value {
+      font-size: 2.5rem; line-height: 1;
     }
     #summary-miles { min-width: 4.2ch; }    /* hold the cell width steady */
     #summary-days  { min-width: 2.2ch; }
@@ -363,10 +367,13 @@
     @media (hover: hover) and (pointer: fine) {
       .zoom-btn:hover { opacity: 1; }
     }
+    /* quieter: a control shouldn't outshout the data — active is just
+       emphasized text with a small accent underline, not a filled pill */
     .zoom-btn.is-active {
-      background: #E89A1F;
-      color: #1a1a1a;
+      background: transparent;
+      color: inherit;
       opacity: 1;
+      box-shadow: inset 0 -2px 0 #E89A1F;
     }
 
     /* Recent runs list (under the chart) */
@@ -699,6 +706,12 @@
 
 <div id="stats-shell">
 
+  <div class="range-nav">
+    <button class="range-arrow" id="range-prev" aria-label="Previous">←</button>
+    <div class="range-label" id="range-label">—</div>
+    <button class="range-arrow" id="range-next" aria-label="Next">→</button>
+  </div>
+
   <div class="chart-card">
     <div class="chart-summary">
       <div>
@@ -738,12 +751,6 @@
     <button class="zoom-btn"           data-zoom="year" >Year</button>
     <button class="zoom-btn is-active" data-zoom="month">Month</button>
     <button class="zoom-btn"           data-zoom="week" >Week</button>
-  </div>
-
-  <div class="range-nav">
-    <button class="range-arrow" id="range-prev" aria-label="Previous">←</button>
-    <div class="range-label" id="range-label">—</div>
-    <button class="range-arrow" id="range-next" aria-label="Next">→</button>
   </div>
 
   <section class="recent">

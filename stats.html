@@ -30,9 +30,6 @@
   <link rel="preconnect" href="https://p.typekit.net" crossorigin>
   <link rel="stylesheet" href="https://use.typekit.net/ymz2nvi.css">
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
   <script src="miles-tracker.js"></script>
   <script src="nav.js"></script>
 
@@ -489,9 +486,6 @@
       margin-top: 1rem; border-radius: 14px;
       overflow: hidden; background: rgba(0, 0, 0, 0.06);
     }
-    .rstats-map .leaflet-control-attribution {
-      font-size: 9px; background: rgba(255, 255, 255, 0.7);
-    }
     .rstats-row {
       display: flex; justify-content: space-between; gap: 1rem;
       padding: 0.6rem 0;
@@ -900,24 +894,77 @@
            '</span><span class="v">' + v + '</span></div>';
   }
 
-  var rsMap = null;
-  function rsClearMap() {
-    if (rsMap) { try { rsMap.remove(); } catch (e) {} rsMap = null; }
+  // ===== Google Maps (brand-styled). Paste your restricted Maps JS API
+  // key below; until then the map silently no-ops (nothing else breaks). =====
+  var GMAPS_KEY = '';   // <-- PASTE GOOGLE MAPS JS API KEY HERE
+
+  // Retro brand palette: cream land, teal water, mustard roads, dark labels.
+  var RS_BRAND_STYLE = [
+    { elementType: 'geometry', stylers: [{ color: '#ECE0BE' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#3A2E12' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#F4ECD3' }] },
+    { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+    { featureType: 'administrative', elementType: 'geometry.stroke',
+      stylers: [{ color: '#B98A3C' }] },
+    { featureType: 'landscape.natural', elementType: 'geometry',
+      stylers: [{ color: '#DCD3A6' }] },
+    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.park', elementType: 'geometry',
+      stylers: [{ color: '#BFD8B8' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#E8C77A' }] },
+    { featureType: 'road.arterial', elementType: 'geometry',
+      stylers: [{ color: '#E3B45A' }] },
+    { featureType: 'road.highway', elementType: 'geometry',
+      stylers: [{ color: '#E89A1F' }] },
+    { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#8FCFC2' }] }
+  ];
+
+  var _gmapsP = null;
+  function loadGMaps() {
+    if (_gmapsP) return _gmapsP;
+    if (!GMAPS_KEY) return Promise.reject('no key');
+    _gmapsP = new Promise(function(resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=' +
+              encodeURIComponent(GMAPS_KEY) + '&v=quarterly';
+      s.async = true; s.defer = true;
+      s.onload = function() {
+        (window.google && google.maps) ? resolve(google.maps) : reject('gmaps not ready');
+      };
+      s.onerror = function() { reject('gmaps script failed'); };
+      document.head.appendChild(s);
+    });
+    return _gmapsP;
   }
+
+  var rsMap = null;
+  function rsClearMap() { rsMap = null; }  // popup rebuilds the div each open
+
   function rsLoadRoute(aid) {
     fetch('routes/' + encodeURIComponent(aid) + '.json')
       .then(function(res) { if (!res.ok) throw 0; return res.json(); })
       .then(function(pts) {
         var el = document.getElementById('rstats-map');
-        if (!el || !pts || pts.length < 2 || typeof L === 'undefined') return;
-        rsMap = L.map(el, { scrollWheelZoom: true, attributionControl: true });
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-          subdomains: 'abcd', maxZoom: 19,
-          attribution: '&copy; OpenStreetMap &copy; CARTO'
-        }).addTo(rsMap);
-        var line = L.polyline(pts, { color: '#E89A1F', weight: 4, opacity: 0.9 }).addTo(rsMap);
-        rsMap.fitBounds(line.getBounds(), { padding: [16, 16] });
-        setTimeout(function() { if (rsMap) rsMap.invalidateSize(); }, 60);
+        if (!el || !pts || pts.length < 2) return;
+        loadGMaps().then(function(gm) {
+          rsMap = new gm.Map(el, {
+            mapTypeControl: false, streetViewControl: false,
+            fullscreenControl: false, gestureHandling: 'greedy',
+            backgroundColor: '#ECE0BE', styles: RS_BRAND_STYLE
+          });
+          var path = pts.map(function(p) { return { lat: p[0], lng: p[1] }; });
+          new gm.Polyline({
+            path: path, map: rsMap,
+            strokeColor: '#B02113', strokeOpacity: 0.95, strokeWeight: 4
+          });
+          var b = new gm.LatLngBounds();
+          path.forEach(function(p) { b.extend(p); });
+          rsMap.fitBounds(b, 24);
+        }).catch(function() {
+          el.style.display = 'none';   // no key / load fail → hide the box
+        });
       })
       .catch(function() { /* no route file for this entry — skip silently */ });
   }

@@ -655,8 +655,8 @@
 
   <div class="zoom-buttons">
     <button class="zoom-btn"           data-zoom="all"  >All</button>
-    <button class="zoom-btn is-active" data-zoom="year" >Year</button>
-    <button class="zoom-btn"           data-zoom="month">Month</button>
+    <button class="zoom-btn"           data-zoom="year" >Year</button>
+    <button class="zoom-btn is-active" data-zoom="month">Month</button>
     <button class="zoom-btn"           data-zoom="week" >Week</button>
   </div>
 
@@ -706,8 +706,8 @@
   // ---------- state ----------
 
   var state = {
-    zoom: 'year',                 // 'week' | 'month' | 'year' | 'all' — default Year
-    cursor: startOfYear(new Date()), // anchor of current visible range
+    zoom: 'month',                // 'week' | 'month' | 'year' | 'all' — default Month
+    cursor: startOfMonth(new Date()), // anchor of current visible range
     dailyWalk: {},                // 'YYYY-MM-DD' -> walk miles that day
     dailyRun:  {},                // 'YYYY-MM-DD' -> run miles that day
     firstEntryDate: null          // earliest date with any entries
@@ -830,10 +830,6 @@
     box.innerHTML = rcRecent.slice(0, rcShown).map(function(r, idx) {
       var isRun = r.type === 'Run';
       var miles = (parseFloat(r.miles) || 0).toFixed(1);
-      var meta = [];
-      if (r.pace) meta.push(rcEsc(r.pace) + '/mi');
-      var t = rcTime(r.start_time, r.end_time);
-      if (t) meta.push(t);
       return '' +
         '<div class="recent-card" data-idx="' + idx + '" role="button" tabindex="0">' +
           '<div class="rc-miles">' + miles + '<span>mi</span></div>' +
@@ -842,7 +838,6 @@
             '<span class="rc-type' + (isRun ? ' run' : '') + '">' +
               (isRun ? 'Run' : 'Walk') + '</span>' +
           '</div>' +
-          (meta.length ? '<div class="rc-meta">' + meta.join(' · ') + '</div>' : '') +
         '</div>';
     }).join('');
 

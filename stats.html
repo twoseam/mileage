@@ -447,11 +447,15 @@
       width: 100%; max-width: 384px;
       border-radius: 22px;
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-      max-height: 85vh; overflow: hidden;
+      max-height: 85vh;
+      /* visible so the close button can hang off the bottom edge;
+         the scroll layer below does the rounded-corner clipping */
+      overflow: visible;
     }
     .rstats-scroll {
       max-height: 85vh; overflow-y: auto;
-      padding: 1.6rem 1.5rem 1.35rem;
+      border-radius: 22px;
+      padding: 1.6rem 1.5rem 2.4rem;
     }
     .rstats-top {
       display: flex; align-items: baseline; gap: 0.6rem;
@@ -554,27 +558,33 @@
       box-shadow: 0 4px 0 #b9760f;
     }
     .rstats-close:active { transform: translateY(2px); box-shadow: 0 2px 0 #b9760f; }
-    /* small X in the card corner (overrides the big .rstats-close button).
-       X is drawn with two centered bars so it's perfectly centered
-       regardless of font glyph metrics. */
+    /* close button hangs off the bottom-middle of the card, half spilling
+       past the edge. Solid so it reads on both the cream card and the
+       dark backdrop. Two centered bars = a perfectly centered X. */
     .rstats-x {
-      position: absolute; top: 10px; right: 10px;
-      width: 34px; height: 34px; min-width: 0;
+      position: absolute; top: auto; right: auto;
+      left: 50%; bottom: -20px;
+      transform: translateX(-50%);
+      width: 44px; height: 44px; min-width: 0;
       margin: 0; padding: 0;
       border-radius: 50%;
-      background: rgba(0, 0, 0, 0.06); color: transparent;
-      font-size: 0; box-shadow: none;
+      background: #E89A1F; color: transparent;
+      font-size: 0;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
       z-index: 6;
     }
     .rstats-x::before, .rstats-x::after {
       content: ''; position: absolute;
       top: 50%; left: 50%;
-      width: 15px; height: 2px; border-radius: 1px;
+      width: 16px; height: 2px; border-radius: 1px;
       background: #1a1a1a;
     }
     .rstats-x::before { transform: translate(-50%, -50%) rotate(45deg); }
     .rstats-x::after  { transform: translate(-50%, -50%) rotate(-45deg); }
-    .rstats-x:active { transform: none; box-shadow: none; }
+    .rstats-x:active {
+      transform: translateX(-50%) translateY(2px);
+      box-shadow: 0 3px 9px rgba(0, 0, 0, 0.4);
+    }
 
     /* Loader */
     #mt-loader {
@@ -1005,11 +1015,14 @@
   var rsMap = null, rsFull = null, rsPts = null;
 
   // Brand-styled, chrome-less route map into `el`; resolves with the map.
-  function rsDrawMap(el, pts) {
+  function rsDrawMap(el, pts, interactive) {
     return loadGMaps().then(function(gm) {
       var m = new gm.Map(el, {
         disableDefaultUI: true, clickableIcons: false, keyboardShortcuts: false,
-        gestureHandling: 'greedy',
+        // inline preview is a static picture (no pinch/scroll zoom so it
+        // doesn't fight page scroll); full screen is fully interactive
+        gestureHandling: interactive ? 'greedy' : 'none',
+        disableDoubleClickZoom: !interactive,
         backgroundColor: '#ECE0BE', styles: RS_BRAND_STYLE
       });
       var path = pts.map(function(p) { return { lat: p[0], lng: p[1] }; });
@@ -1052,7 +1065,7 @@
     if (!ov || !el) return;
     el.innerHTML = '';
     ov.classList.add('show');
-    rsDrawMap(el, rsPts)
+    rsDrawMap(el, rsPts, true)
       .then(function(m) { rsFull = m; })
       .catch(function() { rsCloseFull(); });
   }
@@ -1129,7 +1142,6 @@
                '<button class="rstats-map-full" id="rstats-map-full" ' +
                'type="button" aria-label="Fullscreen map">⤢</button></div>' : '') +
       shoeBlock +
-      '<button class="rstats-close" type="button">Close</button>' +
       '</div>';
 
     document.getElementById('rstats').classList.add('show');

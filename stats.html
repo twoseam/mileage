@@ -1120,7 +1120,8 @@
       rcRow('Weather', r.weather ? rcEsc(r.weather) : '') +
       rcRow('Location', loc) +
       (r.notes ? '<div class="rstats-notes">' + rcEsc(r.notes) + '</div>' : '') +
-      (aid ? '<div class="rstats-map" id="rstats-map">' +
+      (aid ? '<div class="rstats-map">' +
+               '<div id="rstats-map" class="rstats-map-canvas"></div>' +
                '<button class="rstats-map-full" id="rstats-map-full" ' +
                'type="button" aria-label="Fullscreen map">⤢</button></div>' : '') +
       shoeBlock +

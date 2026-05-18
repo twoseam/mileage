@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>2026 Mileage — Shoes</title>
+
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Mileage">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#252525">
+
+  <link rel="preconnect" href="https://use.typekit.net" crossorigin>
+  <link rel="preconnect" href="https://p.typekit.net" crossorigin>
+  <link rel="stylesheet" href="https://use.typekit.net/ymz2nvi.css">
+
+  <script src="miles-tracker.js"></script>
+  <script src="nav.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    html { scrollbar-width: none; -ms-overflow-style: none; }
+    body::-webkit-scrollbar { display: none; }
+    body {
+      background: #252525;
+      color: #f5f5f5;
+      font-family: "omnes", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .mt-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      transform: translateY(50px);
+      background: linear-gradient(
+        159deg,
+        transparent 0%, transparent 76.6%,
+        #016074 76.6%, #016074 78.8%,
+        #94D3BE 78.8%, #94D3BE 81.1%,
+        #E7D7A4 81.1%, #E7D7A4 83.9%,
+        #EB9A00 83.9%, #EB9A00 86.6%,
+        #CA6902 86.6%, #CA6902 89.3%,
+        #B02113 89.3%, #B02113 100%
+      );
+    }
+
+    .wordmark {
+      max-width: 720px;
+      margin: 2.5rem auto 0.5rem;
+      padding: 0 2rem;
+      text-align: center;
+      font-family: "omnes", system-ui, sans-serif;
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: 0.01em;
+    }
+    .wordmark-year  { font-size: clamp(2.5rem, 10vw, 4rem); color: #8FCFC2; margin-bottom: 0.1em; }
+    .wordmark-title { font-size: clamp(2.5rem, 10vw, 4rem); color: #E89A1F; }
+    .page-title {
+      font-size: 0.65rem; letter-spacing: 0.24em; text-transform: uppercase;
+      opacity: 0.5; margin-top: 0.6rem; font-weight: 700;
+    }
+
+    #shoes-shell { max-width: 720px; margin: 0 auto; padding: 3rem 1.1rem 3rem; }
+
+    .section-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin: 1.75rem 0 0.85rem;
+    }
+    .section-head h2 {
+      margin: 0; font-size: 0.7rem; font-weight: 800;
+      letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.55;
+    }
+
+    /* Shoe card */
+    .shoe-card {
+      display: flex; gap: 1rem; align-items: center;
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 0.9rem;
+      margin-bottom: 0.85rem;
+    }
+    .shoe-card.retired { opacity: 0.55; }
+    .shoe-photo {
+      width: 84px; height: 84px; flex: 0 0 84px;
+      border-radius: 10px; overflow: hidden;
+      background: #1c1c1c;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .shoe-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .shoe-photo .ph {
+      font-size: 1.8rem; opacity: 0.25;
+    }
+    .shoe-body { flex: 1; min-width: 0; }
+    .shoe-name {
+      font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .shoe-meta {
+      font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
+      opacity: 0.45; margin-top: 2px;
+    }
+    .shoe-miles {
+      font-size: 0.95rem; font-weight: 800; margin-top: 0.5rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .shoe-miles span { font-size: 0.6rem; opacity: 0.5; font-weight: 700; }
+    .wear-track {
+      margin-top: 6px; height: 6px; border-radius: 3px;
+      background: rgba(255,255,255,0.08); overflow: hidden;
+    }
+    .wear-fill {
+      height: 100%; border-radius: 3px; background: #8FCFC2;
+      transition: width 0.5s cubic-bezier(0.2,0.8,0.2,1);
+    }
+    .wear-fill.warn { background: #EB9A00; }
+    .wear-fill.over { background: #B02113; }
+
+    .empty-note {
+      opacity: 0.4; font-size: 0.8rem; text-align: center;
+      padding: 1.5rem 0;
+    }
+
+    /* Buttons */
+    .btn-row { display: flex; gap: 10px; margin-top: 1.5rem; }
+    .btn {
+      flex: 1; padding: 13px 14px; border: none; border-radius: 10px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 800;
+      letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer;
+      transition: filter 0.15s ease, opacity 0.15s ease;
+    }
+    .btn:active { filter: brightness(0.92); }
+    .btn-add {
+      background: #E89A1F; color: #1a1a1a;
+      box-shadow: 0 4px 0 #b9760f;
+    }
+    .btn-ghost {
+      background: transparent; color: #f5f5f5;
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+
+    /* Add-pair sheet */
+    #add-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+      opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+      z-index: 10002;
+    }
+    #add-backdrop.show { opacity: 1; pointer-events: auto; }
+    #add-sheet {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 10003;
+      background: #f5f0e6; color: #1a1a1a;
+      border-radius: 18px 18px 0 0;
+      padding: 1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.2,0.8,0.2,1);
+      max-width: 520px; margin: 0 auto;
+    }
+    #add-sheet.show { transform: translateY(0); }
+    #add-sheet h3 {
+      margin: 0 0 1.1rem; font-size: 1.4rem; font-weight: 900;
+    }
+    .fld { margin-bottom: 1rem; }
+    .fld label {
+      display: block; font-size: 0.6rem; font-weight: 800;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      opacity: 0.55; margin-bottom: 6px;
+    }
+    .fld input[type=text], .fld input[type=date] {
+      width: 100%; padding: 12px; border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.18); background: #fff;
+      font-family: inherit; font-size: 1rem; color: #1a1a1a;
+      -webkit-appearance: none; appearance: none;
+    }
+    .photo-pick {
+      width: 100%; aspect-ratio: 1 / 1; border-radius: 12px;
+      border: 2px dashed rgba(0,0,0,0.22); background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; cursor: pointer; position: relative;
+    }
+    .photo-pick img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-pick .hint {
+      font-size: 0.75rem; font-weight: 700; opacity: 0.45;
+      text-align: center; padding: 1rem; letter-spacing: 0.04em;
+    }
+    .photo-pick input { display: none; }
+    .sheet-actions { display: flex; gap: 10px; margin-top: 1.3rem; }
+    .sheet-actions .btn-save {
+      flex: 1; background: #E89A1F; color: #1a1a1a;
+      box-shadow: 0 4px 0 #b9760f;
+    }
+    .sheet-actions .btn-cancel {
+      flex: 0 0 auto; background: transparent; color: #1a1a1a;
+      border: none; opacity: 0.55; box-shadow: none;
+    }
+    .btn[disabled] { opacity: 0.5; pointer-events: none; }
+
+    /* Loader */
+    #mt-loader {
+      position: fixed; inset: 0; background: #252525;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10000; transition: opacity 0.5s ease;
+    }
+    #mt-loader.mt-loader-hide { opacity: 0; pointer-events: none; }
+    .mt-loader-bar {
+      width: 240px; height: 12px; border-radius: 6px;
+      background: rgba(255,255,255,0.08); overflow: hidden;
+    }
+    .mt-loader-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(to right,
+        #016074 0%, #016074 16.67%, #94D3BE 16.67%, #94D3BE 33.33%,
+        #E7D7A4 33.33%, #E7D7A4 50%, #EB9A00 50%, #EB9A00 66.67%,
+        #CA6902 66.67%, #CA6902 83.33%, #B02113 83.33%, #B02113 100%);
+      transition: width 0.3s ease-out;
+    }
+
+    .mt-pill {
+      position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px);
+      background: #f5f0e6; color: #1a1a1a; font-weight: 800; font-size: 0.8rem;
+      padding: 10px 18px; border-radius: 999px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 10004;
+    }
+    .mt-pill.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .mt-footer { text-align: center; padding: 0 1.5rem 2rem; }
+    .mt-build {
+      font-size: 0.55rem; letter-spacing: 0.15em; opacity: 0.18;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+
+<div class="mt-bg"></div>
+
+<div id="mt-loader">
+  <div class="mt-loader-bar"><div class="mt-loader-fill"></div></div>
+</div>
+
+<div class="wordmark">
+  <div class="wordmark-year">2026</div>
+  <div class="wordmark-title">MILEAGE</div>
+  <div class="page-title">Shoes</div>
+</div>
+
+<div id="shoes-shell">
+
+  <div class="section-head"><h2>Current</h2></div>
+  <div id="current-list"></div>
+
+  <div id="retired-wrap" style="display:none">
+    <div class="section-head"><h2>Retired</h2></div>
+    <div id="retired-list"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="toggle-retired">Show retired</button>
+    <button class="btn btn-add" id="open-add">+ Add a pair</button>
+  </div>
+
+</div>
+
+<div id="add-backdrop"></div>
+<div id="add-sheet">
+  <h3>Add a pair</h3>
+  <div class="fld">
+    <label for="sh-name">Name</label>
+    <input type="text" id="sh-name" placeholder="e.g. Hoka Clifton 9" autocomplete="off">
+  </div>
+  <div class="fld">
+    <label for="sh-date">Purchase date</label>
+    <input type="date" id="sh-date">
+  </div>
+  <div class="fld">
+    <label>Photo</label>
+    <label class="photo-pick" id="photo-pick">
+      <span class="hint" id="photo-hint">Tap to add a photo<br>(cropped to a square)</span>
+      <img id="photo-preview" style="display:none" alt="">
+      <input type="file" id="sh-photo" accept="image/*">
+    </label>
+  </div>
+  <div class="sheet-actions">
+    <button class="btn btn-cancel" id="add-cancel">Cancel</button>
+    <button class="btn btn-save" id="add-save" disabled>Save pair</button>
+  </div>
+</div>
+
+<div class="mt-pill" id="pill"></div>
+
+<footer class="mt-footer">
+  <div class="mt-build">2026.05.17.019</div>
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  var WEAR_TARGET = 400; // miles before a pair is "due to retire"
+  var photoDataUrl = null;
+
+  // ---------- loader ----------
+  var loaderTimer = null, loaderValue = 0;
+  function startLoader() {
+    var fill = document.querySelector('.mt-loader-fill');
+    if (!fill) return;
+    loaderValue = 0; fill.style.width = '0%';
+    loaderTimer = setInterval(function() {
+      if (loaderValue >= 95) return;
+      loaderValue += Math.max(0.4, (95 - loaderValue) * 0.04);
+      fill.style.width = loaderValue + '%';
+    }, 100);
+  }
+  function stopLoader() {
+    if (loaderTimer) { clearInterval(loaderTimer); loaderTimer = null; }
+    var fill = document.querySelector('.mt-loader-fill');
+    if (fill) fill.style.width = '100%';
+    setTimeout(function() {
+      var l = document.getElementById('mt-loader');
+      if (l) l.classList.add('mt-loader-hide');
+    }, 350);
+  }
+
+  // ---------- helpers ----------
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c];
+    });
+  }
+  function fmtDate(s) {
+    if (!s) return '';
+    var d = new Date(s + 'T12:00:00');
+    if (isNaN(d)) return s;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function pill(msg, sticky) {
+    var p = document.getElementById('pill');
+    p.textContent = msg;
+    p.classList.add('show');
+    if (!sticky) setTimeout(function() { p.classList.remove('show'); }, 2500);
+  }
+
+  // ---------- render ----------
+  function shoeCard(s, retired) {
+    var miles = Math.round((s.lifetimeMiles || 0) * 10) / 10;
+    var pct = Math.min(100, (miles / WEAR_TARGET) * 100);
+    var wearCls = miles >= WEAR_TARGET ? 'over' : (miles >= WEAR_TARGET * 0.8 ? 'warn' : '');
+    var when = retired
+      ? (fmtDate(s.purchased) + (s.retired ? ' – ' + fmtDate(s.retired) : ''))
+      : (s.purchased ? 'Since ' + fmtDate(s.purchased) : 'No purchase date');
+    var photo = s.photo
+      ? '<img src="' + esc(s.photo) + '" alt="' + esc(s.name) + '">'
+      : '<span class="ph">&#128095;</span>';
+    return '' +
+      '<div class="shoe-card' + (retired ? ' retired' : '') + '">' +
+        '<div class="shoe-photo">' + photo + '</div>' +
+        '<div class="shoe-body">' +
+          '<div class="shoe-name">' + esc(s.name || 'Unnamed pair') + '</div>' +
+          '<div class="shoe-meta">' + esc(when) + '</div>' +
+          '<div class="shoe-miles">' + miles.toFixed(1) + ' <span>mi</span></div>' +
+          '<div class="wear-track"><div class="wear-fill ' + wearCls + '" style="width:' + pct + '%"></div></div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function render(shoes) {
+    var current = [], retired = [];
+    shoes.forEach(function(s) { (s.retired ? retired : current).push(s); });
+
+    document.getElementById('current-list').innerHTML = current.length
+      ? current.map(function(s) { return shoeCard(s, false); }).join('')
+      : '<div class="empty-note">No active pairs yet — add one below.</div>';
+
+    var rw = document.getElementById('retired-wrap');
+    if (retired.length) {
+      document.getElementById('retired-list').innerHTML =
+        retired.map(function(s) { return shoeCard(s, true); }).join('');
+      document.getElementById('toggle-retired').style.display = '';
+    } else {
+      rw.style.display = 'none';
+      document.getElementById('toggle-retired').style.display = 'none';
+    }
+  }
+
+  function load() {
+    startLoader();
+    MilesTracker.fetchShoes(function(shoes) {
+      render(shoes || []);
+      stopLoader();
+    });
+  }
+
+  // ---------- show retired toggle ----------
+  document.getElementById('toggle-retired').addEventListener('click', function() {
+    var rw = document.getElementById('retired-wrap');
+    var shown = rw.style.display !== 'none';
+    rw.style.display = shown ? 'none' : '';
+    this.textContent = shown ? 'Show retired' : 'Hide retired';
+  });
+
+  // ---------- add-pair sheet ----------
+  var backdrop = document.getElementById('add-backdrop');
+  var sheet = document.getElementById('add-sheet');
+  var nameEl = document.getElementById('sh-name');
+  var dateEl = document.getElementById('sh-date');
+  var saveBtn = document.getElementById('add-save');
+
+  // default date = today, no future
+  var today = new Date();
+  var iso = today.getFullYear() + '-' +
+    ('0' + (today.getMonth() + 1)).slice(-2) + '-' +
+    ('0' + today.getDate()).slice(-2);
+  dateEl.value = iso; dateEl.max = iso;
+
+  function openSheet() { backdrop.classList.add('show'); sheet.classList.add('show'); }
+  function closeSheet() { backdrop.classList.remove('show'); sheet.classList.remove('show'); }
+  function refreshSaveState() {
+    saveBtn.disabled = !(nameEl.value.trim() && dateEl.value);
+  }
+
+  document.getElementById('open-add').addEventListener('click', openSheet);
+  document.getElementById('add-cancel').addEventListener('click', closeSheet);
+  backdrop.addEventListener('click', closeSheet);
+  nameEl.addEventListener('input', refreshSaveState);
+  dateEl.addEventListener('input', refreshSaveState);
+
+  // photo pick → center-crop to a 640px square JPEG
+  document.getElementById('sh-photo').addEventListener('change', function(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var img = new Image();
+    img.onload = function() {
+      var side = Math.min(img.width, img.height);
+      var sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+      var size = 640;
+      var c = document.createElement('canvas');
+      c.width = size; c.height = size;
+      c.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      photoDataUrl = c.toDataURL('image/jpeg', 0.85);
+      var pv = document.getElementById('photo-preview');
+      pv.src = photoDataUrl; pv.style.display = 'block';
+      document.getElementById('photo-hint').style.display = 'none';
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = function() { pill('Could not read that photo'); };
+    img.src = URL.createObjectURL(file);
+  });
+
+  document.getElementById('add-save').addEventListener('click', function() {
+    var name = nameEl.value.trim();
+    var purchased = dateEl.value;
+    if (!name || !purchased) return;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    MilesTracker.addShoe({ name: name, purchased: purchased, photo: photoDataUrl }, function(ok, err) {
+      saveBtn.textContent = 'Save pair';
+      if (!ok) {
+        saveBtn.disabled = false;
+        pill(err || 'Could not save — try again', true);
+        return;
+      }
+      closeSheet();
+      nameEl.value = ''; photoDataUrl = null;
+      document.getElementById('photo-preview').style.display = 'none';
+      document.getElementById('photo-hint').style.display = '';
+      dateEl.value = iso;
+      pill('Pair added');
+      load();
+    });
+  });
+
+  MilesTracker.onReady = function() { load(); };
+  MilesTracker.init();
+
+})();
+</script>
+
+</body>
+</html>

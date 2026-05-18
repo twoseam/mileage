@@ -71,6 +71,22 @@
         .catch(function()    { callback([]); });
     },
 
+    // shoe: { name, purchased, photo? }  — photo is a data: URL (optional)
+    // callback(ok, payloadOrError)
+    addShoe: function(shoe, callback) {
+      fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ secret: SECRET, shoe: shoe })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data.error) { if (callback) callback(false, data.error); }
+        else                    { if (callback) callback(true, data); }
+      })
+      .catch(function(err) { if (callback) callback(false, String(err)); });
+    },
+
     fetchStats: function(callback) {
       _get('stats')
         .then(function(data) { callback(data && !data.error ? data : {}); })

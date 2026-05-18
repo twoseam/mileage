@@ -92,7 +92,8 @@ function _readShoes() {
       name:      name,
       purchased: _fmtDate(r[2]),
       retired:   _fmtDate(r[3]),
-      notes:     r[4] || ''
+      notes:     r[4] || '',
+      photo:     r[5] || ''
     });
   }
   return shoes;
@@ -250,6 +251,7 @@ function _shoesWithLifetime(allRows) {
       purchased:     s.purchased,
       retired:       s.retired,
       notes:         s.notes,
+      photo:         s.photo,
       lifetimeMiles: milesByShoe[s.name] || 0
     };
   });
@@ -324,6 +326,43 @@ function doGet(e) {
   return _json({ error: 'Unknown action' });
 }
 
+// ---------- add a shoe ----------
+
+function _addShoe(shoe) {
+  var name = ((shoe && shoe.name) || '').trim();
+  if (!name) return _json({ error: 'Shoe name required' });
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHOES_SHEET);
+  if (!sheet) return _json({ error: 'Sheet "' + SHOES_SHEET + '" not found' });
+
+  // Make sure a Photo header exists in column 6
+  if (sheet.getLastColumn() < 6) {
+    sheet.getRange(1, 6).setValue('Photo').setFontWeight('bold');
+  }
+
+  var photoUrl = '';
+  if (shoe.photo && shoe.photo.indexOf('data:') === 0) {
+    try {
+      var m = shoe.photo.match(/^data:([^;]+);base64,(.*)$/);
+      if (m) {
+        var blob = Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], name + '.jpg');
+        var folders = DriveApp.getFoldersByName('Mileage Shoe Photos');
+        var folder = folders.hasNext() ? folders.next()
+                                       : DriveApp.createFolder('Mileage Shoe Photos');
+        var file = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        photoUrl = 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w640';
+      }
+    } catch (err) {
+      photoUrl = ''; // photo is optional — don't fail the whole add
+    }
+  }
+
+  // Cols: Brand, Model, Purchased, Retired, Notes, Photo
+  sheet.appendRow(['', name, shoe.purchased || '', '', '', photoUrl]);
+  return _json({ addedShoe: true, name: name, photo: photoUrl });
+}
+
 // ---------- doPost ----------
 
 function doPost(e) {
@@ -335,6 +374,9 @@ function doPost(e) {
   }
 
   if (body.secret !== SECRET) return _json({ error: 'Unauthorized' });
+
+  // Add-a-pair: { secret, shoe: { name, purchased, photo? } }
+  if (body.shoe) return _addShoe(body.shoe);
 
   var entries = body.entries || [];
   if (!entries.length) return _json({ error: 'No entries' });

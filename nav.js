@@ -1,35 +1,32 @@
 /**
- * nav.js — shared hamburger menu + slide-out nav panel.
+ * nav.js — shared bottom tab bar + swipe-up drawer.
  *
- * Drop into any page with <script src="nav.js"></script>. Injects its own
- * styles, hamburger button (top-right, fixed), and side panel with links
- * to every page in the app. Marks the current page's link as active by
- * matching window.location.pathname.
+ * Drop into any page with <script src="nav.js"></script>. Injects a
+ * fixed bottom navigation bar (pictograph + label per page) that sits on
+ * top of the content, a yellow bar marking the current page, and a
+ * swipe-up sheet holding the light/dark toggle and the version link.
+ * Also keeps the theme system and the PWA pull-to-refresh.
  */
 
 (function() {
   'use strict';
 
+  // Each page: href, label, and inline SVG body (24x24 viewBox).
   var PAGES = [
-    { href: 'index.html', label: 'Entry' },
-    { href: 'stats.html', label: 'Stats' },
-    { href: 'history.html', label: 'History' },
-    { href: 'shoes.html', label: 'Shoes' }
+    { href: 'index.html', label: 'Entry',
+      icon: '<path d="M12 5v14M5 12h14"/>' },
+    { href: 'stats.html', label: 'Stats',
+      icon: '<path d="M4 20h16M7.5 20v-7M12 20V5M16.5 20v-9"/>' },
+    { href: 'history.html', label: 'History',
+      icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.5 2"/>' },
+    { href: 'shoes.html', label: 'Shoes',
+      icon: '<path d="M3 16.4c0-.9.4-1.7 1.1-2.2L8 11l2 1.3L12.6 9l3 3.2c2.2.5 4.3 1 5.4 2.3.5.6.6 1.3.6 2v1.4H3z"/><path d="M3 18.7h18"/>' }
   ];
 
-  // Bump this on every release; mirror it in the footer link + changelog.html.
-  var VERSION = 'v4.12.0';
+  var VERSION = 'v4.13.0';
 
-  /* ===================== Theme (light / dark) =====================
-     Default is dark. The user's choice is remembered in localStorage.
-     This runs synchronously while the <head> is still parsing (nav.js
-     is a plain <head> script on every page), so the theme is applied
-     before the body paints — no flash. The light look is an additive
-     override layer keyed on html[data-theme="light"]; the existing
-     dark CSS is never touched, so dark mode can't regress. */
-
+  /* ===================== Theme (light / dark) ===================== */
   var THEME_KEY = 'mt-theme';
-
   function readTheme() {
     try {
       var t = localStorage.getItem(THEME_KEY);
@@ -39,8 +36,6 @@
   var DARK_BG = '#252525';
   function applyTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
-    // iOS standalone paints the status-bar band from <meta theme-color>;
-    // repaint it on toggle so a dark->light flip doesn't leave a stale bar.
     var m = document.querySelector('meta[name="theme-color"]');
     if (!m) {
       m = document.createElement('meta');
@@ -53,54 +48,36 @@
     try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
   }
 
-  // --- light override layer (shared chrome only; per-page surfaces
-  //     are overridden in each page's own stylesheet) ---
-  var LIGHT_BG     = '#f1ebdd'; // warm cream page background
-  var LIGHT_TEXT   = '#171717'; // near-black so opacity-faded subtle text still reads on cream
-  var LIGHT_SURF   = '#fffdf7'; // cards / nav panel
+  var LIGHT_BG     = '#f1ebdd';
+  var LIGHT_TEXT   = '#171717';
+  var LIGHT_SURF   = '#fffdf7';
   var LIGHT_BORDER = 'rgba(0, 0, 0, 0.10)';
-  var LIGHT_ACCENT = '#C77A0C'; // mustard deepened for contrast on cream
+  var LIGHT_ACCENT = '#C77A0C';
 
   var themeCss = [
-    // smooth the flip (no html background — that breaks the body-bg→canvas
-    // propagation the .mt-bg stripe wedge relies on, hiding the stripe)
     'body { transition: background-color 0.25s ease, color 0.25s ease; }',
-    '',
     'html[data-theme="light"] body {',
     '  background: ' + LIGHT_BG + ' !important; color: ' + LIGHT_TEXT + ' !important;',
     '}',
-    // signature stripe wedge stays at full strength on light too —
-    // fading it washed the bands out and hid the cream stripe entirely
-    '',
-    // hamburger + drawer
-    'html[data-theme="light"] #mt-nav-toggle span { background: ' + LIGHT_TEXT + '; }',
-    'html[data-theme="light"] #mt-nav-backdrop { background: rgba(0, 0, 0, 0.32); }',
-    'html[data-theme="light"] #mt-nav-panel {',
+    // bottom bar + sheet in light mode
+    'html[data-theme="light"] #mt-tabbar {',
+    '  background: ' + LIGHT_SURF + '; border-top-color: ' + LIGHT_BORDER + ';',
+    '}',
+    'html[data-theme="light"] .mt-tab { color: ' + LIGHT_TEXT + '; }',
+    'html[data-theme="light"] #mt-sheet {',
     '  background: ' + LIGHT_SURF + '; color: ' + LIGHT_TEXT + ';',
     '}',
-    'html[data-theme="light"] #mt-nav-panel.mt-nav-open {',
-    '  box-shadow: -16px 0 48px rgba(0, 0, 0, 0.18);',
-    '}',
-    'html[data-theme="light"] .mt-nav-link { color: ' + LIGHT_TEXT + '; }',
-    'html[data-theme="light"] .mt-nav-link:hover { background: rgba(0, 0, 0, 0.04); }',
-    'html[data-theme="light"] .mt-nav-link.mt-nav-link-active {',
-    '  color: ' + LIGHT_ACCENT + '; border-left-color: ' + LIGHT_ACCENT + ';',
-    '}',
-    'html[data-theme="light"] .mt-nav-foot { border-top-color: ' + LIGHT_BORDER + '; }',
-    'html[data-theme="light"] .mt-nav-foot a { color: ' + LIGHT_TEXT + '; }',
-    '',
-    // footer version stamp on the content pages
+    'html[data-theme="light"] .mt-sheet-grab { background: rgba(0,0,0,0.18); }',
+    'html[data-theme="light"] #mt-sheet-bd { background: rgba(0,0,0,0.32); }',
+    'html[data-theme="light"] .mt-sheet-ver { color: ' + LIGHT_TEXT + '; }',
     'html[data-theme="light"] .mt-footer .mt-ver { color: ' + LIGHT_TEXT + '; }',
-    '',
-    // the theme switch control itself
+    // theme switch control
     '#mt-theme-switch {',
     '  display: flex; align-items: center; gap: 10px;',
-    '  background: none; border: none; padding: 0 0 1.15rem; margin: 0;',
-    '  cursor: pointer; color: inherit; opacity: 0.6;',
-    '  transition: opacity 0.15s ease;',
+    '  background: none; border: none; padding: 0; margin: 0;',
+    '  cursor: pointer; color: inherit;',
     '}',
-    '#mt-theme-switch:hover { opacity: 0.95; }',
-    '#mt-theme-switch .mt-ts-ico { font-size: 0.95rem; line-height: 1; }',
+    '#mt-theme-switch .mt-ts-ico { font-size: 0.95rem; line-height: 1; opacity: 0.7; }',
     '#mt-theme-switch .mt-ts-track {',
     '  position: relative; width: 44px; height: 24px; border-radius: 999px;',
     '  background: rgba(255, 255, 255, 0.16); transition: background 0.2s ease;',
@@ -119,7 +96,6 @@
     '}'
   ].join('\n');
 
-  // Apply immediately (head still parsing → no flash).
   var theme = readTheme();
   applyTheme(theme);
   (function injectThemeStyle() {
@@ -129,75 +105,96 @@
     (document.head || document.documentElement).appendChild(s);
   })();
 
+  var BAR_H = 60;  // px (excludes the iOS safe-area inset added below)
+
   var css = [
-    '#mt-nav-toggle {',
-    '  position: fixed; top: 22px; right: 22px; z-index: 10001;',
-    '  width: 36px; height: 36px;',
-    '  background: transparent;',
-    '  border: none;',
-    '  cursor: pointer;',
-    '  display: flex; flex-direction: column; align-items: center; justify-content: center;',
-    '  gap: 5px; padding: 0;',
+    // content must clear the fixed bar
+    'body { padding-bottom: calc(' + BAR_H + 'px + env(safe-area-inset-bottom, 0px)); }',
+
+    '#mt-tabbar {',
+    '  position: fixed; left: 0; right: 0; bottom: 0; z-index: 8000;',
+    '  height: calc(' + BAR_H + 'px + env(safe-area-inset-bottom, 0px));',
+    '  padding-bottom: env(safe-area-inset-bottom, 0px);',
+    '  display: flex; align-items: stretch;',
+    '  background: #1c1c1c; color: #f5f5f5;',
+    '  border-top: 1px solid rgba(255, 255, 255, 0.07);',
+    '  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.28);',
+    '  touch-action: none;',
     '}',
-    '#mt-nav-toggle span {',
-    '  display: block; width: 18px; height: 2px; background: #f5f5f5; border-radius: 1px;',
-    '  transition: transform 0.25s ease, opacity 0.2s ease;',
-    '}',
-    '#mt-nav-toggle.mt-nav-toggle-open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }',
-    '#mt-nav-toggle.mt-nav-toggle-open span:nth-child(2) { opacity: 0; }',
-    '#mt-nav-toggle.mt-nav-toggle-open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }',
-    '',
-    '#mt-nav-backdrop {',
-    '  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5);',
-    '  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);',
-    '  z-index: 9999; opacity: 0; pointer-events: none;',
-    '  transition: opacity 0.25s ease;',
-    '}',
-    '#mt-nav-backdrop.mt-nav-backdrop-show { opacity: 1; pointer-events: auto; }',
-    '',
-    '#mt-nav-panel {',
-    '  position: fixed; top: 0; right: 0; bottom: 0;',
-    '  width: 78%; max-width: 320px;',
-    '  background: #1c1c1c;',
-    '  color: #f5f5f5;',
-    '  z-index: 10000;',
-    '  transform: translateX(100%);',
-    '  transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease;',
+    '.mt-tab {',
+    '  flex: 1; position: relative;',
     '  display: flex; flex-direction: column;',
-    '  padding: 88px 0 2rem;',
-    '  box-shadow: none;',
-    '}',
-    '#mt-nav-panel.mt-nav-open {',
-    '  transform: translateX(0);',
-    '  box-shadow: -16px 0 48px rgba(0, 0, 0, 0.4);',
-    '}',
-    '',
-    '.mt-nav-link {',
-    '  display: block; padding: 1rem 2rem;',
-    '  font-family: "omnes", -apple-system, BlinkMacSystemFont, sans-serif;',
-    '  font-size: 1.5rem; font-weight: 800; letter-spacing: 0.02em;',
-    '  color: #f5f5f5; text-decoration: none;',
-    '  border-left: 4px solid transparent;',
-    '  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;',
-    '}',
-    '.mt-nav-link:hover { background: rgba(255, 255, 255, 0.04); }',
-    '.mt-nav-link.mt-nav-link-active {',
-    '  color: #E89A1F; border-left-color: #E89A1F;',
-    '}',
-    '',
-    '.mt-nav-foot {',
-    '  margin-top: auto; padding: 1.25rem 2rem 0;',
-    '  border-top: 1px solid rgba(255, 255, 255, 0.08);',
-    '}',
-    '.mt-nav-foot a {',
-    '  display: inline-block;',
-    '  color: #f5f5f5; text-decoration: none; opacity: 0.5;',
+    '  align-items: center; justify-content: center; gap: 3px;',
+    '  background: none; border: none; cursor: pointer;',
+    '  color: inherit; font-family: inherit; text-decoration: none;',
+    '  opacity: 0.5; -webkit-tap-highlight-color: transparent;',
     '  transition: opacity 0.15s ease;',
     '}',
-    '.mt-nav-foot a:hover { opacity: 0.9; }',
-    '.mt-nav-foot .mt-nav-foot-ver {',
-    '  font-size: 0.9rem; letter-spacing: 0.12em;',
+    '.mt-tab.active { opacity: 1; }',
+    '.mt-tab svg {',
+    '  width: 23px; height: 23px; display: block;',
+    '  fill: none; stroke: currentColor; stroke-width: 2;',
+    '  stroke-linecap: round; stroke-linejoin: round;',
+    '}',
+    '.mt-tab-lbl {',
+    '  font-size: 0.58rem; font-weight: 800;',
+    '  letter-spacing: 0.06em; text-transform: uppercase;',
+    '}',
+    // the yellow current-page bar
+    '.mt-tab-ind {',
+    '  position: absolute; top: 0; left: 50%; transform: translateX(-50%);',
+    '  width: 26px; height: 3px; border-radius: 0 0 3px 3px;',
+    '  background: #F7C948; opacity: 0;',
+    '  transition: opacity 0.15s ease;',
+    '}',
+    '.mt-tab.active .mt-tab-ind { opacity: 1; }',
+    // grab handle (signifies swipe-up)
+    '.mt-grab {',
+    '  position: absolute; top: 6px; left: 50%; transform: translateX(-50%);',
+    '  width: 38px; height: 4px; border-radius: 2px;',
+    '  background: rgba(255, 255, 255, 0.22);',
+    '}',
+
+    '#mt-sheet-bd {',
+    '  position: fixed; inset: 0; z-index: 8090;',
+    '  background: rgba(0, 0, 0, 0.5);',
+    '  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);',
+    '  opacity: 0; pointer-events: none; transition: opacity 0.25s ease;',
+    '}',
+    '#mt-sheet-bd.show { opacity: 1; pointer-events: auto; }',
+    '#mt-sheet {',
+    '  position: fixed; left: 0; right: 0; bottom: 0; z-index: 8100;',
+    '  background: #1c1c1c; color: #f5f5f5;',
+    '  border-radius: 20px 20px 0 0;',
+    '  padding: 14px 1.6rem calc(1.6rem + env(safe-area-inset-bottom, 0px));',
+    '  transform: translateY(110%);',
+    '  transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);',
+    '  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.45);',
+    '}',
+    '#mt-sheet.show { transform: translateY(0); }',
+    '#mt-sheet.dragging { transition: none; }',
+    '.mt-sheet-grab {',
+    '  width: 44px; height: 5px; border-radius: 3px; margin: 0 auto 1.4rem;',
+    '  background: rgba(255, 255, 255, 0.22);',
+    '}',
+    '.mt-sheet-row {',
+    '  display: flex; align-items: center; justify-content: space-between;',
+    '  padding: 0.7rem 0; gap: 1rem;',
+    '}',
+    '.mt-sheet-row + .mt-sheet-row {',
+    '  border-top: 1px solid rgba(255, 255, 255, 0.08);',
+    '}',
+    'html[data-theme="light"] .mt-sheet-row + .mt-sheet-row {',
+    '  border-top-color: ' + LIGHT_BORDER + ';',
+    '}',
+    '.mt-sheet-k {',
+    '  font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em;',
+    '  text-transform: uppercase; opacity: 0.55;',
+    '}',
+    '.mt-sheet-ver {',
+    '  color: inherit; text-decoration: none; font-weight: 800;',
     '  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;',
+    '  letter-spacing: 0.08em; opacity: 0.85;',
     '}'
   ].join('\n');
 
@@ -206,49 +203,48 @@
     style.textContent = css;
     document.head.appendChild(style);
 
+    var path = window.location.pathname.split('/').pop() || 'index.html';
+    if (path === '' || path === '/') path = 'index.html';
+
+    var tabsHtml = PAGES.map(function(p) {
+      var active = (p.href === path) ? ' active' : '';
+      return '<a class="mt-tab' + active + '" href="' + p.href + '">' +
+        '<span class="mt-tab-ind"></span>' +
+        '<svg viewBox="0 0 24 24">' + p.icon + '</svg>' +
+        '<span class="mt-tab-lbl">' + p.label + '</span>' +
+      '</a>';
+    }).join('');
+
     var html = '' +
-      '<button id="mt-nav-toggle" aria-label="Menu">' +
-        '<span></span><span></span><span></span>' +
-      '</button>' +
-      '<div id="mt-nav-backdrop"></div>' +
-      '<nav id="mt-nav-panel">' +
-        PAGES.map(function(p) {
-          return '<a class="mt-nav-link" href="' + p.href + '">' + p.label + '</a>';
-        }).join('') +
-        '<div class="mt-nav-foot">' +
+      '<nav id="mt-tabbar"><div class="mt-grab"></div>' + tabsHtml + '</nav>' +
+      '<div id="mt-sheet-bd"></div>' +
+      '<div id="mt-sheet">' +
+        '<div class="mt-sheet-grab"></div>' +
+        '<div class="mt-sheet-row">' +
+          '<span class="mt-sheet-k">Appearance</span>' +
           '<button id="mt-theme-switch" type="button" role="switch" ' +
                   'aria-label="Switch between light and dark mode">' +
             '<span class="mt-ts-ico">☾</span>' +
             '<span class="mt-ts-track"><span class="mt-ts-knob"></span></span>' +
             '<span class="mt-ts-ico">☀</span>' +
           '</button>' +
-          '<a href="changelog.html">' +
-            '<span class="mt-nav-foot-ver">' + VERSION + '</span>' +
-          '</a>' +
         '</div>' +
-      '</nav>';
-    document.body.insertAdjacentHTML('afterbegin', html);
+        '<div class="mt-sheet-row">' +
+          '<span class="mt-sheet-k">Version history</span>' +
+          '<a class="mt-sheet-ver" href="changelog.html">' + VERSION + '</a>' +
+        '</div>' +
+      '</div>';
+    document.body.insertAdjacentHTML('beforeend', html);
 
-    var toggle   = document.getElementById('mt-nav-toggle');
-    var panel    = document.getElementById('mt-nav-panel');
-    var backdrop = document.getElementById('mt-nav-backdrop');
+    var bar    = document.getElementById('mt-tabbar');
+    var sheet  = document.getElementById('mt-sheet');
+    var sheetB = document.getElementById('mt-sheet-bd');
 
-    function openMenu() {
-      panel.classList.add('mt-nav-open');
-      backdrop.classList.add('mt-nav-backdrop-show');
-      toggle.classList.add('mt-nav-toggle-open');
-    }
-    function closeMenu() {
-      panel.classList.remove('mt-nav-open');
-      backdrop.classList.remove('mt-nav-backdrop-show');
-      toggle.classList.remove('mt-nav-toggle-open');
-    }
-    toggle.addEventListener('click', function() {
-      if (panel.classList.contains('mt-nav-open')) closeMenu();
-      else openMenu();
-    });
-    backdrop.addEventListener('click', closeMenu);
+    function openSheet()  { sheet.classList.add('show'); sheetB.classList.add('show'); }
+    function closeSheet() { sheet.classList.remove('show'); sheetB.classList.remove('show'); }
+    sheetB.addEventListener('click', closeSheet);
 
+    // Theme switch lives in the sheet now
     var themeSwitch = document.getElementById('mt-theme-switch');
     function syncSwitch() {
       themeSwitch.setAttribute('aria-checked', theme === 'light' ? 'true' : 'false');
@@ -256,20 +252,39 @@
     syncSwitch();
     themeSwitch.addEventListener('click', function() {
       theme = (theme === 'light') ? 'dark' : 'light';
-      applyTheme(theme);
-      saveTheme(theme);
-      syncSwitch();
+      applyTheme(theme); saveTheme(theme); syncSwitch();
     });
 
-    // Active state for the current page
-    var path = window.location.pathname.split('/').pop() || 'index.html';
-    if (path === '' || path === '/') path = 'index.html';
-    document.querySelectorAll('.mt-nav-link').forEach(function(a) {
-      if (a.getAttribute('href') === path) a.classList.add('mt-nav-link-active');
+    // --- swipe up on the bar opens the sheet; drag the sheet down closes ---
+    var sy = 0, tracking = false, sdy = 0;
+    bar.addEventListener('touchstart', function(e) {
+      sy = e.touches[0].clientY; tracking = true;
+    }, { passive: true });
+    bar.addEventListener('touchmove', function(e) {
+      if (!tracking) return;
+      if (sy - e.touches[0].clientY > 36) { tracking = false; openSheet(); }
+    }, { passive: true });
+    bar.addEventListener('touchend', function() { tracking = false; });
+    // tapping the handle also opens (discoverable without the gesture)
+    bar.querySelector('.mt-grab').addEventListener('click', function(e) {
+      e.preventDefault(); e.stopPropagation(); openSheet();
     });
 
-    // Single source of truth for the displayed version: nav.js fills every
-    // footer .mt-ver link, so a release bump = change VERSION above only.
+    sheet.addEventListener('touchstart', function(e) {
+      sdy = e.touches[0].clientY; sheet.classList.add('dragging');
+    }, { passive: true });
+    sheet.addEventListener('touchmove', function(e) {
+      var d = e.touches[0].clientY - sdy;
+      if (d > 0) sheet.style.transform = 'translateY(' + d + 'px)';
+    }, { passive: true });
+    sheet.addEventListener('touchend', function(e) {
+      sheet.classList.remove('dragging');
+      sheet.style.transform = '';
+      var d = (e.changedTouches[0] || {}).clientY - sdy;
+      if (d > 70) closeSheet();
+    });
+
+    // Single source of truth for any in-page version stamps.
     document.querySelectorAll('a.mt-ver').forEach(function(a) {
       a.textContent = VERSION;
       if (!a.getAttribute('href')) a.setAttribute('href', 'changelog.html');
@@ -278,8 +293,7 @@
     setupPullToRefresh();
   }
 
-  // Custom pull-to-refresh for the standalone PWA (iOS doesn't give us one).
-  // Reloads with a cache-busting query so it can't serve the stale page.
+  // Custom pull-to-refresh for the standalone PWA.
   function setupPullToRefresh() {
     if (document.getElementById('mt-ptr')) return;
     var st = document.createElement('style');
@@ -302,10 +316,12 @@
     var TRIG = 70, MAX = 110;
 
     function blocked() {
-      var p = document.getElementById('mt-nav-panel');
-      if (p && p.classList.contains('mt-nav-open')) return true;
+      var s = document.getElementById('mt-sheet');
+      if (s && s.classList.contains('show')) return true;
       var m = document.querySelector('[aria-modal="true"]');
       if (m && getComputedStyle(m).display !== 'none') return true;
+      var ap = document.getElementById('apanel');
+      if (ap && ap.classList.contains('open')) return true;
       return false;
     }
     window.addEventListener('touchstart', function(e) {

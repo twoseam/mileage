@@ -19,6 +19,13 @@
 var SECRET        = '101685910168591016859';
 var ENTRIES_SHEET = 'Entries';
 var SHOES_SHEET   = 'Shoes';
+var PENDING_SHEET = 'Pending';   // auto-synced workouts await approval here
+
+// Canonical Entries/Pending column order (used to seed a fresh Pending tab).
+var ENTRY_HEADERS = ['Date','Miles','Type','Start Time','End Time','Pace',
+  'Temp','Weather','Shoe','Notes','Duration','Avg Speed Mph','Avg Heart Rate',
+  'Calories','Steps','Ascent Ft','Descent Ft','Location','Recording Source',
+  'Name','Activity Id'];
 
 // Shoe photos are committed into the GitHub Pages repo so they're served
 // from the site itself. Token lives in Script Properties (key GITHUB_TOKEN),
@@ -508,6 +515,11 @@ function doGet(e) {
     return _json(li ? JSON.parse(li) : { note: 'no ingest yet' });
   }
 
+  if (action === 'pending') {
+    // the approval queue: auto-synced workouts awaiting review
+    return _json({ rows: _pendingRows() });
+  }
+
   return _json({ error: 'Unknown action' });
 }
 
@@ -654,30 +666,40 @@ function _ingestWorkouts(body) {
   var ws = (body.data && body.data.workouts) || body.workouts || [];
   if (!ws.length) return _json({ error: 'no workouts in payload' });
 
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ENTRIES_SHEET);
-  if (!sheet) return _json({ error: 'Entries sheet not found' });
+  // Auto-synced workouts go to the PENDING tab — they don't touch stats
+  // until you approve them in the app.
+  var sheet = _pendingSheet();
+  if (!sheet) return _json({ error: 'Pending sheet unavailable' });
   var data = sheet.getDataRange().getValues();
   var hdr = data[0] || [];
   var hlow = hdr.map(function(h) { return String(h || '').trim().toLowerCase(); });
   var amap = _entryColMap(hdr);
 
-  // Dedupe two ways: by Activity Id (Health Auto Export resends) AND by
-  // date+distance (Health Auto Export assigns DIFFERENT UUIDs than the
-  // one-time Apple Health file export, so the same workout already in the
-  // Sheet from the historical import would otherwise double up).
+  // Dedupe by Activity Id AND by date+distance, against BOTH Entries
+  // (already approved) and Pending (already waiting) — so the same
+  // workout is never staged twice and never doubles an approved one,
+  // even though Health Auto Export's UUIDs differ from the file export.
   var seen = {}, seenDM = {};
   function dmKey(d, mi) { return d + '|' + (Math.round(Number(mi) * 10) / 10); }
-  for (var r = 1; r < data.length; r++) {
-    if (amap.activity_id != null) {
-      var a = String(data[r][amap.activity_id] || '').trim();
-      if (a) seen[a.toLowerCase()] = true;
-    }
-    if (amap.date != null && amap.miles != null) {
-      var dd = String(data[r][amap.date] || '').slice(0, 10);
-      var mm = parseFloat(data[r][amap.miles]);
-      if (dd && !isNaN(mm)) seenDM[dmKey(dd, mm)] = true;
+  function _harvest(sheetName) {
+    var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+    if (!sh || sh.getLastRow() < 2) return;
+    var d = sh.getDataRange().getValues();
+    var m = _entryColMap(d[0] || []);
+    for (var i = 1; i < d.length; i++) {
+      if (m.activity_id != null) {
+        var a = String(d[i][m.activity_id] || '').trim();
+        if (a) seen[a.toLowerCase()] = true;
+      }
+      if (m.date != null && m.miles != null) {
+        var dd = String(d[i][m.date] || '').slice(0, 10);
+        var mm = parseFloat(d[i][m.miles]);
+        if (dd && !isNaN(mm)) seenDM[dmKey(dd, mm)] = true;
+      }
     }
   }
+  _harvest(ENTRIES_SHEET);
+  _harvest(PENDING_SHEET);
 
   function setByHeader(row, label, val) {
     var j = hlow.indexOf(label);
@@ -767,12 +789,8 @@ function _ingestWorkouts(body) {
   if (rows.length) {
     sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length)
          .setValues(rows);
-    try {
-      var ch = CacheService.getScriptCache();
-      ch.remove('dashboard_current');
-      ch.remove('allEntries_gz');
-      ch.remove('dashboard_' + new Date().getFullYear());
-    } catch (e) {}
+    // No cache bust — Pending isn't in Entries, so stats are unaffected
+    // until approval.
   }
   // stash for the ?action=lastIngest debug peek
   try {
@@ -781,6 +799,110 @@ function _ingestWorkouts(body) {
       21600);
   } catch (e) {}
   return _json({ added: rows.length, total: ws.length, summary: summary });
+}
+
+// Get (creating + seeding if needed) the Pending tab. Mirrors the Entries
+// column order so an approved row copies across by header cleanly.
+function _pendingSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(PENDING_SHEET);
+  if (!sh) sh = ss.insertSheet(PENDING_SHEET);
+  if (sh.getLastRow() === 0) {
+    sh.getRange(1, 1, 1, ENTRY_HEADERS.length)
+      .setValues([ENTRY_HEADERS]).setFontWeight('bold');
+  }
+  return sh;
+}
+
+// Pending rows as objects for the approval queue.
+function _pendingRows() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PENDING_SHEET);
+  if (!sh || sh.getLastRow() < 2) return [];
+  var d = sh.getDataRange().getValues();
+  var h = d[0].map(function(x) { return String(x || '').trim(); });
+  var out = [];
+  for (var i = 1; i < d.length; i++) {
+    var o = {};
+    for (var j = 0; j < h.length; j++) o[h[j]] = d[i][j];
+    out.push(o);
+  }
+  return out;
+}
+
+// Approve one pending workout into Entries (with the user's edits),
+// then remove it from Pending. Matched by Activity Id.
+function _approvePending(req) {
+  req = req || {};
+  var id = String(req.activity_id || '').trim();
+  if (!id) return _json({ error: 'activity_id required' });
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var psh = ss.getSheetByName(PENDING_SHEET);
+  if (!psh || psh.getLastRow() < 2) return _json({ error: 'nothing pending' });
+  var pdata = psh.getDataRange().getValues();
+  var phdr = pdata[0].map(function(x) { return String(x || '').trim(); });
+  var pmap = _entryColMap(pdata[0]);
+
+  var prow = -1;
+  for (var i = 1; i < pdata.length; i++) {
+    if (pmap.activity_id != null &&
+        String(pdata[i][pmap.activity_id] || '').trim().toLowerCase() === id.toLowerCase()) {
+      prow = i; break;
+    }
+  }
+  if (prow < 0) return _json({ error: 'pending workout not found' });
+
+  // value object keyed by header label, from the pending row + edits
+  var vals = {};
+  for (var c = 0; c < phdr.length; c++) vals[phdr[c]] = pdata[prow][c];
+  function setLabel(label, v) {
+    for (var k in vals) if (k.toLowerCase() === label) { vals[k] = v; return; }
+  }
+  if (req.shoe  != null) setLabel('shoe', req.shoe);
+  if (req.notes != null) setLabel('notes', req.notes);
+  if (req.type  != null) setLabel('type', req.type);
+  if (req.miles != null && !isNaN(parseFloat(req.miles)))
+    setLabel('miles', parseFloat(req.miles));
+
+  // append to Entries in ITS header order
+  var esh = ss.getSheetByName(ENTRIES_SHEET);
+  if (!esh) return _json({ error: 'Entries sheet not found' });
+  var ehdr = esh.getRange(1, 1, 1, Math.max(1, esh.getLastColumn()))
+                .getValues()[0].map(function(x) { return String(x || '').trim(); });
+  var erow = ehdr.map(function(label) {
+    var key = Object.keys(vals).filter(function(k) {
+      return k.toLowerCase() === String(label).toLowerCase();
+    })[0];
+    return key ? vals[key] : '';
+  });
+  esh.getRange(esh.getLastRow() + 1, 1, 1, erow.length).setValues([erow]);
+  psh.deleteRow(prow + 1);
+
+  try {
+    var ch = CacheService.getScriptCache();
+    ch.remove('dashboard_current');
+    ch.remove('allEntries_gz');
+    ch.remove('dashboard_' + new Date().getFullYear());
+  } catch (e) {}
+  return _json({ approved: true, activity_id: id });
+}
+
+function _rejectPending(req) {
+  req = req || {};
+  var id = String(req.activity_id || '').trim();
+  if (!id) return _json({ error: 'activity_id required' });
+  var psh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PENDING_SHEET);
+  if (!psh || psh.getLastRow() < 2) return _json({ error: 'nothing pending' });
+  var d = psh.getDataRange().getValues();
+  var m = _entryColMap(d[0]);
+  for (var i = 1; i < d.length; i++) {
+    if (m.activity_id != null &&
+        String(d[i][m.activity_id] || '').trim().toLowerCase() === id.toLowerCase()) {
+      psh.deleteRow(i + 1);
+      return _json({ rejected: true, activity_id: id });
+    }
+  }
+  return _json({ error: 'pending workout not found' });
 }
 
 function _shoesSheet() {
@@ -925,6 +1047,12 @@ function doPost(e) {
   }
 
   if (body.secret !== SECRET) return _json({ error: 'Unauthorized' });
+
+  // Approve a pending workout into Entries (with edits): { secret, approve:
+  //   { activity_id, shoe?, notes?, type?, miles? } }
+  if (body.approve) return _approvePending(body.approve);
+  // Discard a pending workout: { secret, reject: { activity_id } }
+  if (body.reject) return _rejectPending(body.reject);
 
   // Add a pair:    { secret, shoe: { brand, model, purchased, goal?, color?, photo? } }
   if (body.shoe) return _addShoe(body.shoe);

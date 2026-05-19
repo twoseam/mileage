@@ -217,22 +217,48 @@
     }
     #summary-miles { min-width: 4.2ch; }    /* hold the cell width steady */
     #summary-days  { min-width: 2.2ch; }
-    .chart-legend {
-      margin-left: auto;
+    /* Series filter — tucked into the chart card's top-right corner */
+    .chart-summary > .chart-toggles {
+      margin-left: auto;        /* push to the right edge */
+      align-self: flex-start;   /* sit at the top of the summary row */
       display: flex;
-      gap: 0.9rem;
+      flex-direction: row;
       align-items: center;
-      font-size: 0.65rem;
-      letter-spacing: 0.06em;
-      opacity: 0.75;
-      padding-bottom: 4px;
+      gap: 0.3rem;
     }
+    .chart-legend-btn {
+      background: none;
+      border: none;
+      border-radius: 999px;
+      padding: 0.28rem 0.7rem;
+      margin: 0;
+      font: inherit;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      display: inline-flex;
+      align-items: center;
+      transition: background 0.18s ease, opacity 0.18s ease;
+    }
+    .chart-legend-btn[aria-pressed="true"]  { background: rgba(255, 255, 255, 0.07); }
+    .chart-legend-btn[aria-pressed="false"] { opacity: 0.45; }
+    html[data-theme="light"] .chart-legend-btn[aria-pressed="true"] { background: rgba(0, 0, 0, 0.05); }
     .chart-legend-swatch {
       display: inline-block;
-      width: 10px; height: 10px;
-      border-radius: 2px;
-      margin-right: 6px;
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      margin-right: 7px;
       vertical-align: middle;
+      box-sizing: border-box;
+      transition: background 0.18s ease, box-shadow 0.18s ease;
+    }
+    /* on = filled dot, off = hollow ring — clear on/off without clutter */
+    .chart-legend-btn[aria-pressed="false"] .chart-legend-swatch {
+      background: transparent !important;
+      box-shadow: inset 0 0 0 2px currentColor;
     }
 
     .chart-bars {
@@ -245,26 +271,35 @@
     }
     .chart-bar {
       flex: 1;
-      min-height: 1px;
+      height: 100%;                /* full plot height; segments size against this */
       position: relative;
-      display: flex;
-      flex-direction: column;
-      border-radius: 4px 4px 0 0;
-      overflow: hidden;
-      transition: height 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+      transform: scaleY(1);
+      transform-origin: bottom;    /* grow-in scales up from the baseline */
+      transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
       cursor: default;
     }
     .chart-bar.is-drillable { cursor: pointer; }
     .chart-bar:hover { filter: brightness(1.1); }
-    .chart-bar-seg { width: 100%; }
-    .chart-bar-seg-walk { background: #8FCFC2; }  /* cyan */
-    .chart-bar-seg-run  { background: #E7D7A4; }  /* cream */
+    /* Each segment is an ABSOLUTE fraction of the plot, anchored to the
+       baseline — so toggling one series can't move the other one. */
+    .chart-bar-seg {
+      position: absolute;
+      left: 0;
+      right: 0;
+      transition: height 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+                  bottom 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .chart-bar-seg-walk { background: #8FCFC2; bottom: 0; }  /* cyan, on the baseline */
+    .chart-bar-seg-run  { background: #E7D7A4; }             /* cream, sits on walk */
+    /* Round only the top-most visible segment so the seam stays clean. */
+    .chart-bar-seg-run { border-radius: 4px 4px 0 0; }
+    .chart-bar.run-off .chart-bar-seg-walk { border-radius: 4px 4px 0 0; }
     /* Current period: yellow duotone so it pops AND still shows walk/run split */
     .chart-bar.is-current .chart-bar-seg-walk { background: #F7C948; }
     .chart-bar.is-current .chart-bar-seg-run  { background: #C77A0C; }
     .chart-bar-value {
       position: absolute;
-      bottom: 100%;
+      bottom: 0;
       left: 0;
       right: 0;
       text-align: center;
@@ -273,7 +308,8 @@
       margin-bottom: 4px;
       line-height: 1;
       opacity: 0;
-      transition: opacity 0.15s ease;
+      transition: opacity 0.15s ease,
+                  bottom 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
       pointer-events: none;
       white-space: nowrap;
     }
@@ -737,9 +773,9 @@
         <div class="chart-summary-label">Days</div>
         <div class="chart-summary-value" id="summary-days">—</div>
       </div>
-      <div class="chart-legend">
-        <span><span class="chart-legend-swatch" style="background:#8FCFC2"></span>Walk</span>
-        <span><span class="chart-legend-swatch" style="background:#E7D7A4"></span>Run</span>
+      <div class="chart-toggles">
+        <button type="button" class="chart-legend-btn" data-series="walk" aria-pressed="true"><span class="chart-legend-swatch" style="background:#8FCFC2"></span>Walk</button>
+        <button type="button" class="chart-legend-btn" data-series="run" aria-pressed="true"><span class="chart-legend-swatch" style="background:#E7D7A4"></span>Run</button>
       </div>
     </div>
     <div class="chart-viewport" id="chart-viewport">
@@ -842,10 +878,20 @@
     cursor: startOfMonth(new Date()), // anchor of current visible range
     dailyWalk: {},                // 'YYYY-MM-DD' -> walk miles that day
     dailyRun:  {},                // 'YYYY-MM-DD' -> run miles that day
-    firstEntryDate: null          // earliest date with any entries
+    firstEntryDate: null,         // earliest date with any entries
+    show: { walk: true, run: true } // legend toggles — which series the chart draws
   };
 
   function dayTotal(k) { return (state.dailyWalk[k] || 0) + (state.dailyRun[k] || 0); }
+
+  // Miles in a bin counting only the series currently toggled on.
+  function binVis(b) {
+    return (state.show.walk ? b.walkMiles : 0) + (state.show.run ? b.runMiles : 0);
+  }
+  // Set true right before a render that should grow the bars in (init, zoom
+  // change, legend toggle). A carousel swipe leaves it false so the slide
+  // stays clean and the bars don't re-animate on every nudge.
+  var growIn = false;
 
   // ---------- loader ----------
 
@@ -903,6 +949,7 @@
         state.rows = rows;
         state.firstEntryDate = firstDate;
         renderRecent(rows);
+        growIn = true;            // grow the bars in on first paint
         render();
       } catch (err) {
         // a render error must not strand the loader
@@ -1492,19 +1539,76 @@
 
   var centerBins = [];
 
-  function barsHTML(bins, max) {
+  function barsHTML(bins, max, anim) {
     return bins.map(function(b, i) {
-      var pct = (b.miles / max) * 100;
+      var vis = binVis(b);                          // shown miles (for value/title)
       var cls = 'chart-bar' + (b.drillTo ? ' is-drillable' : '') + (b.isCurrent ? ' is-current' : '');
-      var walkPct = b.miles > 0 ? (b.walkMiles / b.miles) * 100 : 0;
-      var runPct  = b.miles > 0 ? (b.runMiles  / b.miles) * 100 : 0;
-      var val = b.miles > 0 ? '<div class="chart-bar-value">' + b.miles.toFixed(1) + '</div>' : '';
-      var segs = '';
-      // Stack: run on top (rendered first), walk on bottom (flex puts last at bottom)
-      if (b.runMiles  > 0) segs += '<div class="chart-bar-seg chart-bar-seg-run"  style="height:' + runPct  + '%"></div>';
-      if (b.walkMiles > 0) segs += '<div class="chart-bar-seg chart-bar-seg-walk" style="height:' + walkPct + '%"></div>';
-      return '<div class="' + cls + '" data-idx="' + i + '" style="height:' + pct + '%" title="' + b.tooltip + ': ' + b.miles.toFixed(1) + ' mi">' + val + segs + '</div>';
+      var rv = state.show.run  ? b.runMiles  : 0;
+      var wv = state.show.walk ? b.walkMiles : 0;
+      // Heights are an ABSOLUTE fraction of the plot (max), not of the bar —
+      // so walk's pixel height never depends on whether run is shown.
+      var walkH = (wv / max) * 100;
+      var runH  = (rv / max) * 100;
+      var topPct = walkH + runH;
+      if (rv <= 0) cls += ' run-off';   // round the walk top when run's absent
+      // Grow-in scales the whole bar up from the baseline (one transform, so
+      // nothing can overshoot); a legend toggle instead animates seg heights
+      // in place via applyShow(). Raw miles ride along for that.
+      var barStyle = anim
+        ? 'transform:scaleY(0);transition-delay:' + (i * 28) + 'ms'
+        : '';
+      return '<div class="' + cls + '" data-idx="' + i +
+             '" data-w="' + b.walkMiles + '" data-r="' + b.runMiles +
+             '" style="' + barStyle + '" title="' + b.tooltip + ': ' + vis.toFixed(1) + ' mi">' +
+             '<div class="chart-bar-value" style="bottom:' + topPct + '%' + (vis > 0 ? '' : ';display:none') + '">' + vis.toFixed(1) + '</div>' +
+             '<div class="chart-bar-seg chart-bar-seg-run"  style="height:' + runH + '%;bottom:' + walkH + '%"></div>' +
+             '<div class="chart-bar-seg chart-bar-seg-walk" style="height:' + walkH + '%"></div>' +
+             '</div>';
     }).join('');
+  }
+
+  // Re-skin the already-rendered bars to the current Walk/Run toggle state
+  // WITHOUT rebuilding the DOM, so the CSS height transitions animate the
+  // change — the chart visibly responds to the button instead of reloading.
+  function applyShow() {
+    var sc = scaleFor(computeZoomMax());
+    ['prev', 'center', 'next'].forEach(function(which) {
+      var pane = document.querySelector('.chart-pane[data-pane="' + which + '"]');
+      if (!pane) return;
+      pane.querySelector('.chart-grid').innerHTML = gridHTML(sc);
+      pane.querySelectorAll('.chart-bar').forEach(function(el) {
+        var w = parseFloat(el.getAttribute('data-w')) || 0;
+        var r = parseFloat(el.getAttribute('data-r')) || 0;
+        var rv = state.show.run  ? r : 0;
+        var wv = state.show.walk ? w : 0;
+        var vis = rv + wv;
+        var walkH = (wv / sc.barMax) * 100;       // absolute — walk ignores run
+        var runH  = (rv / sc.barMax) * 100;
+        el.style.transitionDelay = '';            // drop any grow-in stagger
+        el.classList.toggle('run-off', rv <= 0);
+        var runSeg  = el.querySelector('.chart-bar-seg-run');
+        var walkSeg = el.querySelector('.chart-bar-seg-walk');
+        if (walkSeg) walkSeg.style.height = walkH + '%';
+        if (runSeg)  { runSeg.style.height = runH + '%'; runSeg.style.bottom = walkH + '%'; }
+        var v = el.querySelector('.chart-bar-value');
+        if (v) {
+          v.textContent = vis.toFixed(1);
+          v.style.bottom = (walkH + runH) + '%';
+          v.style.display = vis > 0 ? '' : 'none';
+        }
+        el.setAttribute('title', el.getAttribute('title').replace(/: [\d.]+ mi$/, ': ' + vis.toFixed(1) + ' mi'));
+      });
+    });
+    var total = 0;
+    document.querySelectorAll('.chart-pane[data-pane="center"] .chart-bar').forEach(function(el) {
+      var w = parseFloat(el.getAttribute('data-w')) || 0;
+      var r = parseFloat(el.getAttribute('data-r')) || 0;
+      total += (state.show.walk ? w : 0) + (state.show.run ? r : 0);
+    });
+    animateNumber(document.getElementById('summary-miles'), total, 1);
+    document.querySelectorAll('.chart-legend-btn').forEach(function(b) {
+      b.setAttribute('aria-pressed', state.show[b.getAttribute('data-series')] ? 'true' : 'false');
+    });
   }
   function labelsHTML(bins) {
     return bins.map(function(b) {
@@ -1555,6 +1659,8 @@
   }
   function computeZoomMax() {
     var max = 0;
+    // Full walk+run total — the axis stays put when a series is toggled, so
+    // the rest of the chart doesn't move; the bar just loses that chunk.
     function scan(bins) { bins.forEach(function(b) { if (b.miles > max) max = b.miles; }); }
     if (state.zoom === 'all') {
       scan(withCursor(state.cursor, function() { return buildBins(); }));
@@ -1576,11 +1682,24 @@
       return { bins: buildBins(), label: rangeLabel(), days: computeDaysInRange() };
     });
     var bins = data.bins;
-    var totalMiles = bins.reduce(function(s, b) { return s + b.miles; }, 0);
+    var totalMiles = bins.reduce(function(s, b) { return s + binVis(b); }, 0);
     var pane = document.querySelector('.chart-pane[data-pane="' + which + '"]');
+    var anim = growIn && which === 'center';
+    var barsEl = pane.querySelector('.chart-bars');
     pane.querySelector('.chart-grid').innerHTML   = gridHTML(sc);
-    pane.querySelector('.chart-bars').innerHTML   = barsHTML(bins, sc.barMax);
+    barsEl.innerHTML                              = barsHTML(bins, sc.barMax, anim);
     pane.querySelector('.chart-labels').innerHTML = labelsHTML(bins);
+    if (anim) {
+      // Bars rendered at scaleY(0) — release them to scaleY(1) next frame so
+      // the whole bar grows up from the baseline (per-bar delay staggers it).
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          barsEl.querySelectorAll('.chart-bar').forEach(function(el) {
+            el.style.transform = 'scaleY(1)';
+          });
+        });
+      });
+    }
     return { bins: bins, label: data.label, days: data.days, miles: totalMiles };
   }
 
@@ -1617,6 +1736,7 @@
     fillPane('prev',  stepCursor(state.cursor, -1), sc);
     var c = fillPane('center', state.cursor, sc);
     fillPane('next',  stepCursor(state.cursor,  1), sc);
+    growIn = false;               // one-shot: consumed by the center pane above
     centerBins = c.bins;
 
     animateNumber(document.getElementById('summary-miles'), c.miles, 1);
@@ -1873,7 +1993,21 @@
       if (z === 'month') state.cursor = startOfMonth(today);
       if (z === 'year')  state.cursor = startOfYear(today);
       if (z === 'all')   state.cursor = today;
+      growIn = true;
       render();
+    });
+  });
+
+  // Legend entries double as series toggles: tap Walk or Run to drop that
+  // data from every bar (and the scale). At least one stays on.
+  document.querySelectorAll('.chart-legend-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      btn.blur();
+      var s = btn.getAttribute('data-series');           // 'walk' | 'run'
+      var other = s === 'walk' ? 'run' : 'walk';
+      if (state.show[s] && !state.show[other]) return;    // don't allow both off
+      state.show[s] = !state.show[s];
+      applyShow();   // animate the existing bars in place — no rebuild
     });
   });
 

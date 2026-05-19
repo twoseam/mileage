@@ -45,6 +45,8 @@
       font-family: "omnes", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      -webkit-user-select: none; user-select: none;
+      -webkit-touch-callout: none;
     }
 
     .mt-bg {
@@ -1219,22 +1221,30 @@
   enableReorder(shell);
   var cards = [].slice.call(shell.querySelectorAll('.tr-card'));
 
+  function redrawAll() {
+    cards.forEach(function (c) {
+      if (!c._redraw) return;
+      try { c._redraw(); }
+      catch (e) { if (window.console) console.error('chart failed:', c.getAttribute('data-metric') || c.getAttribute('data-agg'), e); }
+    });
+  }
+
   var rt;
   window.addEventListener('resize', function () {
     clearTimeout(rt);
-    rt = setTimeout(function () {
-      cards.forEach(function (c) { if (c._redraw) c._redraw(); });
-    }, 160);
+    rt = setTimeout(redrawAll, 160);
   });
 
+  var loadedOnce = false;
   function load() {
     startLoader();
     MilesTracker.fetchAllEntries(function (rows) {
       try {
-        allRows = rows || [];
-        cards.forEach(function (c) { if (c._redraw) c._redraw(); });
+        if (rows && rows.length) { allRows = rows; loadedOnce = true; }
+        else if (!loadedOnce) allRows = allRows || [];
+        redrawAll();
       } catch (err) {
-        if (window.console) console.error('trends render failed:', err);
+        if (window.console) console.error('trends load failed:', err);
       } finally {
         clearTimeout(watchdog);
         stopLoader();
@@ -1244,6 +1254,9 @@
 
   MilesTracker.onReady = function () { load(); };
   MilesTracker.init();
+  // Belt-and-suspenders: don't rely solely on onReady timing.
+  if (document.readyState === 'complete') load();
+  else window.addEventListener('load', function () { if (!loadedOnce) load(); });
 })();
 </script>
 </body>

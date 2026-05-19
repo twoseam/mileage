@@ -2142,18 +2142,15 @@
       'Duration': '38:52', 'Pace': '18:25', 'Activity Id': 'demo-002' }
   ];
 
-  // Name of the iOS Shortcut (set up once on the phone) that runs the
-  // Health Auto Export export. The button just deep-links into it.
-  var MT_SYNC_SHORTCUT = 'Mileage Sync';
+  // HAE has no Shortcuts action for Workouts→REST, so the only on-demand
+  // trigger is its in-app "Manual Export". The button just opens the app;
+  // you tap Manual Export there, then come back — the queue auto-refreshes.
   function mtSyncNow() {
     var btn = document.getElementById('mt-sync-btn');
     var msg = document.getElementById('mt-sync-msg');
     if (btn) btn.classList.add('mt-busy');
-    if (msg) msg.textContent = 'Asking Health Auto Export to export…';
-    try {
-      window.location.href = 'shortcuts://run-shortcut?name=' +
-        encodeURIComponent(MT_SYNC_SHORTCUT);
-    } catch (e) {}
+    if (msg) msg.textContent = 'Syncing…';
+    try { window.location.href = 'healthautoexport://'; } catch (e) {}
     // The export + upload takes a few seconds; poll the queue while it lands.
     var tries = 0;
     var iv = setInterval(function () {

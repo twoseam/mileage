@@ -253,7 +253,7 @@
       </div>
     </div>
     <div class="tr-metric">Pace</div>
-    <div class="tr-readout"><span class="tr-val">—</span><span class="tr-unit">/ mi</span><span class="tr-when"></span></div>
+    <div class="tr-readout"><span class="tr-val">—</span><span class="tr-unit">/ mi · up = faster</span><span class="tr-when"></span></div>
     <div class="tr-plot"><div class="tr-tip"></div><div class="tr-empty" hidden></div></div>
   </section>
 
@@ -293,6 +293,32 @@
     </div>
     <div class="tr-metric">Efficiency</div>
     <div class="tr-readout"><span class="tr-val">—</span><span class="tr-unit">beats / mi · lower = fitter</span><span class="tr-when"></span></div>
+    <div class="tr-plot"><div class="tr-tip"></div><div class="tr-empty" hidden></div></div>
+  </section>
+
+  <section class="tr-card" data-metric="cadence">
+    <div class="tr-head">
+      <select class="tr-window" aria-label="Time window"></select>
+      <div class="tr-toggle">
+        <button type="button" class="tr-tg" data-type="Walk" aria-pressed="true"><span class="tr-dot" style="background:#8FCFC2"></span>Walk</button>
+        <button type="button" class="tr-tg" data-type="Run" aria-pressed="false"><span class="tr-dot" style="background:#E7D7A4"></span>Run</button>
+      </div>
+    </div>
+    <div class="tr-metric">Cadence</div>
+    <div class="tr-readout"><span class="tr-val">—</span><span class="tr-unit">steps / min</span><span class="tr-when"></span></div>
+    <div class="tr-plot"><div class="tr-tip"></div><div class="tr-empty" hidden></div></div>
+  </section>
+
+  <section class="tr-card" data-agg="ptemp">
+    <div class="tr-head">
+      <select class="tr-window" aria-label="Time window"></select>
+      <div class="tr-toggle">
+        <button type="button" class="tr-tg" data-type="Walk" aria-pressed="true"><span class="tr-dot" style="background:#8FCFC2"></span>Walk</button>
+        <button type="button" class="tr-tg" data-type="Run" aria-pressed="false"><span class="tr-dot" style="background:#E7D7A4"></span>Run</button>
+      </div>
+    </div>
+    <div class="tr-metric">Pace vs Temp</div>
+    <div class="tr-readout"><span class="tr-val">—</span><span class="tr-unit">/ mi · up = faster · by temp</span><span class="tr-when"></span></div>
     <div class="tr-plot"><div class="tr-tip"></div><div class="tr-empty" hidden></div></div>
   </section>
 
@@ -406,7 +432,8 @@
     pace: {
       value: function (r) { return paceSec(r.pace); },
       val:   function (v) { return mmss(v); },
-      axis:  function (v) { return mmss(v); }
+      axis:  function (v) { return mmss(v); },
+      invert: true               // faster (smaller m:ss) plots toward the top
     },
     hr: {
       value: function (r) { var v = parseFloat(r.avg_hr); return v > 0 ? v : null; },
@@ -422,6 +449,23 @@
         var minPerMi = ps > 0 ? ps / 60
                      : (parseFloat(r.avg_speed) > 0 ? 60 / parseFloat(r.avg_speed) : null);
         return minPerMi ? hr * minPerMi : null;
+      },
+      val:   function (v) { return String(Math.round(v)); },
+      axis:  function (v) { return String(Math.round(v)); }
+    },
+    // steps per minute. Needs step count + a time for the session.
+    cadence: {
+      value: function (r) {
+        var st = parseFloat(r.steps); if (!(st > 0)) return null;
+        var mi = parseFloat(r.miles) || 0, ps = paceSec(r.pace), min = null;
+        if (ps > 0 && mi > 0) min = ps * mi / 60;
+        if (min == null) {
+          var d = String(r.duration || '').split(':').map(Number);
+          if (d.length === 3 && d.every(function (x) { return !isNaN(x); })) min = (d[0] * 3600 + d[1] * 60 + d[2]) / 60;
+          else if (d.length === 2 && d.every(function (x) { return !isNaN(x); })) min = (d[0] * 60 + d[1]) / 60;
+        }
+        if (min == null) { var sp = parseFloat(r.avg_speed); if (sp > 0 && mi > 0) min = mi / sp * 60; }
+        return (min && min > 0) ? st / min : null;
       },
       val:   function (v) { return String(Math.round(v)); },
       axis:  function (v) { return String(Math.round(v)); }
@@ -528,7 +572,11 @@
       vMin -= pad; vMax += pad;
 
       function X(t) { return padL + (t - t0) / tSpan * (W - padL - padR); }
-      function Y(v) { return padT + (1 - (v - vMin) / (vMax - vMin)) * (H - padT - padB); }
+      function Y(v) {
+        var f = (v - vMin) / (vMax - vMin);
+        if (M.invert) f = 1 - f;                  // pace: faster sits at the top
+        return padT + (1 - f) * (H - padT - padB);
+      }
 
       // one dot per session
       var dots = '';
@@ -916,6 +964,172 @@
     card._redraw = draw; draw();
   }
 
+  // ---------- scatter: pace vs temperature ----------
+  function setupScatter(card) {
+    var sel    = card.querySelector('.tr-window');
+    var plot   = card.querySelector('.tr-plot');
+    var tip    = card.querySelector('.tr-tip');
+    var empty  = card.querySelector('.tr-empty');
+    var valEl  = card.querySelector('.tr-val');
+    var whenEl = card.querySelector('.tr-when');
+    var state  = { type: 'Walk', win: DEFAULT_WINDOW };
+
+    WINDOWS.forEach(function (w) {
+      var o = document.createElement('option');
+      o.value = w.key; o.textContent = w.label;
+      if (w.key === DEFAULT_WINDOW) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', function () { state.win = sel.value; draw(); });
+    card.querySelectorAll('.tr-tg').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.getAttribute('aria-pressed') === 'true') return;
+        state.type = b.getAttribute('data-type');
+        card.querySelectorAll('.tr-tg').forEach(function (x) {
+          x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+        });
+        draw();
+      });
+    });
+
+    function points() {
+      var win = WINDOWS.filter(function (w) { return w.key === state.win; })[0];
+      var since = win && win.months ? addMonths(new Date(), -win.months) : null;
+      var out = [];
+      allRows.forEach(function (r) {
+        if ((r.type || 'Walk') !== state.type) return;
+        if (!r.date) return;
+        if (r.temp_f === '' || r.temp_f == null) return;
+        var tp = parseFloat(r.temp_f); if (isNaN(tp)) return;
+        var ps = paceSec(r.pace); if (ps == null) return;
+        var d = parseDate(r.date);
+        if (since && d < since) return;
+        out.push({ x: tp, v: ps, t: d });
+      });
+      out = rejectOutliers(out);                       // drop fluke paces
+      out.sort(function (a, b) { return a.x - b.x; });
+      return out;
+    }
+
+    function draw() {
+      var pts = points();
+      var old = plot.querySelector('svg');
+      if (pts.length < 2) {
+        if (old) old.remove();
+        empty.hidden = false; empty.textContent = 'Not enough data in range';
+        valEl.textContent = '—'; whenEl.textContent = '';
+        return;
+      }
+      empty.hidden = true;
+      var color = TYPE_COLOR[state.type];
+      var W = Math.max(260, plot.clientWidth || 320), H = plot.clientHeight || 188;
+      var padL = 40, padR = 10, padT = 12, padB = 20;
+      var xMin = Infinity, xMax = -Infinity, vMin = Infinity, vMax = -Infinity;
+      pts.forEach(function (p) {
+        if (p.x < xMin) xMin = p.x; if (p.x > xMax) xMax = p.x;
+        if (p.v < vMin) vMin = p.v; if (p.v > vMax) vMax = p.v;
+      });
+      if (xMin === xMax) { xMin -= 1; xMax += 1; }
+      if (vMin === vMax) { vMin -= 1; vMax += 1; }
+      var vp = (vMax - vMin) * 0.12; vMin -= vp; vMax += vp;
+      var xSpan = xMax - xMin;
+      function X(x) { return padL + (x - xMin) / xSpan * (W - padL - padR); }
+      // pace on Y: faster (smaller seconds) plots toward the top
+      function Y(v) { return padT + ((v - vMin) / (vMax - vMin)) * (H - padT - padB); }
+
+      var dots = '';
+      pts.forEach(function (p) {
+        dots += '<circle class="tr-pt" cx="' + X(p.x).toFixed(1) + '" cy="' + Y(p.v).toFixed(1) +
+                '" r="3" fill="' + color + '"/>';
+      });
+
+      // LOESS over temperature
+      var n = pts.length;
+      var xs = pts.map(function (p) { return (p.x - xMin) / xSpan; });
+      var ys = pts.map(function (p) { return p.v; });
+      var spanf = Math.min(1, Math.max(0.30, 12 / n));
+      var k = Math.max(2, Math.round(spanf * n));
+      function loessAt(x0) {
+        var idx = []; for (var i = 0; i < n; i++) idx.push(i);
+        idx.sort(function (a, b) { return Math.abs(xs[a] - x0) - Math.abs(xs[b] - x0); });
+        var near = idx.slice(0, k);
+        var dmax = Math.abs(xs[near[near.length - 1]] - x0) || 1e-9;
+        var sw = 0, swx = 0, swy = 0, swxx = 0, swxy = 0;
+        near.forEach(function (i2) {
+          var u = Math.abs(xs[i2] - x0) / dmax, w = Math.pow(1 - u * u * u, 3);
+          if (w < 0) w = 0;
+          var x = xs[i2], y = ys[i2];
+          sw += w; swx += w * x; swy += w * y; swxx += w * x * x; swxy += w * x * y;
+        });
+        var dn = sw * swxx - swx * swx;
+        if (!dn) return sw ? swy / sw : 0;
+        var b1 = (sw * swxy - swx * swy) / dn;
+        return (swy - b1 * swx) / sw + b1 * x0;
+      }
+      var S = Math.min(64, Math.max(24, n)), tp2 = '';
+      for (var s = 0; s <= S; s++) {
+        var xx = s / S;
+        tp2 += (s ? 'L' : 'M') + X(xMin + xx * xSpan).toFixed(1) + ' ' + Y(loessAt(xx)).toFixed(1) + ' ';
+      }
+      var trend = '<path class="tr-trend" d="' + tp2 + '"/>';
+
+      var gy = '';
+      for (var i = 0; i <= 4; i++) {
+        var vv = vMin + (vMax - vMin) * (i / 4), yy = Y(vv).toFixed(1);
+        gy += '<line class="tr-grid" x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '"/>';
+        gy += '<text class="tr-axis" x="' + (padL - 6) + '" y="' + (+yy + 3) + '" text-anchor="end">' + mmss(vv) + '</text>';
+      }
+      var xl = '';
+      [0, 0.5, 1].forEach(function (f, kk) {
+        var a = kk === 0 ? 'start' : (kk === 2 ? 'end' : 'middle');
+        var tx = xMin + xSpan * f;
+        xl += '<text class="tr-axis" x="' + X(tx).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + a +
+              '">' + Math.round(tx) + '°</text>';
+      });
+
+      var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + gy + xl + dots + trend +
+        '<line class="tr-cursor" x1="0" y1="' + padT + '" x2="0" y2="' + (H - padB) + '" style="opacity:0"/>' +
+        '<circle class="tr-hl" r="5.5" fill="' + color + '" stroke="#1f1f1f" stroke-width="2" style="opacity:0"/></svg>';
+      if (old) old.remove();
+      plot.insertAdjacentHTML('beforeend', svg);
+
+      var svgEl = plot.querySelector('svg');
+      var cursor = svgEl.querySelector('.tr-cursor'), dot = svgEl.querySelector('.tr-hl');
+      function setDefault() {
+        valEl.textContent = pts.length + ' sessions';
+        whenEl.textContent = Math.round(xMin) + '–' + Math.round(xMax) + '°F';
+      }
+      setDefault();
+      function scrub(clientX) {
+        var rect = plot.getBoundingClientRect();
+        var px = (clientX - rect.left) / rect.width * W;
+        var best = 0, bd = Infinity;
+        for (var j = 0; j < pts.length; j++) {
+          var dx = Math.abs(X(pts[j].x) - px);
+          if (dx < bd) { bd = dx; best = j; }
+        }
+        var p = pts[best], cx = X(p.x), cy = Y(p.v);
+        cursor.setAttribute('x1', cx); cursor.setAttribute('x2', cx); cursor.style.opacity = 1;
+        dot.setAttribute('cx', cx); dot.setAttribute('cy', cy); dot.style.opacity = 1;
+        tip.innerHTML = '<span>' + mmss(p.v) + ' · ' + Math.round(p.x) + '°F</span> ' +
+                        '<span class="tr-tip-d">' + shortDateYr(p.t) + '</span>';
+        var lp = cx / W * rect.width; lp = Math.max(34, Math.min(rect.width - 34, lp));
+        tip.style.left = lp + 'px'; tip.classList.add('show');
+        valEl.textContent = mmss(p.v) + ' /mi';
+        whenEl.textContent = Math.round(p.x) + '°F';
+        card.classList.add('tr-scrubbing');
+      }
+      function endScrub() {
+        cursor.style.opacity = 0; dot.style.opacity = 0; tip.classList.remove('show');
+        card.classList.remove('tr-scrubbing'); setDefault();
+      }
+      plot.onpointermove = function (e) { if (e.pointerType === 'touch') e.preventDefault(); scrub(e.clientX); };
+      plot.onpointerdown = function (e) { scrub(e.clientX); };
+      plot.onpointerup = endScrub; plot.onpointerleave = endScrub; plot.onpointercancel = endScrub;
+    }
+    card._redraw = draw; draw();
+  }
+
   // ---------- press-and-hold drag to reorder, persisted ----------
   var ORDER_KEY = 'mt-trends-order';
   function cardId(c) { return c.getAttribute('data-metric') || ('agg-' + c.getAttribute('data-agg')); }
@@ -999,6 +1213,7 @@
   var shell = document.getElementById('tr-shell');
   applySavedOrder(shell);
   [].slice.call(shell.querySelectorAll('.tr-card[data-metric]')).forEach(setupCard);
+  var pCard = shell.querySelector('[data-agg="ptemp"]'); if (pCard) setupScatter(pCard);
   var dCard = shell.querySelector('[data-agg="days"]'); if (dCard) setupDays(dCard);
   var yCard = shell.querySelector('[data-agg="ytd"]');  if (yCard) setupYtd(yCard);
   enableReorder(shell);

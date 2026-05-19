@@ -548,6 +548,65 @@ function doGet(e) {
     return _json({ rows: _pendingRows() });
   }
 
+  if (action === 'backfillWeather') {
+    // One-time historical fill. Resumable: keeps a row cursor in Script
+    // Properties and processes a batch per call so it never hits the
+    // 6-min limit. Call repeatedly until {done:true}. &reset=1 restarts.
+    var props = PropertiesService.getScriptProperties();
+    if (e.parameter.reset) { props.deleteProperty('BF_CURSOR'); props.deleteProperty('HOME_LL'); }
+    var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ENTRIES_SHEET);
+    if (!sh) return _json({ error: 'Entries sheet not found' });
+    var data = sh.getDataRange().getValues();
+    var map  = _entryColMap(data[0]);
+    if (map.weather == null || map.date == null)
+      return _json({ error: 'weather/date column missing' });
+    var home = _homeLL(data, map);
+    var cursor = parseInt(props.getProperty('BF_CURSOR') || '1', 10);
+    var BATCH = 35, t0 = Date.now(), processed = 0, filled = 0, i = cursor;
+    for (; i < data.length; i++) {
+      if (processed >= BATCH || (Date.now() - t0) > 230000) break;
+      var row = data[i];
+      if (String(row[map.weather] || '').trim() !== '') continue;     // already has it
+      var dateStr = _fmtDate(row[map.date]);
+      if (!dateStr) continue;
+      var hh = 12;
+      if (map.start_time != null) {
+        var tm = /(\d{1,2}):/.exec(_fmtTime(row[map.start_time]));
+        if (tm) hh = parseInt(tm[1], 10);
+      }
+      var id = map.activity_id != null ? String(row[map.activity_id] || '').trim() : '';
+      var pt = (id && _routeStart(id)) || home;
+      if (!pt) { processed++; continue; }
+      var wx = _archiveWeather(pt[0], pt[1], dateStr, hh) ||
+               _histWeather(pt[0], pt[1], dateStr, hh);
+      processed++;
+      if (wx && wx.weather) {
+        sh.getRange(i + 1, map.weather + 1).setValue(wx.weather);
+        filled++;
+        if (map.temp_f != null && String(row[map.temp_f] || '').trim() === '' &&
+            wx.temp_f != null) {
+          sh.getRange(i + 1, map.temp_f + 1).setValue(wx.temp_f);
+        }
+      }
+      Utilities.sleep(120);                                           // be gentle on the API
+    }
+    var done = i >= data.length;
+    if (done) props.deleteProperty('BF_CURSOR');
+    else props.setProperty('BF_CURSOR', String(i));
+    if (filled) {
+      try {
+        var ch = CacheService.getScriptCache();
+        ch.remove('allEntries_gz'); ch.remove('dashboard_current');
+        ch.remove('dashboard_' + new Date().getFullYear());
+      } catch (e2) {}
+    }
+    return _json({
+      done: done, processed: processed, filled: filled,
+      scannedTo: i, total: data.length - 1,
+      home: home ? (home[0] + ',' + home[1]) : null
+    });
+  }
+
   return _json({ error: 'Unknown action' });
 }
 
@@ -661,6 +720,50 @@ function _histWeather(lat, lon, dateStr, hh) {
       weather: _weatherWord(data.hourly.weather_code[idx])
     };
   } catch (e) { return null; }
+}
+
+// Historical weather from Open-Meteo's ARCHIVE API — unlike _histWeather
+// (forecast, ~90-day window) this reaches back years, for the old imports.
+function _archiveWeather(lat, lon, dateStr, hh) {
+  try {
+    var url = 'https://archive-api.open-meteo.com/v1/archive' +
+      '?latitude=' + lat + '&longitude=' + lon +
+      '&start_date=' + dateStr + '&end_date=' + dateStr +
+      '&hourly=temperature_2m,weather_code' +
+      '&temperature_unit=fahrenheit&timezone=auto';
+    var r = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (r.getResponseCode() !== 200) return null;
+    var data = JSON.parse(r.getContentText());
+    if (!data || !data.hourly || !data.hourly.time) return null;
+    var target = dateStr + 'T' + ('0' + (parseInt(hh, 10) || 12)).slice(-2) + ':00';
+    var idx = data.hourly.time.indexOf(target);
+    if (idx === -1) idx = 12;                        // fall back to midday slot
+    var t = data.hourly.temperature_2m[idx], c = data.hourly.weather_code[idx];
+    if (t == null && c == null) return null;
+    return { temp_f: t != null ? Math.round(t) : null, weather: _weatherWord(c) };
+  } catch (e) { return null; }
+}
+
+// "Home" = the median start point of recent routed walks (the cluster you
+// leave from most). Used as the fallback location for routeless entries.
+// Cached in Script Properties so it's computed once.
+function _homeLL(data, map) {
+  var props = PropertiesService.getScriptProperties();
+  var cached = props.getProperty('HOME_LL');
+  if (cached) { var p = cached.split(','); return [parseFloat(p[0]), parseFloat(p[1])]; }
+  if (!data || map.activity_id == null) return null;
+  var las = [], los = [];
+  for (var i = data.length - 1; i >= 1 && las.length < 20; i--) {
+    var id = String(data[i][map.activity_id] || '').trim();
+    if (!id) continue;
+    var pt = _routeStart(id);
+    if (pt) { las.push(pt[0]); los.push(pt[1]); }
+  }
+  if (!las.length) return null;
+  function med(a) { a.sort(function (x, y) { return x - y; }); return a[Math.floor(a.length / 2)]; }
+  var home = [med(las), med(los)];
+  props.setProperty('HOME_LL', home[0] + ',' + home[1]);
+  return home;
 }
 
 function _pushText(path, text, message) {

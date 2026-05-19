@@ -65,6 +65,7 @@
     '.a-hero span{display:block;margin-top:.5rem;font-size:.9rem;font-weight:700;opacity:.5;}',
     '.a-grid{display:grid;grid-template-columns:repeat(3,1fr);row-gap:1.7rem;column-gap:1rem;}',
     '.a-cell b{display:block;font-size:1.55rem;font-weight:900;letter-spacing:-.01em;line-height:1;}',
+    '.a-wx{width:30px;height:30px;display:block;color:inherit;margin-bottom:-2px;}',
     '.a-cell span{display:block;margin-top:.4rem;font-size:.78rem;font-weight:800;',
     'letter-spacing:.05em;line-height:1.15;}',
     /* one brand color per row, contrast-picked for the dark surface */
@@ -79,8 +80,12 @@
     '.a-hero.ap-anim.in,.a-cell.ap-anim.in{opacity:1;transform:none;',
     'transition:opacity .45s ease,transform .45s ease;}',
     '@media (prefers-reduced-motion:reduce){.a-hero.ap-anim,.a-cell.ap-anim{opacity:1;transform:none;}}',
-    '.a-notes{margin-top:1.8rem;padding-top:1.2rem;border-top:1px solid rgba(255,255,255,.12);',
-    'font-size:.95rem;line-height:1.55;opacity:.82;white-space:pre-wrap;word-break:break-word;}',
+    '.a-notes{margin-top:1.8rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);',
+    'border-left:3px solid #EB9A00;border-radius:12px;padding:1rem 1.15rem 1.1rem;}',
+    'html[data-theme="light"] .a-notes{background:rgba(0,0,0,.035);border-color:rgba(0,0,0,.08);border-left-color:#C77A0C;}',
+    '.a-notes-h{font-size:.66rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;',
+    'opacity:.5;margin-bottom:.5rem;}',
+    '.a-notes-b{font-size:1.02rem;line-height:1.6;white-space:pre-wrap;word-break:break-word;}',
     '.a-shoe{margin-top:1.8rem;padding-top:1.4rem;border-top:1px solid rgba(255,255,255,.12);}',
     'html[data-theme="light"] .a-notes,html[data-theme="light"] .a-shoe{border-top-color:rgba(0,0,0,.12);}',
     '.a-shoe .snm{font-size:1.4rem;font-weight:900;letter-spacing:-.01em;}',
@@ -266,21 +271,68 @@
       if (val === '' || val == null) return '';
       return '<div class="a-cell"><b>' + val + '</b><span>' + label + '</span></div>';
     }
+    function weatherIcon(w) {
+      var key = String(w || '').trim().toLowerCase();
+      var sun  = '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4"/>';
+      var cloud = '<path d="M7 18h9.5a3.5 3.5 0 0 0 .5-6.96A5 5 0 0 0 7.2 9.2 3.9 3.9 0 0 0 7 18z"/>';
+      var drops = '<path d="M9 20l-1 2M13 20l-1 2M17 20l-1 2"/>';
+      var rain  = '<path d="M9 20l-1.3 2.5M13 20l-1.3 2.5M17 20l-1.3 2.5"/>';
+      var bolt  = '<path d="M13 19l-3 4 1-3H8l3-4"/>';
+      var flake = '<path d="M12 18v5M9.5 19.3l5 2.4M14.5 19.3l-5 2.4"/>';
+      var fog   = '<path d="M6 20h12M7 23h10"/>';
+      var SET = {
+        'clear':       sun,
+        'sunny':       sun,
+        'cloudy':      cloud,
+        'partly cloudy': cloud,
+        'overcast':    cloud,
+        'fog':         cloud + fog,
+        'mist':        cloud + fog,
+        'haze':        cloud + fog,
+        'drizzle':     cloud + drops,
+        'showers':     cloud + drops,
+        'rain':        cloud + rain,
+        'thunder':     cloud + bolt,
+        'thunderstorm':cloud + bolt,
+        'snow':        cloud + flake,
+        'snow showers':cloud + flake,
+        'sleet':       cloud + flake
+      };
+      var body = SET[key];
+      if (!body) return '';
+      return '<svg class="a-wx" viewBox="0 0 24 24" title="' + esc(w) + '" ' +
+             'fill="none" stroke="currentColor" stroke-width="1.7" ' +
+             'stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>';
+    }
+    function cadence(r) {
+      var st = parseFloat(r.steps); if (!(st > 0)) return '';
+      var mi = parseFloat(r.miles) || 0;
+      var pm = /^(\d{1,3}):(\d{2})$/.exec(String(r.pace || '').trim());
+      var ps = pm ? (+pm[1]) * 60 + (+pm[2]) : null, min = null;
+      if (ps > 0 && mi > 0) min = ps * mi / 60;
+      if (min == null) {
+        var d = String(r.duration || '').split(':').map(Number);
+        if (d.length === 3 && d.every(function (x) { return !isNaN(x); })) min = (d[0] * 3600 + d[1] * 60 + d[2]) / 60;
+        else if (d.length === 2 && d.every(function (x) { return !isNaN(x); })) min = (d[0] * 60 + d[1]) / 60;
+      }
+      if (min == null) { var sp = parseFloat(r.avg_speed); if (sp > 0 && mi > 0) min = mi / sp * 60; }
+      return (min && min > 0) ? Math.round(st / min) + ' spm' : '';
+    }
     var when = esc(dShort(r.date)) + (t12(r.start_time) ? ' · ' + t12(r.start_time) : '');
     var primary =
+      cell('Avg HR', num(r.avg_hr) !== '' ? Math.round(r.avg_hr) : '') +
       cell('Avg. Pace', r.pace ? esc(r.pace) : '') +
       cell('Time', r.duration ? esc(r.duration) : '') +
       cell('Calories', num(r.calories) !== '' ? Math.round(r.calories) : '') +
-      cell('Elevation Gain', num(r.ascent) !== '' ? Math.round(r.ascent) + ' ft' : '') +
-      cell('Avg. Heart Rate', num(r.avg_hr) !== '' ? Math.round(r.avg_hr) : '') +
-      cell('Avg. Speed', num(r.avg_speed) !== '' ? (+r.avg_speed).toFixed(1) + ' mph' : '');
+      cell('Cadence', cadence(r)) +
+      cell('Steps', num(r.steps) !== '' ? Math.round(r.steps).toLocaleString() : '');
     var secondary =
-      cell('Steps', num(r.steps) !== '' ? Math.round(r.steps).toLocaleString() : '') +
-      cell('Elevation Loss', num(r.descent) !== '' ? Math.round(r.descent) + ' ft' : '') +
       cell('Start', t12(r.start_time)) +
       cell('End', t12(r.end_time)) +
+      cell('Elevation Gain', num(r.ascent) !== '' ? Math.round(r.ascent) + ' ft' : '') +
       cell('Temp', (r.temp_f != null && r.temp_f !== '') ? Math.round(r.temp_f) + '°F' : '') +
-      cell('Weather', r.weather ? esc(r.weather) : '');
+      cell('Conditions', r.weather ? (weatherIcon(r.weather) || esc(r.weather))
+            : ((r.temp_f != null && r.temp_f !== '') ? '—' : ''));
 
     elContent.innerHTML =
       '<div class="a-when"><span class="wt">' + when + '</span>' +
@@ -294,7 +346,8 @@
       (aid ? '<div class="a-map"><div id="ap-map" class="a-map-canvas"></div>' +
              '<button class="a-map-full" type="button" aria-label="Fullscreen map">⤢</button></div>' : '') +
       (secondary ? '<div class="a-grid">' + secondary + '</div>' : '') +
-      (r.notes ? '<div class="a-notes">' + esc(r.notes) + '</div>' : '') +
+      (r.notes ? '<div class="a-notes"><div class="a-notes-h">Notes</div>' +
+                 '<div class="a-notes-b">' + esc(r.notes) + '</div></div>' : '') +
       shoeBlock;
 
     elPanel.scrollTop = 0;

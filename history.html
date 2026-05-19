@@ -104,6 +104,9 @@
       color: #1a1a1a; background: #8FCFC2;
     }
     .h-badge.run { background: #E7D7A4; }
+    .h-right { flex: 0 0 auto; align-self: flex-start; display: flex;
+      flex-direction: column; align-items: flex-end; gap: 7px; }
+    .h-wx { width: 19px; height: 19px; opacity: 0.42; }
     .h-date { font-size: 0.74rem; font-weight: 700; opacity: 0.5; }
     .h-name {
       font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em;
@@ -194,6 +197,24 @@
     return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) {
       return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c];
     });
+  }
+  function hWxIcon(w) {
+    var k = String(w || '').trim().toLowerCase();
+    var cloud = '<path d="M7 18h9.5a3.5 3.5 0 0 0 .5-6.96A5 5 0 0 0 7.2 9.2 3.9 3.9 0 0 0 7 18z"/>';
+    var SET = {
+      'clear': '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4"/>',
+      'cloudy': cloud, 'partly cloudy': cloud, 'overcast': cloud,
+      'fog': cloud + '<path d="M6 20h12M7 23h10"/>', 'mist': cloud + '<path d="M6 20h12M7 23h10"/>', 'haze': cloud + '<path d="M6 20h12M7 23h10"/>',
+      'drizzle': cloud + '<path d="M9 20l-1 2M13 20l-1 2M17 20l-1 2"/>', 'showers': cloud + '<path d="M9 20l-1 2M13 20l-1 2M17 20l-1 2"/>',
+      'rain': cloud + '<path d="M9 20l-1.3 2.5M13 20l-1.3 2.5M17 20l-1.3 2.5"/>',
+      'thunder': cloud + '<path d="M13 19l-3 4 1-3H8l3-4"/>', 'thunderstorm': cloud + '<path d="M13 19l-3 4 1-3H8l3-4"/>',
+      'snow': cloud + '<path d="M12 18v5M9.5 19.3l5 2.4M14.5 19.3l-5 2.4"/>',
+      'snow showers': cloud + '<path d="M12 18v5M9.5 19.3l5 2.4M14.5 19.3l-5 2.4"/>', 'sleet': cloud + '<path d="M12 18v5M9.5 19.3l5 2.4M14.5 19.3l-5 2.4"/>'
+    };
+    var body = SET[k];
+    if (!body) return '';
+    return '<svg class="h-wx" viewBox="0 0 24 24" title="' + hEsc(w) + '" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>';
   }
   function hPad2(n) { return String(n).padStart(2, '0'); }
 
@@ -314,8 +335,11 @@
             '<div class="h-date">' + hEsc(hShortDate(r.date)) + '</div>' +
             '<div class="h-name">' + hEsc(hTitle(r)) + '</div>' +
           '</div>' +
-          '<span class="h-badge' + (r.type === 'Run' ? ' run' : '') + '">' +
-            (r.type === 'Run' ? 'Run' : 'Walk') + '</span>' +
+          '<div class="h-right">' +
+            '<span class="h-badge' + (r.type === 'Run' ? ' run' : '') + '">' +
+              (r.type === 'Run' ? 'Run' : 'Walk') + '</span>' +
+            hWxIcon(r.weather) +
+          '</div>' +
         '</div>' +
         '<div class="h-stats">' +
           '<div class="h-stat"><b>' + (r.miles != null ? r.miles.toFixed(2) : '—') +

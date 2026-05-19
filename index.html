@@ -2145,26 +2145,53 @@
   // HAE has no Shortcuts action for Workouts→REST, so the only on-demand
   // trigger is its in-app "Manual Export". The button just opens the app;
   // you tap Manual Export there, then come back — the queue auto-refreshes.
+  function mtSyncId(x) { return String(x['Activity Id'] || x.activity_id || ''); }
+  function mtSyncMsg(rows) {
+    if (!rows.length) return 'No new data to sync';
+    var w = 0, r = 0;
+    rows.forEach(function (x) {
+      if (String(x.Type || x.type || '').toLowerCase().indexOf('run') >= 0) r++; else w++;
+    });
+    var p = [];
+    if (w) p.push(w + (w === 1 ? ' walk' : ' walks'));
+    if (r) p.push(r + (r === 1 ? ' run' : ' runs'));
+    return p.join(' · ') + ' synced';
+  }
   function mtSyncNow() {
     var btn = document.getElementById('mt-sync-btn');
     var msg = document.getElementById('mt-sync-msg');
     if (btn) btn.classList.add('mt-busy');
     if (msg) msg.textContent = 'Syncing…';
-    try { window.location.href = 'healthautoexport://'; } catch (e) {}
-    // The export + upload takes a few seconds; poll the queue while it lands.
-    var tries = 0;
-    var iv = setInterval(function () {
-      tries++;
-      mtRenderPending();
-      mtRefreshStats(false);
-      if (msg) msg.textContent = 'Checking for new workouts…';
-      if (tries >= 5) {
-        clearInterval(iv);
-        if (btn) btn.classList.remove('mt-busy');
-        if (msg) msg.textContent = 'Up to date — anything new is above to review.';
-        setTimeout(function () { if (msg) msg.textContent = ''; }, 6000);
-      }
-    }, 6000);
+    var baseline = {};
+    function finish(fresh) {
+      if (btn) btn.classList.remove('mt-busy');
+      mtRenderPending(); mtRefreshStats(false);
+      if (msg) msg.textContent = mtSyncMsg(fresh);
+      setTimeout(function () { if (msg) msg.textContent = ''; }, 7000);
+    }
+    function fire() {
+      try { window.location.href = 'healthautoexport://'; } catch (e) {}
+      var tries = 0;
+      var iv = setInterval(function () {
+        tries++;
+        MilesTracker.fetchPending(function (rows) {
+          rows = rows || [];
+          var fresh = rows.filter(function (x) { return !baseline[mtSyncId(x)]; });
+          if (fresh.length || tries >= 5) {
+            clearInterval(iv);
+            finish(fresh);
+          } else if (msg) {
+            msg.textContent = 'Checking for new workouts…';
+          }
+        });
+      }, 5000);
+    }
+    if (MilesTracker.fetchPending) {
+      MilesTracker.fetchPending(function (rows) {
+        (rows || []).forEach(function (x) { baseline[mtSyncId(x)] = 1; });
+        fire();
+      });
+    } else { fire(); }
   }
 
   function mtRenderPending() {

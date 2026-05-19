@@ -875,8 +875,29 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     /* ---------- APPROVAL QUEUE ---------- */
-    #mt-pending { margin-bottom: 2.75rem; }
     #mt-pending:empty { display: none; }
+    #mt-pq-modal {
+      position: fixed; inset: 0; z-index: 1200; display: none;
+      align-items: flex-start; justify-content: center;
+      padding: 6vh 1rem 2rem; overflow: auto;
+      background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+    #mt-pq-modal.show { display: flex; }
+    .mt-pq-sheet { width: 100%; max-width: 440px; }
+    .mt-pq-banner {
+      font-size: 0.72rem; font-weight: 900; letter-spacing: 0.16em;
+      text-transform: uppercase; color: #fff; background: #B02113;
+      border-radius: 12px; padding: 0.75rem 1rem; text-align: center;
+      margin-bottom: 14px; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.4);
+    }
+    #mt-pq-later {
+      display: block; margin: 8px auto 0; background: none; border: none;
+      color: #fff; opacity: 0.55; font-family: inherit; font-size: 0.66rem;
+      font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+      cursor: pointer;
+    }
+    #mt-pq-later:hover { opacity: 0.85; }
     .mt-pq-head {
       font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase;
       opacity: 0.5; margin-bottom: 12px;
@@ -1083,13 +1104,17 @@
     </div>
   </div>
 
-  <div id="mt-pending"></div>
+  <div id="mt-pq-modal">
+    <div class="mt-pq-sheet">
+      <div class="mt-pq-banner">Review these first</div>
+      <div id="mt-pending"></div>
+      <button type="button" id="mt-pq-later" onclick="mtPqLater()">Later</button>
+    </div>
+  </div>
 
   <div id="mt-actions">
-    <button type="button" id="mt-sync-btn" onclick="mtSyncNow()">Sync</button>
-    <button type="button" id="mt-manual-toggle" onclick="mtOpenManual()">Manual</button>
+    <button type="button" id="mt-manual-toggle" onclick="mtOpenManual()">Manual Entry</button>
   </div>
-  <div id="mt-sync-msg"></div>
 
   <div id="mt-form">
 
@@ -2059,7 +2084,7 @@
     setTimeout(function() {
       card.remove();
       var wrap = document.getElementById('mt-pending');
-      if (!wrap.querySelector('.mt-pq-card')) wrap.innerHTML = '';
+      if (!wrap.querySelector('.mt-pq-card')) { wrap.innerHTML = ''; mtPqModal(false); }
     }, 450);
   }
 
@@ -2114,9 +2139,16 @@
         'onclick="mtRenderPending()">Retry</button>' : '') + '</div>';
   }
 
+  var mtPqDismissed = false;
+  function mtPqModal(on) {
+    var m = document.getElementById('mt-pq-modal');
+    if (m) m.classList.toggle('show', !!on);
+  }
+  window.mtPqLater = function() { mtPqDismissed = true; mtPqModal(false); };
+
   function mtRenderPendingRows(rows) {
     var wrap = document.getElementById('mt-pending');
-    if (!rows || !rows.length) { wrap.innerHTML = ''; mtPqShownIds = ''; return; }
+    if (!rows || !rows.length) { wrap.innerHTML = ''; mtPqShownIds = ''; mtPqModal(false); return; }
     // Don't blow away cards (and any half-typed notes / shoe pick) if the
     // exact same set is already on screen — only re-render on a change.
     var ids = rows.map(function(r) {
@@ -2133,6 +2165,7 @@
         im.parentNode.innerHTML = '<span class="ph">&#128095;</span>';
       });
     });
+    if (!mtPqDismissed) mtPqModal(true);
   }
 
   var MT_DEMO_ROWS = [
@@ -2224,6 +2257,7 @@
     var now = Date.now();
     if (now - mtPqLastCheck < 5000) return;   // debounce rapid focus events
     mtPqLastCheck = now;
+    mtPqDismissed = false;                     // re-nag on a fresh visit
     mtRenderPending();
   }
   document.addEventListener('visibilitychange', mtPqMaybeRefresh);

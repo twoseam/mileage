@@ -2,10 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Mileage — Trends</title>
 
-  <meta name="description" content="Trends — coming soon.">
+  <meta name="description" content="Trends — pace, heart rate and distance over time.">
+  <link rel="canonical" href="https://twoseam.github.io/mileage/trends.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Mileage">
+  <meta property="og:title" content="Mileage — Trends">
+  <meta property="og:description" content="Pace, heart rate and distance over time.">
+  <meta property="og:url" content="https://twoseam.github.io/mileage/trends.html">
+  <meta property="og:image" content="https://twoseam.github.io/mileage/apple-touch-icon-1024.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Mileage — Trends">
+  <meta name="twitter:description" content="Pace, heart rate and distance over time.">
+  <meta name="twitter:image" content="https://twoseam.github.io/mileage/apple-touch-icon-1024.png">
   <link rel="icon" type="image/png" sizes="180x180" href="apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -20,32 +31,1005 @@
   <link rel="stylesheet" href="https://use.typekit.net/ymz2nvi.css">
 
   <script src="nav.js"></script>
+  <script src="miles-tracker.js"></script>
 
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
+    html { scrollbar-width: none; -ms-overflow-style: none; }
+    body::-webkit-scrollbar { display: none; }
     body {
-      background: #252525; color: #f5f5f5; min-height: 100vh;
-      font-family: "omnes", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      background: #252525;
+      color: #f5f5f5;
+      min-height: 100vh;
+      font-family: "omnes", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .mt-bg {
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      transform: translateY(50px);
+      background: linear-gradient(159deg,
+        transparent 0%, transparent 76.6%,
+        #016074 76.6%, #016074 78.8%,
+        #94D3BE 78.8%, #94D3BE 81.1%,
+        #E7D7A4 81.1%, #E7D7A4 83.9%,
+        #EB9A00 83.9%, #EB9A00 86.6%,
+        #CA6902 86.6%, #CA6902 89.3%,
+        #B02113 89.3%, #B02113 100%);
+    }
+
+    .wordmark {
+      max-width: 720px; margin: 2.4rem auto 0.2rem; padding: 0 2rem;
+      text-align: center; font-family: "omnes", system-ui, sans-serif;
+      font-weight: 900; line-height: 0.95; letter-spacing: 0.01em;
+    }
+    .wordmark-title { font-size: clamp(2.5rem, 10vw, 4rem); color: #E89A1F; }
+    .page-title {
+      font-size: 0.65rem; letter-spacing: 0.24em; text-transform: uppercase;
+      opacity: 0.5; margin-top: 0.55rem; font-weight: 700;
+    }
+
+    #tr-shell { max-width: 640px; margin: 0 auto; padding: 1.6rem 1.1rem 3rem; }
+
+    .tr-card {
+      background: #1f1f1f;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 16px;
+      padding: 1.1rem 1.05rem 1.15rem;
+      margin-bottom: 1.05rem;
+      touch-action: pan-y;
+      transition: box-shadow 0.18s ease, transform 0.06s linear, opacity 0.18s ease;
+    }
+    .tr-card.tr-drag {
+      z-index: 50; position: relative;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+      opacity: 0.96; cursor: grabbing;
+    }
+    .tr-card.tr-drag .tr-plot { pointer-events: none; }
+    .tr-shift { transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .tr-legend2 {
+      display: flex; gap: 0.7rem; font-size: 0.66rem; font-weight: 700;
+      opacity: 0.7; letter-spacing: 0.03em;
+    }
+    .tr-legend2 i {
+      display: inline-block; width: 9px; height: 9px; border-radius: 2px;
+      margin-right: 5px; vertical-align: middle;
+    }
+    .tr-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.75rem; margin-bottom: 0.2rem;
+    }
+    /* time-window dropdown — top-left, stock-chart style */
+    .tr-window {
+      appearance: none; -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: inherit; font: inherit; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 0.34rem 1.6rem 0.34rem 0.7rem;
+      border-radius: 8px; cursor: pointer; outline: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23bbb' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.6rem center;
+    }
+    .tr-toggle { display: flex; gap: 0.3rem; }
+    .tr-tg {
+      background: none; border: none; border-radius: 999px;
+      padding: 0.3rem 0.72rem; margin: 0;
+      font: inherit; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em;
+      color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
+      display: inline-flex; align-items: center;
+      transition: background 0.18s ease, opacity 0.18s ease;
+    }
+    .tr-tg[aria-pressed="true"]  { background: rgba(255, 255, 255, 0.08); }
+    .tr-tg[aria-pressed="false"] { opacity: 0.45; }
+    .tr-dot {
+      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+      margin-right: 6px; vertical-align: middle; box-sizing: border-box;
+      transition: background 0.18s ease, box-shadow 0.18s ease;
+    }
+    .tr-tg[aria-pressed="false"] .tr-dot {
+      background: transparent !important; box-shadow: inset 0 0 0 2px currentColor;
+    }
+
+    .tr-metric {
+      font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em;
+      margin: 0.55rem 0 0.1rem;
+    }
+    .tr-readout {
+      display: flex; align-items: baseline; gap: 0.4rem;
+      margin: 0 0 0.5rem; min-height: 1.3rem;
+    }
+    .tr-val { font-size: 1rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1; transition: color 0.12s ease; }
+    .tr-scrubbing .tr-val,
+    .tr-scrubbing .tr-when { color: #E89A1F; }
+    .tr-unit { font-size: 0.72rem; font-weight: 700; opacity: 0.45; }
+    .tr-when { margin-left: auto; font-size: 0.66rem; font-weight: 700; opacity: 0.4; letter-spacing: 0.05em; }
+    .tr-pt { stroke: none; opacity: 0.8; }
+    .tr-trend {
+      fill: none; stroke: #E89A1F; stroke-width: 2.5;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+    .tr-bar { transition: opacity 0.12s ease; }
+
+    .tr-plot { position: relative; width: 100%; height: 188px; touch-action: pan-y; }
+    .tr-plot svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    .tr-empty {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700; opacity: 0.35;
+    }
+    .tr-grid { stroke: rgba(255, 255, 255, 0.07); stroke-width: 1; }
+    .tr-axis {
+      font-size: 9px; font-weight: 700; fill: rgba(255, 255, 255, 0.4);
+      font-family: inherit;
+    }
+    .tr-cursor { stroke: rgba(255, 255, 255, 0.28); stroke-width: 1; stroke-dasharray: 3 3; }
+    .tr-tip {
+      position: absolute; top: 0; transform: translateX(-50%);
+      background: #2c2c2c; border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px; padding: 0.32rem 0.55rem; pointer-events: none;
+      font-size: 0.66rem; font-weight: 700; white-space: nowrap;
+      opacity: 0; transition: opacity 0.12s ease; z-index: 3;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    }
+    .tr-tip.show { opacity: 1; }
+    .tr-tip-d { opacity: 0.5; font-weight: 600; }
+
+    .mt-footer { text-align: center; padding: 0.5rem 1.5rem 2rem; }
+    .mt-footer a {
+      font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+      color: inherit; text-decoration: none; opacity: 0.32;
+      transition: opacity 0.2s ease;
+    }
+    .mt-footer a:hover { opacity: 0.8; }
+
+    /* loader */
+    #mt-loader {
+      position: fixed; inset: 0; background: #252525; z-index: 9999;
       display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.4s ease;
     }
+    #mt-loader.mt-loader-hide { opacity: 0; pointer-events: none; }
+    .mt-loader-bar {
+      width: 240px; height: 12px; background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px; overflow: hidden;
+    }
+    .mt-loader-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #E7D7A4, #E89A1F);
+      border-radius: 999px;
+    }
+
+    /* ---------- LIGHT MODE (additive) ---------- */
     html[data-theme="light"] body { background: #f1ebdd; color: #171717; }
-    .tr-wrap { text-align: center; padding: 2rem; }
-    .tr-mark {
-      font-size: clamp(2.4rem, 11vw, 3.4rem); font-weight: 900;
-      letter-spacing: -0.02em; color: #E89A1F;
+    html[data-theme="light"] .wordmark-title { color: #C77A0C; }
+    html[data-theme="light"] .tr-card {
+      background: #fffdf7; border-color: rgba(0, 0, 0, 0.08);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
-    .tr-sub {
-      margin-top: 0.6rem; font-size: 0.95rem; font-weight: 700;
-      opacity: 0.5; letter-spacing: 0.02em;
+    html[data-theme="light"] .tr-window {
+      background: rgba(0, 0, 0, 0.04); border-color: rgba(0, 0, 0, 0.16);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.6rem center;
+    }
+    html[data-theme="light"] .tr-tg[aria-pressed="true"] { background: rgba(0, 0, 0, 0.05); }
+    html[data-theme="light"] .tr-grid { stroke: rgba(0, 0, 0, 0.09); }
+    html[data-theme="light"] .tr-axis { fill: rgba(0, 0, 0, 0.45); }
+    html[data-theme="light"] .tr-cursor { stroke: rgba(0, 0, 0, 0.3); }
+    html[data-theme="light"] .tr-tip { background: #fff; border-color: rgba(0,0,0,0.12); }
+    html[data-theme="light"] #mt-loader { background: #f1ebdd; }
+    html[data-theme="light"] .mt-loader-bar { background: rgba(0, 0, 0, 0.10); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        transition-duration: 0.001ms !important;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="tr-wrap">
-    <div class="tr-mark">Trends</div>
-    <div class="tr-sub">Coming soon.</div>
-  </div>
+
+<div class="mt-bg"></div>
+
+<div id="mt-loader">
+  <div class="mt-loader-bar"><div class="mt-loader-fill"></div></div>
+</div>
+
+<header class="wordmark">
+  <div class="wordmark-title">MILEAGE</div>
+  <div class="page-title">Trends</div>
+</header>
+
+<main id="tr-shell">
+
+  <section class="tr-card" data-metric="pace">
+    <div class="tr-head">
+      <select class="tr-window" aria-label="Time window"></select>
+      <div class="tr-toggle">
+        <button type="button" class="tr-tg" data-type="Walk" aria-pressed="true"><span class="tr-dot" style="background:#8FCFC2"></span>Walk</button>
+        <button type="button" class="tr-tg" data-type="Run" aria-pressed="false"><span class="tr-dot" style="background:#E7D7A4"></span>Run</button>
+      </div>
+    </div>
+    <div class="tr-metric">Pace</div>
+    <div class="tr-readout"><span class="tr-val">—</span><span class="tr-unit">/ mi</span><span class="tr-when"></span></div>
+    <div class="tr-plot"><div class="tr-tip"></div><div class="tr-empty" hidden></div></div>
+  </section>
+
+  <section class="tr-card" data-metric="hr">
+    <div class="tr-head">
+      <select class="tr-window" aria-label="Time window"></select>
+      <div class="tr-toggle">
+        <button type="button" class="tr-tg" data-type="Walk" aria-pressed="true"><span class="tr-dot" style="background:#8FCFC2"></span>Walk</button>
+        <button type="button" class="tr-tg" data-type="Run" aria-pressed="false"><span class="tr-dot" style="background:#E7D7A4"></span>Run</button>
+      </div>
+    </div>
+    <div class="tr-metric">Heart Rate</div>
+    <div class="tr-readout"><span class="tr-val">—</span><span class="tr-unit">bpm</span><span class="tr-when"></span></div>
+    <div class="tr-plot"><div class="tr-tip"></div><div class="tr-empty" hidden></div></div>
+  </section>
+
+  <section class="tr-card" data-metric="distance">
+    <div class="tr-head">
+      <select class="tr-window" aria-label="Time window"></select>
+      <div class="tr-toggle">
+        <button type="button" class="tr-tg" data-type="Walk" aria-pressed="true"><span class="tr-dot" style="background:#8FCFC2"></span>Walk</button>
+        <button type="button" class="tr-tg" data-type="Run" aria-pressed="false"><span class="tr-dot" style="background:#E7D7A4"></span>Run</button>
+      </div>
+    </div>
+    <div class="tr-metric">Distance</div>
+    <div class="tr-readout"><span class="tr-val">—</span><span class="tr-unit">mi</span><span class="tr-when"></span></div>
+    <div class="tr-plot"><div class="tr-tip"></div><div class="tr-empty" hidden></div></div>
+  </section>
+
+  <section class="tr-card" data-metric="fit">
+    <div class="tr-head">
+      <select class="tr-window" aria-label="Time window"></select>
+      <div class="tr-toggle">
+        <button type="button" class="tr-tg" data-type="Walk" aria-pressed="true"><span class="tr-dot" style="background:#8FCFC2"></span>Walk</button>
+        <button type="button" class="tr-tg" data-type="Run" aria-pressed="false"><span class="tr-dot" style="background:#E7D7A4"></span>Run</button>
+      </div>
+    </div>
+    <div class="tr-metric">Efficiency</div>
+    <div class="tr-readout"><span class="tr-val">—</span><span class="tr-unit">beats / mi · lower = fitter</span><span class="tr-when"></span></div>
+    <div class="tr-plot"><div class="tr-tip"></div><div class="tr-empty" hidden></div></div>
+  </section>
+
+  <section class="tr-card" data-agg="days">
+    <div class="tr-head">
+      <select class="tr-window" aria-label="Time window"></select>
+      <div class="tr-toggle">
+        <button type="button" class="tr-tg" data-type="any" aria-pressed="true">All</button>
+        <button type="button" class="tr-tg" data-type="Walk" aria-pressed="false"><span class="tr-dot" style="background:#8FCFC2"></span>Walk</button>
+        <button type="button" class="tr-tg" data-type="Run" aria-pressed="false"><span class="tr-dot" style="background:#E7D7A4"></span>Run</button>
+      </div>
+    </div>
+    <div class="tr-metric">Active Days / Month</div>
+    <div class="tr-readout"><span class="tr-val">—</span><span class="tr-unit">days last month</span><span class="tr-when"></span></div>
+    <div class="tr-plot"><div class="tr-tip"></div><div class="tr-empty" hidden></div></div>
+  </section>
+
+  <section class="tr-card" data-agg="ytd">
+    <div class="tr-head">
+      <div class="tr-metric" style="margin:0">This Year vs Last</div>
+      <div class="tr-legend2">
+        <span><i style="background:#E89A1F"></i><b class="ytd-y0">—</b></span>
+        <span><i style="background:#8FCFC2"></i><b class="ytd-y1">—</b></span>
+      </div>
+    </div>
+    <div class="tr-readout"><span class="tr-val">—</span><span class="tr-unit">mi YTD</span><span class="tr-when"></span></div>
+    <div class="tr-plot"><div class="tr-tip"></div><div class="tr-empty" hidden></div></div>
+  </section>
+
+</main>
+
+<footer class="mt-footer">
+  <a href="changelog.html">Changelog</a>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- loader ----------
+  var loaderDone = false;
+  function startLoader() {
+    var fill = document.querySelector('.mt-loader-fill');
+    if (!fill) return;
+    var p = 0;
+    (function tick() {
+      if (loaderDone) return;
+      p = Math.min(95, p + (95 - p) * 0.12 + 1);
+      fill.style.width = p + '%';
+      setTimeout(tick, 120);
+    })();
+  }
+  function stopLoader() {
+    loaderDone = true;
+    var fill = document.querySelector('.mt-loader-fill');
+    var ldr = document.getElementById('mt-loader');
+    if (fill) fill.style.width = '100%';
+    setTimeout(function () { if (ldr) ldr.classList.add('mt-loader-hide'); }, 180);
+  }
+  // never strand the loader on a slow cold start
+  var watchdog = setTimeout(stopLoader, 18000);
+
+  // ---------- date helpers ----------
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function parseDate(s) { return new Date(s + 'T12:00:00'); }
+  function addMonths(d, n) { var x = new Date(d); x.setMonth(x.getMonth() + n); return x; }
+  function shortDate(d) {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  function shortDateYr(d) {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+  }
+
+  // ---------- metric + window config ----------
+  function paceSec(p) {
+    var m = /^(\d{1,3}):(\d{2})$/.exec(String(p || '').trim());
+    return m ? (+m[1]) * 60 + (+m[2]) : null;
+  }
+  function mmss(secs) {
+    secs = Math.round(secs);
+    return Math.floor(secs / 60) + ':' + pad2(secs % 60);
+  }
+
+  // Drop wild anomalies (e.g. a paused-watch pace) using a robust
+  // median/MAD modified z-score. Cutoff 3.5 = Iglewicz–Hoaglin standard;
+  // lower = stricter. Needs ≥6 points and never fires on tight data.
+  var OUTLIER_Z = 3.5;
+  function median(sorted) {
+    var m = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[m] : (sorted[m - 1] + sorted[m]) / 2;
+  }
+  function rejectOutliers(arr) {
+    if (arr.length < 6) return arr;
+    var vs = arr.map(function (o) { return o.v; }).sort(function (a, b) { return a - b; });
+    var med = median(vs);
+    var dev = vs.map(function (x) { return Math.abs(x - med); })
+                .sort(function (a, b) { return a - b; });
+    var mad = median(dev);
+    if (mad === 0) return arr;                       // data too tight to judge
+    return arr.filter(function (o) {
+      return 0.6745 * Math.abs(o.v - med) / mad <= OUTLIER_Z;
+    });
+  }
+
+  var METRICS = {
+    distance: {
+      value: function (r) { var v = parseFloat(r.miles); return v > 0 ? v : null; },
+      val:   function (v) { return v.toFixed(2); },
+      axis:  function (v) { return v.toFixed(v < 10 ? 1 : 0); }
+    },
+    pace: {
+      value: function (r) { return paceSec(r.pace); },
+      val:   function (v) { return mmss(v); },
+      axis:  function (v) { return mmss(v); }
+    },
+    hr: {
+      value: function (r) { var v = parseFloat(r.avg_hr); return v > 0 ? v : null; },
+      val:   function (v) { return String(Math.round(v)); },
+      axis:  function (v) { return String(Math.round(v)); }
+    },
+    // beats per mile = HR (beats/min) × minutes per mile. Lower = fitter.
+    fit: {
+      value: function (r) {
+        var hr = parseFloat(r.avg_hr);
+        if (!(hr > 0)) return null;
+        var ps = paceSec(r.pace);                       // sec per mile
+        var minPerMi = ps > 0 ? ps / 60
+                     : (parseFloat(r.avg_speed) > 0 ? 60 / parseFloat(r.avg_speed) : null);
+        return minPerMi ? hr * minPerMi : null;
+      },
+      val:   function (v) { return String(Math.round(v)); },
+      axis:  function (v) { return String(Math.round(v)); }
+    }
+  };
+
+  // stock-chart style ranges
+  var WINDOWS = [
+    { key: '1m',  label: '1M',  months: 1 },
+    { key: '3m',  label: '3M',  months: 3 },
+    { key: '6m',  label: '6M',  months: 6 },
+    { key: '1y',  label: '1Y',  months: 12 },
+    { key: '2y',  label: '2Y',  months: 24 },
+    { key: 'all', label: 'All', months: 0 }
+  ];
+  var DEFAULT_WINDOW = '6m';
+
+  var TYPE_COLOR = { Walk: '#8FCFC2', Run: '#E7D7A4' };
+
+  var allRows = [];
+
+  // ---------- one card ----------
+  function setupCard(card) {
+    var metric  = card.getAttribute('data-metric');
+    var M       = METRICS[metric];
+    var sel     = card.querySelector('.tr-window');
+    var plot    = card.querySelector('.tr-plot');
+    var tip     = card.querySelector('.tr-tip');
+    var empty   = card.querySelector('.tr-empty');
+    var valEl   = card.querySelector('.tr-val');
+    var unitEl  = card.querySelector('.tr-unit');
+    var whenEl  = card.querySelector('.tr-when');
+    var state   = { type: 'Walk', win: DEFAULT_WINDOW, pts: [] };
+
+    WINDOWS.forEach(function (w) {
+      var o = document.createElement('option');
+      o.value = w.key; o.textContent = w.label;
+      if (w.key === DEFAULT_WINDOW) o.selected = true;
+      sel.appendChild(o);
+    });
+
+    sel.addEventListener('change', function () { state.win = sel.value; draw(); });
+
+    card.querySelectorAll('.tr-tg').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.getAttribute('aria-pressed') === 'true') return;
+        state.type = btn.getAttribute('data-type');
+        card.querySelectorAll('.tr-tg').forEach(function (b) {
+          b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+        });
+        draw();
+      });
+    });
+
+    function series() {
+      var win = WINDOWS.filter(function (w) { return w.key === state.win; })[0];
+      var since = win && win.months ? addMonths(new Date(), -win.months) : null;
+      var out = [];
+      allRows.forEach(function (r) {
+        if ((r.type || 'Walk') !== state.type) return;
+        if (!r.date) return;
+        var v = M.value(r);
+        if (v == null || isNaN(v)) return;
+        var d = parseDate(r.date);
+        if (since && d < since) return;
+        out.push({ t: d, v: v, date: r.date });
+      });
+      out = rejectOutliers(out);
+      out.sort(function (a, b) { return a.t - b.t; });
+      return out;
+    }
+
+    function draw() {
+      var pts = series();
+      state.pts = pts;
+      var color = TYPE_COLOR[state.type];
+
+      if (pts.length < 2) {
+        plot.querySelector('svg') && plot.querySelector('svg').remove();
+        empty.hidden = false;
+        empty.textContent = pts.length === 1 ? 'Only one session in range' : 'No data in range';
+        valEl.textContent = pts.length === 1 ? M.val(pts[0].v) : '—';
+        whenEl.textContent = pts.length === 1 ? shortDateYr(pts[0].t) : '';
+        tip.classList.remove('show');
+        return;
+      }
+      empty.hidden = true;
+
+      // latest reading in the readout
+      var last = pts[pts.length - 1];
+      valEl.textContent = M.val(last.v);
+      whenEl.textContent = shortDateYr(last.t);
+
+      var W = Math.max(260, plot.clientWidth || 320);
+      var H = plot.clientHeight || 188;
+      var padL = 34, padR = 10, padT = 12, padB = 20;
+
+      var t0 = pts[0].t.getTime(), t1 = last.t.getTime();
+      var tSpan = (t1 - t0) || 1;
+      var vMin = Infinity, vMax = -Infinity;
+      pts.forEach(function (p) { if (p.v < vMin) vMin = p.v; if (p.v > vMax) vMax = p.v; });
+      if (vMin === vMax) { vMin -= 1; vMax += 1; }
+      var pad = (vMax - vMin) * 0.12;
+      vMin -= pad; vMax += pad;
+
+      function X(t) { return padL + (t - t0) / tSpan * (W - padL - padR); }
+      function Y(v) { return padT + (1 - (v - vMin) / (vMax - vMin)) * (H - padT - padB); }
+
+      // one dot per session
+      var dots = '';
+      pts.forEach(function (p) {
+        dots += '<circle class="tr-pt" cx="' + X(p.t.getTime()).toFixed(1) +
+                '" cy="' + Y(p.v).toFixed(1) + '" r="3" fill="' + color + '"/>';
+      });
+
+      // LOESS trend: locally weighted linear regression sampled across the
+      // window, so the curve follows the data's shape (not one global slope).
+      var n = pts.length;
+      var xs = pts.map(function (p) { return (p.t.getTime() - t0) / tSpan; });
+      var ys = pts.map(function (p) { return p.v; });
+      var span = Math.min(1, Math.max(0.30, 12 / n));     // wider span when sparse
+      var k = Math.max(2, Math.round(span * n));
+
+      function loessAt(x0) {
+        // k nearest neighbours by |x - x0|
+        var idx = [];
+        for (var ii = 0; ii < n; ii++) idx.push(ii);
+        idx.sort(function (a, b) { return Math.abs(xs[a] - x0) - Math.abs(xs[b] - x0); });
+        var near = idx.slice(0, k);
+        var dmax = Math.abs(xs[near[near.length - 1]] - x0) || 1e-9;
+        var swt = 0, swx = 0, swy = 0, swxx = 0, swxy = 0;
+        near.forEach(function (i2) {
+          var u = Math.abs(xs[i2] - x0) / dmax;
+          var w = Math.pow(1 - u * u * u, 3);             // tricube weight
+          if (w < 0) w = 0;
+          var x = xs[i2], y = ys[i2];
+          swt += w; swx += w * x; swy += w * y;
+          swxx += w * x * x; swxy += w * x * y;
+        });
+        var dn = swt * swxx - swx * swx;
+        if (!dn) return swt ? swy / swt : 0;
+        var b1 = (swt * swxy - swx * swy) / dn;
+        var b0 = (swy - b1 * swx) / swt;
+        return b0 + b1 * x0;
+      }
+
+      var SAMPLES = Math.min(64, Math.max(24, n));
+      var trendPath = '';
+      for (var s = 0; s <= SAMPLES; s++) {
+        var xx = s / SAMPLES;
+        var yy = loessAt(xx);
+        trendPath += (s ? 'L' : 'M') +
+          X(t0 + xx * tSpan).toFixed(1) + ' ' + Y(yy).toFixed(1) + ' ';
+      }
+      var trend = '<path class="tr-trend" d="' + trendPath + '"/>';
+
+      // ~4 horizontal gridlines + y labels
+      var gy = '', ticks = 4;
+      for (var i = 0; i <= ticks; i++) {
+        var vv = vMin + (vMax - vMin) * (i / ticks);
+        var yy = Y(vv).toFixed(1);
+        gy += '<line class="tr-grid" x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '"/>';
+        gy += '<text class="tr-axis" x="' + (padL - 6) + '" y="' + (+yy + 3) +
+              '" text-anchor="end">' + M.axis(vv) + '</text>';
+      }
+      // x labels: start / mid / end
+      var xl = '';
+      [0, 0.5, 1].forEach(function (f, k) {
+        var tt = t0 + tSpan * f;
+        var anchor = k === 0 ? 'start' : (k === 2 ? 'end' : 'middle');
+        xl += '<text class="tr-axis" x="' + X(tt).toFixed(1) + '" y="' + (H - 6) +
+              '" text-anchor="' + anchor + '">' + shortDate(new Date(tt)) + '</text>';
+      });
+
+      var svg =
+        '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+          gy + xl +
+          dots +
+          trend +
+          '<line class="tr-cursor" x1="0" y1="' + padT + '" x2="0" y2="' + (H - padB) +
+            '" style="opacity:0"/>' +
+          '<circle class="tr-hl" r="5.5" fill="' + color + '" stroke="#1f1f1f" stroke-width="2"' +
+            ' style="opacity:0"/>' +
+        '</svg>';
+
+      var old = plot.querySelector('svg');
+      if (old) old.remove();
+      plot.insertAdjacentHTML('beforeend', svg);
+
+      // scrubber
+      var svgEl  = plot.querySelector('svg');
+      var cursor = svgEl.querySelector('.tr-cursor');
+      var dot    = svgEl.querySelector('.tr-hl');
+
+      function scrub(clientX) {
+        var rect = plot.getBoundingClientRect();
+        var px = (clientX - rect.left) / rect.width * W;   // into viewBox units
+        // nearest point by x
+        var best = 0, bd = Infinity;
+        for (var j = 0; j < pts.length; j++) {
+          var dx = Math.abs(X(pts[j].t.getTime()) - px);
+          if (dx < bd) { bd = dx; best = j; }
+        }
+        var p = pts[best];
+        var cx = X(p.t.getTime()), cy = Y(p.v);
+        cursor.setAttribute('x1', cx); cursor.setAttribute('x2', cx);
+        cursor.style.opacity = 1;
+        dot.setAttribute('cx', cx); dot.setAttribute('cy', cy);
+        dot.style.opacity = 1;
+        tip.innerHTML = '<span>' + M.val(p.v) + '</span> ' +
+                        '<span class="tr-tip-d">' + shortDateYr(p.t) + '</span>';
+        var leftPx = cx / W * rect.width;
+        leftPx = Math.max(34, Math.min(rect.width - 34, leftPx));
+        tip.style.left = leftPx + 'px';
+        tip.classList.add('show');
+        // live readout under the title tracks the finger too
+        valEl.textContent = M.val(p.v);
+        whenEl.textContent = shortDateYr(p.t);
+        card.classList.add('tr-scrubbing');
+      }
+      function endScrub() {
+        cursor.style.opacity = 0; dot.style.opacity = 0;
+        tip.classList.remove('show');
+        card.classList.remove('tr-scrubbing');
+        // restore the readout to the latest session
+        valEl.textContent = M.val(last.v);
+        whenEl.textContent = shortDateYr(last.t);
+      }
+      plot.onpointermove = function (e) {
+        if (e.pointerType === 'touch') e.preventDefault();
+        scrub(e.clientX);
+      };
+      plot.onpointerdown = function (e) { scrub(e.clientX); };
+      plot.onpointerup = endScrub;
+      plot.onpointerleave = endScrub;
+      plot.onpointercancel = endScrub;
+    }
+
+    card._redraw = draw;
+    draw();
+  }
+
+  function dayOfYear(d) {
+    var s = new Date(d.getFullYear(), 0, 1, 12);
+    return Math.floor((d - s) / 86400000) + 1;
+  }
+
+  // ---------- aggregate: active days per month ----------
+  function setupDays(card) {
+    var sel    = card.querySelector('.tr-window');
+    var plot   = card.querySelector('.tr-plot');
+    var tip    = card.querySelector('.tr-tip');
+    var empty  = card.querySelector('.tr-empty');
+    var valEl  = card.querySelector('.tr-val');
+    var unitEl = card.querySelector('.tr-unit');
+    var whenEl = card.querySelector('.tr-when');
+    var WIN = [{ l: '12M', m: 12 }, { l: '24M', m: 24 }, { l: '36M', m: 36 }, { l: 'All', m: 0 }];
+    var state = { type: 'any', m: 12 };
+    unitEl.textContent = 'days';
+
+    WIN.forEach(function (w) {
+      var o = document.createElement('option');
+      o.value = w.m; o.textContent = w.l;
+      if (w.m === 12) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', function () { state.m = +sel.value; draw(); });
+    card.querySelectorAll('.tr-tg').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.getAttribute('aria-pressed') === 'true') return;
+        state.type = b.getAttribute('data-type');
+        card.querySelectorAll('.tr-tg').forEach(function (x) {
+          x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+        });
+        draw();
+      });
+    });
+
+    function buckets() {
+      var map = {};
+      allRows.forEach(function (r) {
+        if (!r.date) return;
+        if (state.type !== 'any' && (r.type || 'Walk') !== state.type) return;
+        var mk = r.date.slice(0, 7);
+        (map[mk] = map[mk] || {})[r.date] = 1;
+      });
+      var now = new Date(), endY = now.getFullYear(), endM = now.getMonth();
+      var start;
+      if (state.m === 0) {
+        var ks = Object.keys(map).sort();
+        if (!ks.length) return [];
+        var f = ks[0].split('-');
+        start = new Date(+f[0], +f[1] - 1, 1, 12);
+      } else {
+        start = new Date(endY, endM - (state.m - 1), 1, 12);
+      }
+      var out = [], cur = new Date(start), guard = 0;
+      while ((cur.getFullYear() < endY ||
+             (cur.getFullYear() === endY && cur.getMonth() <= endM)) && guard++ < 600) {
+        var mk = cur.getFullYear() + '-' + pad2(cur.getMonth() + 1);
+        out.push({ date: new Date(cur), count: map[mk] ? Object.keys(map[mk]).length : 0 });
+        cur.setMonth(cur.getMonth() + 1);
+      }
+      return out;
+    }
+
+    function draw() {
+      var bins = buckets();
+      var old = plot.querySelector('svg');
+      if (!bins.length) {
+        if (old) old.remove();
+        empty.hidden = false; empty.textContent = 'No data';
+        valEl.textContent = '—'; whenEl.textContent = '';
+        return;
+      }
+      empty.hidden = true;
+      var color = state.type === 'Run' ? '#E7D7A4' : '#8FCFC2';
+      var W = Math.max(260, plot.clientWidth || 320), H = plot.clientHeight || 188;
+      var padL = 26, padR = 10, padT = 12, padB = 20, n = bins.length;
+      var maxC = 0; bins.forEach(function (b) { if (b.count > maxC) maxC = b.count; });
+      var yMax = Math.max(maxC, 16);                 // keep the ~15-day 50% line visible
+      var slot = (W - padL - padR) / n;
+      var bw = Math.max(3, Math.min(26, slot * 0.62));
+      function bx(i) { return padL + slot * i + slot / 2; }
+      function Y(v) { return padT + (1 - v / yMax) * (H - padT - padB); }
+
+      var gy = '', step = Math.max(1, Math.ceil(yMax / 4));
+      for (var v = 0; v <= yMax + 0.001; v += step) {
+        var yy = Y(v).toFixed(1);
+        gy += '<line class="tr-grid" x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '"/>';
+        gy += '<text class="tr-axis" x="' + (padL - 6) + '" y="' + (+yy + 3) + '" text-anchor="end">' + v + '</text>';
+      }
+      var gl = Y(15).toFixed(1);
+      var goal = '<line x1="' + padL + '" y1="' + gl + '" x2="' + (W - padR) + '" y2="' + gl +
+                 '" stroke="#E89A1F" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.7"/>';
+      var bars = '';
+      bins.forEach(function (b, i) {
+        var y = Y(b.count), h = Math.max(0, (H - padB) - y);
+        bars += '<rect class="tr-bar" x="' + (bx(i) - bw / 2).toFixed(1) + '" y="' + y.toFixed(1) +
+                '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="' + color + '"/>';
+      });
+      var xl = '';
+      [0, n > 1 ? Math.floor((n - 1) / 2) : 0, n - 1].forEach(function (i, k) {
+        var a = k === 0 ? 'start' : (k === 2 ? 'end' : 'middle');
+        xl += '<text class="tr-axis" x="' + bx(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + a +
+              '">' + bins[i].date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) + '</text>';
+      });
+      var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + gy + goal + bars + xl +
+        '<line class="tr-cursor" x1="0" y1="' + padT + '" x2="0" y2="' + (H - padB) + '" style="opacity:0"/></svg>';
+      if (old) old.remove();
+      plot.insertAdjacentHTML('beforeend', svg);
+
+      var svgEl = plot.querySelector('svg');
+      var cursor = svgEl.querySelector('.tr-cursor');
+      var rects = svgEl.querySelectorAll('.tr-bar');
+      var lastB = bins[n - 1];
+      function setDefault() {
+        valEl.textContent = lastB.count;
+        whenEl.textContent = lastB.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      }
+      setDefault();
+      function scrub(clientX) {
+        var rect = plot.getBoundingClientRect();
+        var px = (clientX - rect.left) / rect.width * W;
+        var bi = Math.max(0, Math.min(n - 1, Math.floor((px - padL) / slot)));
+        var b = bins[bi], cx = bx(bi);
+        cursor.setAttribute('x1', cx); cursor.setAttribute('x2', cx); cursor.style.opacity = 1;
+        rects.forEach(function (r, ix) { r.setAttribute('opacity', ix === bi ? '1' : '0.4'); });
+        tip.innerHTML = '<span>' + b.count + ' days</span> <span class="tr-tip-d">' +
+                        b.date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) + '</span>';
+        var lp = cx / W * rect.width; lp = Math.max(34, Math.min(rect.width - 34, lp));
+        tip.style.left = lp + 'px'; tip.classList.add('show');
+        valEl.textContent = b.count;
+        whenEl.textContent = b.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        card.classList.add('tr-scrubbing');
+      }
+      function endScrub() {
+        cursor.style.opacity = 0; tip.classList.remove('show'); card.classList.remove('tr-scrubbing');
+        rects.forEach(function (r) { r.setAttribute('opacity', '1'); });
+        setDefault();
+      }
+      plot.onpointermove = function (e) { if (e.pointerType === 'touch') e.preventDefault(); scrub(e.clientX); };
+      plot.onpointerdown = function (e) { scrub(e.clientX); };
+      plot.onpointerup = endScrub; plot.onpointerleave = endScrub; plot.onpointercancel = endScrub;
+    }
+    card._redraw = draw; draw();
+  }
+
+  // ---------- aggregate: cumulative miles, this year vs last ----------
+  function setupYtd(card) {
+    var plot   = card.querySelector('.tr-plot');
+    var tip    = card.querySelector('.tr-tip');
+    var empty  = card.querySelector('.tr-empty');
+    var valEl  = card.querySelector('.tr-val');
+    var whenEl = card.querySelector('.tr-when');
+    var lg0 = card.querySelector('.ytd-y0'), lg1 = card.querySelector('.ytd-y1');
+
+    function curve(yr) {
+      var ev = [];
+      allRows.forEach(function (r) {
+        if (!r.date || r.date.slice(0, 4) !== String(yr)) return;
+        var m = parseFloat(r.miles) || 0; if (m <= 0) return;
+        ev.push({ doy: dayOfYear(parseDate(r.date)), m: m });
+      });
+      ev.sort(function (a, b) { return a.doy - b.doy; });
+      var cum = 0, pts = [];
+      ev.forEach(function (e) { cum += e.m; pts.push({ doy: e.doy, cum: cum }); });
+      return pts;
+    }
+
+    function draw() {
+      var now = new Date(), y0 = now.getFullYear(), y1 = y0 - 1;
+      lg0.textContent = y0; lg1.textContent = y1;
+      var c0 = curve(y0), c1 = curve(y1);
+      var old = plot.querySelector('svg');
+      if (!c0.length && !c1.length) {
+        if (old) old.remove();
+        empty.hidden = false; empty.textContent = 'No data';
+        valEl.textContent = '—'; whenEl.textContent = '';
+        return;
+      }
+      empty.hidden = true;
+      var W = Math.max(260, plot.clientWidth || 320), H = plot.clientHeight || 188;
+      var padL = 34, padR = 10, padT = 12, padB = 20;
+      var maxC = 1;
+      [c0, c1].forEach(function (c) { if (c.length) maxC = Math.max(maxC, c[c.length - 1].cum); });
+      var top = maxC * 1.08, todayDoy = dayOfYear(now);
+      function X(doy) { return padL + (doy - 1) / 365 * (W - padL - padR); }
+      function Y(v) { return padT + (1 - v / top) * (H - padT - padB); }
+      function path(c, ext) {
+        if (!c.length) return '';
+        var d = 'M' + X(1).toFixed(1) + ' ' + Y(0).toFixed(1);
+        c.forEach(function (p) { d += ' L' + X(p.doy).toFixed(1) + ' ' + Y(p.cum).toFixed(1); });
+        d += ' L' + X(ext).toFixed(1) + ' ' + Y(c[c.length - 1].cum).toFixed(1);
+        return d;
+      }
+      var gy = '';
+      for (var i = 0; i <= 4; i++) {
+        var vv = top * i / 4, yy = Y(vv).toFixed(1);
+        gy += '<line class="tr-grid" x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '"/>';
+        gy += '<text class="tr-axis" x="' + (padL - 6) + '" y="' + (+yy + 3) + '" text-anchor="end">' + Math.round(vv) + '</text>';
+      }
+      var xl = '';
+      [[1, 'Jan'], [91, 'Apr'], [182, 'Jul'], [274, 'Oct'], [365, 'Dec']].forEach(function (mm, k) {
+        var a = k === 0 ? 'start' : (k === 4 ? 'end' : 'middle');
+        xl += '<text class="tr-axis" x="' + X(mm[0]).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + a + '">' + mm[1] + '</text>';
+      });
+      var p1 = path(c1, 365), p0 = path(c0, todayDoy);
+      var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + gy + xl +
+        (p1 ? '<path d="' + p1 + '" fill="none" stroke="#8FCFC2" stroke-width="2" stroke-linejoin="round" opacity="0.5"/>' : '') +
+        (p0 ? '<path d="' + p0 + '" fill="none" stroke="#E89A1F" stroke-width="2.5" stroke-linejoin="round"/>' : '') +
+        '<line class="tr-cursor" x1="0" y1="' + padT + '" x2="0" y2="' + (H - padB) + '" style="opacity:0"/>' +
+        '<circle class="tr-hl" r="5" fill="#E89A1F" stroke="#1f1f1f" stroke-width="2" style="opacity:0"/></svg>';
+      if (old) old.remove();
+      plot.insertAdjacentHTML('beforeend', svg);
+
+      var svgEl = plot.querySelector('svg');
+      var cursor = svgEl.querySelector('.tr-cursor'), dot = svgEl.querySelector('.tr-hl');
+      function cumAt(c, doy) { var v = 0; for (var j = 0; j < c.length; j++) { if (c[j].doy <= doy) v = c[j].cum; else break; } return v; }
+      var thisTotal = c0.length ? c0[c0.length - 1].cum : 0;
+      var lastNow = cumAt(c1, todayDoy);
+      function setDefault() {
+        valEl.textContent = thisTotal.toFixed(1);
+        var diff = thisTotal - lastNow;
+        whenEl.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' vs ' + y1;
+      }
+      setDefault();
+      function scrub(clientX) {
+        var rect = plot.getBoundingClientRect();
+        var px = (clientX - rect.left) / rect.width * W;
+        var doy = Math.max(1, Math.min(365, Math.round((px - padL) / (W - padL - padR) * 365) + 1));
+        var v0 = cumAt(c0, doy), v1 = cumAt(c1, doy), cx = X(doy);
+        cursor.setAttribute('x1', cx); cursor.setAttribute('x2', cx); cursor.style.opacity = 1;
+        dot.setAttribute('cx', cx); dot.setAttribute('cy', Y(v0)); dot.style.opacity = 1;
+        var dl = new Date(y0, 0, 1, 12); dl.setDate(doy);
+        tip.innerHTML = '<span>' + v0.toFixed(1) + '</span> <span class="tr-tip-d">' +
+          dl.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' + y1 + ' ' + v1.toFixed(1) + '</span>';
+        var lp = cx / W * rect.width; lp = Math.max(34, Math.min(rect.width - 34, lp));
+        tip.style.left = lp + 'px'; tip.classList.add('show');
+        valEl.textContent = v0.toFixed(1);
+        whenEl.textContent = ((v0 - v1) >= 0 ? '+' : '') + (v0 - v1).toFixed(1) + ' vs ' + y1;
+        card.classList.add('tr-scrubbing');
+      }
+      function endScrub() {
+        cursor.style.opacity = 0; dot.style.opacity = 0; tip.classList.remove('show');
+        card.classList.remove('tr-scrubbing'); setDefault();
+      }
+      plot.onpointermove = function (e) { if (e.pointerType === 'touch') e.preventDefault(); scrub(e.clientX); };
+      plot.onpointerdown = function (e) { scrub(e.clientX); };
+      plot.onpointerup = endScrub; plot.onpointerleave = endScrub; plot.onpointercancel = endScrub;
+    }
+    card._redraw = draw; draw();
+  }
+
+  // ---------- press-and-hold drag to reorder, persisted ----------
+  var ORDER_KEY = 'mt-trends-order';
+  function cardId(c) { return c.getAttribute('data-metric') || ('agg-' + c.getAttribute('data-agg')); }
+  function applySavedOrder(shell) {
+    var saved;
+    try { saved = JSON.parse(localStorage.getItem(ORDER_KEY) || '[]'); } catch (e) { saved = []; }
+    if (!saved || !saved.length) return;
+    saved.forEach(function (id) {
+      var el = [].slice.call(shell.querySelectorAll('.tr-card')).filter(function (c) { return cardId(c) === id; })[0];
+      if (el) shell.appendChild(el);
+    });
+  }
+  function saveOrder(shell) {
+    try {
+      localStorage.setItem(ORDER_KEY,
+        JSON.stringify([].slice.call(shell.querySelectorAll('.tr-card')).map(cardId)));
+    } catch (e) {}
+  }
+  function enableReorder(shell) {
+    var LONG = 320, CANCEL = 10;
+    shell.querySelectorAll('.tr-card').forEach(function (card) {
+      var timer = null, sx = 0, sy = 0, dragging = false, originY = 0;
+      function cleanupPre() {
+        document.removeEventListener('pointermove', preMove);
+        document.removeEventListener('pointerup', preUp);
+      }
+      function preMove(e) {
+        if (Math.abs(e.clientY - sy) > CANCEL || Math.abs(e.clientX - sx) > CANCEL) {
+          clearTimeout(timer); cleanupPre();
+        }
+      }
+      function preUp() { clearTimeout(timer); cleanupPre(); }
+      card.addEventListener('pointerdown', function (e) {
+        if (e.target.closest('.tr-plot, select, button')) return;   // keep scrubber/controls
+        sx = e.clientX; sy = e.clientY;
+        timer = setTimeout(function () { begin(e); }, LONG);
+        document.addEventListener('pointermove', preMove, { passive: true });
+        document.addEventListener('pointerup', preUp, { passive: true });
+      });
+      function begin(e) {
+        cleanupPre(); dragging = true; originY = e.clientY;
+        card.classList.add('tr-drag');
+        try { navigator.vibrate && navigator.vibrate(15); } catch (_) {}
+        document.addEventListener('pointermove', onMove, { passive: false });
+        document.addEventListener('pointerup', onUp);
+        document.addEventListener('pointercancel', onUp);
+      }
+      function onMove(e) {
+        if (!dragging) return;
+        e.preventDefault();
+        card.style.transform = 'translateY(' + (e.clientY - originY) + 'px) scale(1.02)';
+        var sibs = [].slice.call(shell.querySelectorAll('.tr-card')).filter(function (c) { return c !== card; });
+        var target = null;
+        for (var i = 0; i < sibs.length; i++) {
+          var r = sibs[i].getBoundingClientRect();
+          if (e.clientY < r.top + r.height / 2) { target = sibs[i]; break; }
+        }
+        if (target) {
+          if (card.nextElementSibling !== target) {
+            shell.insertBefore(card, target);
+            originY = e.clientY; card.style.transform = 'translateY(0px) scale(1.02)';
+          }
+        } else if (shell.lastElementChild !== card) {
+          shell.appendChild(card);
+          originY = e.clientY; card.style.transform = 'translateY(0px) scale(1.02)';
+        }
+      }
+      function onUp() {
+        dragging = false;
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
+        card.style.transform = '';
+        card.classList.remove('tr-drag');
+        saveOrder(shell);
+      }
+    });
+  }
+
+  // ---------- wire everything ----------
+  var shell = document.getElementById('tr-shell');
+  applySavedOrder(shell);
+  [].slice.call(shell.querySelectorAll('.tr-card[data-metric]')).forEach(setupCard);
+  var dCard = shell.querySelector('[data-agg="days"]'); if (dCard) setupDays(dCard);
+  var yCard = shell.querySelector('[data-agg="ytd"]');  if (yCard) setupYtd(yCard);
+  enableReorder(shell);
+  var cards = [].slice.call(shell.querySelectorAll('.tr-card'));
+
+  var rt;
+  window.addEventListener('resize', function () {
+    clearTimeout(rt);
+    rt = setTimeout(function () {
+      cards.forEach(function (c) { if (c._redraw) c._redraw(); });
+    }, 160);
+  });
+
+  function load() {
+    startLoader();
+    MilesTracker.fetchAllEntries(function (rows) {
+      try {
+        allRows = rows || [];
+        cards.forEach(function (c) { if (c._redraw) c._redraw(); });
+      } catch (err) {
+        if (window.console) console.error('trends render failed:', err);
+      } finally {
+        clearTimeout(watchdog);
+        stopLoader();
+      }
+    });
+  }
+
+  MilesTracker.onReady = function () { load(); };
+  MilesTracker.init();
+})();
+</script>
 </body>
 </html>

@@ -2170,7 +2170,6 @@
       setTimeout(function () { if (msg) msg.textContent = ''; }, 7000);
     }
     function fire() {
-      try { window.location.href = 'healthautoexport://'; } catch (e) {}
       var tries = 0;
       var iv = setInterval(function () {
         tries++;

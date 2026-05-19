@@ -891,13 +891,6 @@
       border-radius: 12px; padding: 0.75rem 1rem; text-align: center;
       margin-bottom: 14px; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.4);
     }
-    #mt-pq-later {
-      display: block; margin: 8px auto 0; background: none; border: none;
-      color: #fff; opacity: 0.55; font-family: inherit; font-size: 0.66rem;
-      font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
-      cursor: pointer;
-    }
-    #mt-pq-later:hover { opacity: 0.85; }
     .mt-pq-head {
       font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase;
       opacity: 0.5; margin-bottom: 12px;
@@ -1108,7 +1101,6 @@
     <div class="mt-pq-sheet">
       <div class="mt-pq-banner">Review these first</div>
       <div id="mt-pending"></div>
-      <button type="button" id="mt-pq-later" onclick="mtPqLater()">Later</button>
     </div>
   </div>
 
@@ -2144,7 +2136,6 @@
     var m = document.getElementById('mt-pq-modal');
     if (m) m.classList.toggle('show', !!on);
   }
-  window.mtPqLater = function() { mtPqDismissed = true; mtPqModal(false); };
 
   function mtRenderPendingRows(rows) {
     var wrap = document.getElementById('mt-pending');

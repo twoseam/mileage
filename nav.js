@@ -25,7 +25,7 @@
       icon: '<path d="M3 16.4c0-.9.4-1.7 1.1-2.2L8 11l2 1.3L12.6 9l3 3.2c2.2.5 4.3 1 5.4 2.3.5.6.6 1.3.6 2v1.4H3z"/><path d="M3 18.7h18"/>' }
   ];
 
-  var VERSION = 'v4.16.4';
+  var VERSION = 'v4.16.5';
 
   /* ===================== Theme (light / dark) ===================== */
   var THEME_KEY = 'mt-theme';
@@ -130,7 +130,7 @@
     // no handle — swipe up anywhere on the bar to open
     '#mt-nav-tabs {',
     '  display: flex; align-items: stretch; justify-content: center;',
-    '  gap: 18px; height: ' + BAR_H + 'px; padding-bottom: ' + BAR_PAD + ';',
+    '  gap: 12px; height: ' + BAR_H + 'px; padding-bottom: ' + BAR_PAD + ';',
     '  background: #1c1c1c; border-radius: 14px 14px 0 0;',
     '  box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.16);',
     '}',

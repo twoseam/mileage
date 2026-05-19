@@ -1022,6 +1022,36 @@ function _approvePending(req) {
     }
   }
 
+  // Sheets reads a bare "10:01" as 10h01m (a clock time), not 10m01s, so
+  // a short walk's Duration balloons to an hour+ on approve. (Pace dodges
+  // this because its column is plain-text — don't reformat it or a clean
+  // "50:00" becomes "00:50:00".) Re-encode Duration from the RAW Pending
+  // cell into an unambiguous 3-part "HH:MM:SS" string, which Sheets stores
+  // as a true elapsed-time value regardless of the column's format.
+  function _clockSecs(v, tz2) {
+    if (v === '' || v == null) return null;
+    if (Object.prototype.toString.call(v) === '[object Date]') {
+      tz2 = tz2 || ss.getSpreadsheetTimeZone();
+      return parseInt(Utilities.formatDate(v, tz2, 'H'), 10) * 3600 +
+             parseInt(Utilities.formatDate(v, tz2, 'm'), 10) * 60 +
+             parseInt(Utilities.formatDate(v, tz2, 's'), 10);
+    }
+    if (typeof v === 'number') return Math.round(v * 86400);
+    var p = String(v).trim().split(':').map(Number);
+    if (p.some(isNaN)) return null;
+    return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2]
+         : p.length === 2 ? p[0] * 60 + p[1]
+         : p[0];
+  }
+  if (pmap.duration != null) {
+    var durSecs = _clockSecs(pdata[prow][pmap.duration], tz);
+    if (durSecs != null) {
+      for (var dk in vals) {
+        if (dk.toLowerCase() === 'duration') vals[dk] = _hms(durSecs);
+      }
+    }
+  }
+
   // append to Entries in ITS header order
   var esh = ss.getSheetByName(ENTRIES_SHEET);
   if (!esh) return _json({ error: 'Entries sheet not found' });

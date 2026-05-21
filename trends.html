@@ -51,7 +51,8 @@
 
     .mt-bg {
       position: fixed; inset: 0; z-index: -1; pointer-events: none;
-      transform: translateY(50px);
+      /* lift the wedge so the full stripe clears the bottom nav bar */
+      transform: translateY(calc(-74px - env(safe-area-inset-bottom, 0px)));
       background: linear-gradient(159deg,
         transparent 0%, transparent 76.6%,
         #016074 76.6%, #016074 78.8%,

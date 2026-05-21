@@ -51,7 +51,9 @@
       inset: 0;
       z-index: -1;
       pointer-events: none;
-      transform: translateY(50px);
+      /* lift the wedge so the full stripe clears the bottom nav bar
+         (nav = 62px tab row + 12px lift + safe-area inset) */
+      transform: translateY(calc(-74px - env(safe-area-inset-bottom, 0px)));
       background: linear-gradient(
         159deg,
         transparent 0%, transparent 76.6%,
@@ -1268,6 +1270,13 @@
   }
 
   function mtRenderStats(data, animate) {
+    // Animate the intro once per page load. Stale-while-revalidate fires
+    // this callback twice (cache, then network), and focus/return refreshes
+    // call it again — replaying the count-ups every time looked like the
+    // page was reloading. After the first animated pass, just update values.
+    if (mtRenderStats._animated) animate = false;
+    if (animate) mtRenderStats._animated = true;
+
     var daysNum = data.days;
     if (typeof daysNum === 'string') daysNum = parseInt(daysNum.split(' ')[0], 10);
 
@@ -1345,6 +1354,10 @@
   }
 
   function mtRenderWeek(rows, animate) {
+    // Grow the bars once per page load — see mtRenderStats note above.
+    if (mtRenderWeek._animated) animate = false;
+    if (animate) mtRenderWeek._animated = true;
+
     var today = new Date(); today.setHours(12, 0, 0, 0);
     var sun = new Date(today); sun.setDate(today.getDate() - today.getDay());  // Sunday
     function fd(d) {

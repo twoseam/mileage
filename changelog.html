@@ -50,7 +50,9 @@
       inset: 0;
       z-index: -1;
       pointer-events: none;
-      transform: translateY(50px);
+      /* lift the wedge so the full stripe clears the bottom nav bar
+         (nav = 62px tab row + 12px lift + safe-area inset) */
+      transform: translateY(calc(-74px - env(safe-area-inset-bottom, 0px)));
       background: linear-gradient(
         159deg,
         transparent 0%, transparent 76.6%,
@@ -171,8 +173,20 @@
 
   <section class="rel current">
     <div class="rel-head">
-      <span class="rel-ver">v4.17.0</span>
+      <span class="rel-ver">v4.17.1</span>
       <span class="rel-tag">Current</span>
+      <span class="rel-date">May 21, 2026</span>
+    </div>
+    <ul>
+      <li>Fixed: walks that auto-import from your phone now get the correct weather and temperature. They had been arriving with no weather, and a temperature that read far too cold — the phone's Celsius reading was being stored as Fahrenheit.</li>
+      <li>Fixed: the retro stripe now sits fully above the bottom navigation bar, instead of having its lower edge hidden behind it.</li>
+      <li>Fixed: the home-screen count-up numbers and growing bars now animate once when the page loads, instead of replaying every time fresh data arrives.</li>
+    </ul>
+  </section>
+
+  <section class="rel">
+    <div class="rel-head">
+      <span class="rel-ver">v4.17.0</span>
       <span class="rel-date">May 18, 2026</span>
     </div>
     <ul>

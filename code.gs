@@ -929,7 +929,6 @@ function _ingestWorkouts(body) {
     var cal = _haNum(_haPick(w, ['activeEnergyBurned', 'activeEnergy', 'totalEnergyBurned', 'calories']));
     var hr  = _haNum(_haPick(w, ['averageHeartRate', 'heartRateAverage', 'avgHeartRate', 'heartRate']));
     var steps = _haNum(_haPick(w, ['stepCount', 'steps']));
-    var temp = _haNum(_haPick(w, ['temperature', 'weatherTemperature']));
     var asc = _haNum(_haPick(w, ['elevationAscended', 'elevationUp', 'totalAscent']));
     var dsc = _haNum(_haPick(w, ['elevationDescended', 'elevationDown', 'totalDescent']));
 
@@ -962,7 +961,10 @@ function _ingestWorkouts(body) {
     put('date', sp.date); put('miles', miles); put('type', type);
     put('start_time', sp.time); put('end_time', ep.time);
     put('pace', pace); put('activity_id', id);
-    if (temp != null) put('temp_f', Math.round(temp));
+    // Temp intentionally NOT taken from the phone — HealthKit reports it in
+    // Celsius, which would land in the Fahrenheit column. Leaving temp_f
+    // blank lets the approve-time Open-Meteo backfill fill temp + weather
+    // together (see _histWeather call below).
     setByHeader(row, 'duration', durS != null ? _hms(durS) : '');
     setByHeader(row, 'avg speed mph', (durS && miles) ? Math.round(miles / (durS / 3600) * 100) / 100 : '');
     setByHeader(row, 'avg heart rate', hr != null ? Math.round(hr) : '');

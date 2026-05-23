@@ -49,12 +49,12 @@
     }
     .mt-bg {
       position: fixed;
-      inset: 0;
+      top: calc(-74px - env(safe-area-inset-bottom, 0px));
+      left: 0; right: 0; bottom: 0;
       z-index: -1;
       pointer-events: none;
-      /* lift the wedge so the full stripe clears the bottom nav bar
-         (nav = 62px tab row + 12px lift + safe-area inset) */
-      transform: translateY(calc(-74px - env(safe-area-inset-bottom, 0px)));
+      /* extend the div above the viewport so the wedge sits above the bottom
+         nav bar while staying flush with the viewport bottom (no dark gap) */
       background: linear-gradient(
         159deg,
         transparent 0%, transparent 76.6%,

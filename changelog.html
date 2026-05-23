@@ -47,12 +47,12 @@
     }
     .mt-bg {
       position: fixed;
-      inset: 0;
+      top: calc(-74px - env(safe-area-inset-bottom, 0px));
+      left: 0; right: 0; bottom: 0;
       z-index: -1;
       pointer-events: none;
-      /* lift the wedge so the full stripe clears the bottom nav bar
-         (nav = 62px tab row + 12px lift + safe-area inset) */
-      transform: translateY(calc(-74px - env(safe-area-inset-bottom, 0px)));
+      /* extend the div above the viewport so the wedge sits above the bottom
+         nav bar while staying flush with the viewport bottom (no dark gap) */
       background: linear-gradient(
         159deg,
         transparent 0%, transparent 76.6%,
@@ -173,8 +173,19 @@
 
   <section class="rel current">
     <div class="rel-head">
-      <span class="rel-ver">v4.17.1</span>
+      <span class="rel-ver">v4.17.2</span>
       <span class="rel-tag">Current</span>
+      <span class="rel-date">May 22, 2026</span>
+    </div>
+    <ul>
+      <li>Fixed: the retro stripe no longer leaves a dark gap below it. The background now extends past the bottom of the screen, so the wedge stays flush against the nav bar.</li>
+      <li>Pace trend chart: lower on the chart now means a lower pace number (faster pace at the bottom, slower at the top).</li>
+    </ul>
+  </section>
+
+  <section class="rel">
+    <div class="rel-head">
+      <span class="rel-ver">v4.17.1</span>
       <span class="rel-date">May 21, 2026</span>
     </div>
     <ul>

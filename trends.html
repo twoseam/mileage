@@ -50,9 +50,12 @@
     }
 
     .mt-bg {
-      position: fixed; inset: 0; z-index: -1; pointer-events: none;
-      /* lift the wedge so the full stripe clears the bottom nav bar */
-      transform: translateY(calc(-74px - env(safe-area-inset-bottom, 0px)));
+      position: fixed;
+      top: calc(-74px - env(safe-area-inset-bottom, 0px));
+      left: 0; right: 0; bottom: 0;
+      z-index: -1; pointer-events: none;
+      /* extend the div above the viewport so the wedge sits above the bottom
+         nav bar while staying flush with the viewport bottom (no dark gap) */
       background: linear-gradient(159deg,
         transparent 0%, transparent 76.6%,
         #016074 76.6%, #016074 78.8%,
@@ -435,8 +438,8 @@
     pace: {
       value: function (r) { return paceSec(r.pace); },
       val:   function (v) { return mmss(v); },
-      axis:  function (v) { return mmss(v); },
-      invert: true               // faster (smaller m:ss) plots toward the top
+      axis:  function (v) { return mmss(v); }
+      // not inverted: lower pace (smaller m:ss = faster) sits at the bottom
     },
     hr: {
       value: function (r) { var v = parseFloat(r.avg_hr); return v > 0 ? v : null; },
